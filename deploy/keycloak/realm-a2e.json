@@ -1,0 +1,48 @@
+{
+  "realm": "a2e-dev",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "accessTokenLifespan": 28800,
+  "clients": [
+    {
+      "clientId": "a2e-ui",
+      "name": "A2E console",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost:8000/*", "http://localhost:5173/*"],
+      "webOrigins": ["http://localhost:8000", "http://localhost:5173"],
+      "attributes": {"pkce.code.challenge.method": "S256"},
+      "protocolMappers": [
+        {
+          "name": "a2e-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "a2e-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {"id": "22222222-2222-4222-8222-222222222201", "username": "ada.admin", "email": "ada.admin@demo.invalid", "enabled": true, "emailVerified": true, "firstName": "Ada", "lastName": "Admin", "credentials": [{"type": "password", "value": "dev-only-change-me", "temporary": false}]},
+    {"id": "22222222-2222-4222-8222-222222222202", "username": "carl.commander", "email": "carl.commander@demo.invalid", "enabled": true, "emailVerified": true, "firstName": "Carl", "lastName": "Commander", "credentials": [{"type": "password", "value": "dev-only-change-me", "temporary": false}]},
+    {"id": "22222222-2222-4222-8222-222222222203", "username": "priya.planner", "email": "priya.planner@demo.invalid", "enabled": true, "emailVerified": true, "firstName": "Priya", "lastName": "Planner", "credentials": [{"type": "password", "value": "dev-only-change-me", "temporary": false}]},
+    {"id": "22222222-2222-4222-8222-222222222204", "username": "owen.operator", "email": "owen.operator@demo.invalid", "enabled": true, "emailVerified": true, "firstName": "Owen", "lastName": "Operator", "credentials": [{"type": "password", "value": "dev-only-change-me", "temporary": false}]},
+    {"id": "22222222-2222-4222-8222-222222222205", "username": "gwen.analyst", "email": "gwen.analyst@demo.invalid", "enabled": true, "emailVerified": true, "firstName": "Gwen", "lastName": "Analyst", "credentials": [{"type": "password", "value": "dev-only-change-me", "temporary": false}]},
+    {"id": "22222222-2222-4222-8222-222222222206", "username": "mike.maintainer", "email": "mike.maintainer@demo.invalid", "enabled": true, "emailVerified": true, "firstName": "Mike", "lastName": "Maintainer", "credentials": [{"type": "password", "value": "dev-only-change-me", "temporary": false}]},
+    {"id": "22222222-2222-4222-8222-222222222207", "username": "audrey.auditor", "email": "audrey.auditor@demo.invalid", "enabled": true, "emailVerified": true, "firstName": "Audrey", "lastName": "Auditor", "credentials": [{"type": "password", "value": "dev-only-change-me", "temporary": false}]},
+    {"id": "22222222-2222-4222-8222-222222222208", "username": "una.south", "email": "una.south@demo.invalid", "enabled": true, "emailVerified": true, "firstName": "Una", "lastName": "South", "credentials": [{"type": "password", "value": "dev-only-change-me", "temporary": false}]},
+    {"id": "22222222-2222-4222-8222-222222222209", "username": "frank.falcon", "email": "frank.falcon@demo.invalid", "enabled": true, "emailVerified": true, "firstName": "Frank", "lastName": "Falcon", "credentials": [{"type": "password", "value": "dev-only-change-me", "temporary": false}]}
+  ]
+}

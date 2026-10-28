@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a2e-gateway
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: a2e-gateway
+  template:
+    metadata:
+      labels:
+        app: a2e-gateway
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: gateway
+          image: "{{ .Values.image.repository | replace "a2e-api" "a2e-gateway" }}:{{ .Values.image.tag }}"
+          ports:
+            - name: http
+              containerPort: 8088
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: a2e-gateway
+spec:
+  selector:
+    app: a2e-gateway
+  ports:
+    - name: http
+      port: 8088
+      targetPort: http

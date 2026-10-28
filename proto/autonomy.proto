@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package a2e.autonomy.v1;
+
+// Contract for FANTOM Core. This build implements it with SimRuntime.
+// STUB: the government SDK is not linked. See FantomRuntime.
+
+service AutonomyRuntime {
+  rpc Load(LoadRequest) returns (Handle);
+  rpc Configure(ConfigureRequest) returns (Empty);
+  rpc Start(StartRequest) returns (Empty);
+  rpc Stop(StopRequest) returns (Empty);
+  rpc Status(Handle) returns (StatusReply);
+}
+
+message Empty {}
+
+message Handle {
+  string id = 1;
+}
+
+message LoadRequest {
+  string manifest_json = 1;
+}
+
+message ConfigureRequest {
+  string handle = 1;
+  string config_json = 2;
+}
+
+message StartRequest {
+  string handle = 1;
+  string mission_state = 2;
+  bool live = 3;
+}
+
+message StopRequest {
+  string handle = 1;
+  string reason = 2;
+}
+
+message StatusReply {
+  string handle = 1;
+  bool running = 2;
+  bool live = 3;
+  string name = 4;
+  string promotion = 5;
+}

@@ -1,0 +1,24 @@
+# Theater edge. Same images, no Keycloak. Point OIDC at a cached realm or use test auth only in a lab.
+services:
+  postgres:
+    extends:
+      file: docker-compose.yml
+      service: postgres
+  redis:
+    extends:
+      file: docker-compose.yml
+      service: redis
+  nats:
+    extends:
+      file: docker-compose.yml
+      service: nats
+  gateway:
+    extends:
+      file: docker-compose.yml
+      service: gateway
+  api:
+    extends:
+      file: docker-compose.yml
+      service: api
+    environment:
+      A2E_EDGE_NODE: "true"

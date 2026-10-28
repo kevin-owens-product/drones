@@ -1,0 +1,29 @@
+env: development
+authMode: oidc
+seed: true
+devLogin: false
+cookieSecure: false
+createDevSecrets: true
+replicas: 1
+postgres:
+  devInstance: true
+keycloak:
+  enabled: true
+ingress:
+  enabled: false
+oidc:
+  issuer: http://localhost:8080/realms/a2e-dev
+  audience: a2e-api
+  publicClientId: a2e-ui
+  redirectUri: http://localhost:8000/v1/session/callback
+database:
+  host: a2e-postgres
+  name: a2e
+  user: a2e_app
+devSecretValues:
+  databaseUrl: postgresql+asyncpg://a2e_app:change-me-app@a2e-postgres:5432/a2e
+  migrationUrl: postgresql+psycopg://a2e:change-me-db@a2e-postgres:5432/a2e
+  redisUrl: redis://:change-me-redis@a2e-redis:6379/0
+  sessionSecret: dev-only-session-secret-change-me
+  dataKey: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+  postgresPassword: change-me-db

@@ -1,0 +1,357 @@
+[
+  {
+    "name": "usa_cui_reads_noforn",
+    "action": "fleet.read",
+    "system_high": "CUI",
+    "subject": {
+      "clearance": "CUI",
+      "citizenship": "USA",
+      "ntk": ["isr-demo"],
+      "roles": ["analyst"],
+      "accessible_tenant_ids": ["t1"]
+    },
+    "resource": {
+      "tenant_id": "t1",
+      "classification": "CUI",
+      "caveats": ["NOFORN"],
+      "ntk": ["isr-demo"]
+    },
+    "allow": true
+  },
+  {
+    "name": "gbr_denied_noforn",
+    "action": "fleet.read",
+    "system_high": "CUI",
+    "subject": {
+      "clearance": "CUI",
+      "citizenship": "GBR",
+      "ntk": ["isr-demo"],
+      "roles": ["analyst"],
+      "accessible_tenant_ids": ["t1"]
+    },
+    "resource": {
+      "tenant_id": "t1",
+      "classification": "CUI",
+      "caveats": ["NOFORN"],
+      "ntk": ["isr-demo"]
+    },
+    "allow": false,
+    "reason": "noforn"
+  },
+  {
+    "name": "unclass_denied_cui",
+    "action": "fleet.read",
+    "system_high": "CUI",
+    "subject": {
+      "clearance": "UNCLASSIFIED",
+      "citizenship": "USA",
+      "ntk": ["isr-demo"],
+      "roles": ["operator"],
+      "accessible_tenant_ids": ["t1"]
+    },
+    "resource": {
+      "tenant_id": "t1",
+      "classification": "CUI",
+      "caveats": [],
+      "ntk": []
+    },
+    "allow": false,
+    "reason": "clearance_insufficient"
+  },
+  {
+    "name": "cui_reads_unclass",
+    "action": "fleet.read",
+    "system_high": "CUI",
+    "subject": {
+      "clearance": "CUI",
+      "citizenship": "USA",
+      "ntk": [],
+      "roles": ["analyst"],
+      "accessible_tenant_ids": ["t1"]
+    },
+    "resource": {
+      "tenant_id": "t1",
+      "classification": "UNCLASSIFIED",
+      "caveats": [],
+      "ntk": []
+    },
+    "allow": true
+  },
+  {
+    "name": "gbr_rel_to_usa_gbr",
+    "action": "fleet.read",
+    "system_high": "CUI",
+    "subject": {
+      "clearance": "CUI",
+      "citizenship": "GBR",
+      "ntk": [],
+      "roles": ["analyst"],
+      "accessible_tenant_ids": ["t1"]
+    },
+    "resource": {
+      "tenant_id": "t1",
+      "classification": "CUI",
+      "caveats": ["REL TO USA, GBR"],
+      "ntk": []
+    },
+    "allow": true
+  },
+  {
+    "name": "can_denied_rel_to",
+    "action": "fleet.read",
+    "system_high": "CUI",
+    "subject": {
+      "clearance": "CUI",
+      "citizenship": "CAN",
+      "ntk": [],
+      "roles": ["analyst"],
+      "accessible_tenant_ids": ["t1"]
+    },
+    "resource": {
+      "tenant_id": "t1",
+      "classification": "CUI",
+      "caveats": ["REL TO USA, GBR"],
+      "ntk": []
+    },
+    "allow": false,
+    "reason": "rel_to_denied"
+  },
+  {
+    "name": "usa_fvey",
+    "action": "fleet.read",
+    "system_high": "CUI",
+    "subject": {
+      "clearance": "CUI",
+      "citizenship": "USA",
+      "ntk": [],
+      "roles": ["analyst"],
+      "accessible_tenant_ids": ["t1"]
+    },
+    "resource": {
+      "tenant_id": "t1",
+      "classification": "CUI",
+      "caveats": ["REL TO FVEY"],
+      "ntk": []
+    },
+    "allow": true
+  },
+  {
+    "name": "fra_denied_fvey",
+    "action": "fleet.read",
+    "system_high": "CUI",
+    "subject": {
+      "clearance": "CUI",
+      "citizenship": "FRA",
+      "ntk": [],
+      "roles": ["analyst"],
+      "accessible_tenant_ids": ["t1"]
+    },
+    "resource": {
+      "tenant_id": "t1",
+      "classification": "CUI",
+      "caveats": ["REL TO FVEY"],
+      "ntk": []
+    },
+    "allow": false,
+    "reason": "rel_to_denied"
+  },
+  {
+    "name": "ntk_match",
+    "action": "fleet.read",
+    "system_high": "CUI",
+    "subject": {
+      "clearance": "CUI",
+      "citizenship": "USA",
+      "ntk": ["isr-demo"],
+      "roles": ["analyst"],
+      "accessible_tenant_ids": ["t1"]
+    },
+    "resource": {
+      "tenant_id": "t1",
+      "classification": "CUI",
+      "caveats": [],
+      "ntk": ["isr-demo"]
+    },
+    "allow": true
+  },
+  {
+    "name": "ntk_missing",
+    "action": "fleet.read",
+    "system_high": "CUI",
+    "subject": {
+      "clearance": "CUI",
+      "citizenship": "USA",
+      "ntk": [],
+      "roles": ["analyst"],
+      "accessible_tenant_ids": ["t1"]
+    },
+    "resource": {
+      "tenant_id": "t1",
+      "classification": "CUI",
+      "caveats": [],
+      "ntk": ["isr-demo"]
+    },
+    "allow": false,
+    "reason": "ntk_denied"
+  },
+  {
+    "name": "secret_above_system_high",
+    "action": "fleet.read",
+    "system_high": "CUI",
+    "subject": {
+      "clearance": "SECRET",
+      "citizenship": "USA",
+      "ntk": [],
+      "roles": ["analyst"],
+      "accessible_tenant_ids": ["t1"]
+    },
+    "resource": {
+      "tenant_id": "t1",
+      "classification": "SECRET",
+      "caveats": [],
+      "ntk": []
+    },
+    "allow": false,
+    "reason": "above_system_high"
+  },
+  {
+    "name": "orcon_unknown",
+    "action": "fleet.read",
+    "system_high": "CUI",
+    "subject": {
+      "clearance": "CUI",
+      "citizenship": "USA",
+      "ntk": [],
+      "roles": ["analyst"],
+      "accessible_tenant_ids": ["t1"]
+    },
+    "resource": {
+      "tenant_id": "t1",
+      "classification": "CUI",
+      "caveats": ["ORCON"],
+      "ntk": []
+    },
+    "allow": false,
+    "reason": "caveat_not_understood"
+  },
+  {
+    "name": "noforn_and_rel_to_gbr_usa_denied",
+    "action": "fleet.read",
+    "system_high": "CUI",
+    "subject": {
+      "clearance": "CUI",
+      "citizenship": "USA",
+      "ntk": [],
+      "roles": ["analyst"],
+      "accessible_tenant_ids": ["t1"]
+    },
+    "resource": {
+      "tenant_id": "t1",
+      "classification": "CUI",
+      "caveats": ["NOFORN", "REL TO GBR"],
+      "ntk": []
+    },
+    "allow": false,
+    "reason": "rel_to_denied"
+  },
+  {
+    "name": "noforn_and_rel_to_usa_gbr_denied",
+    "action": "fleet.read",
+    "system_high": "CUI",
+    "subject": {
+      "clearance": "CUI",
+      "citizenship": "GBR",
+      "ntk": [],
+      "roles": ["analyst"],
+      "accessible_tenant_ids": ["t1"]
+    },
+    "resource": {
+      "tenant_id": "t1",
+      "classification": "CUI",
+      "caveats": ["NOFORN", "REL TO USA"],
+      "ntk": []
+    },
+    "allow": false,
+    "reason": "noforn"
+  },
+  {
+    "name": "lowercase_citizenship",
+    "action": "fleet.read",
+    "system_high": "CUI",
+    "subject": {
+      "clearance": "CUI",
+      "citizenship": "usa",
+      "ntk": [],
+      "roles": ["analyst"],
+      "accessible_tenant_ids": ["t1"]
+    },
+    "resource": {
+      "tenant_id": "t1",
+      "classification": "UNCLASSIFIED",
+      "caveats": [],
+      "ntk": []
+    },
+    "allow": false,
+    "reason": "citizenship_invalid"
+  },
+  {
+    "name": "two_letter_rel_to",
+    "action": "fleet.read",
+    "system_high": "CUI",
+    "subject": {
+      "clearance": "CUI",
+      "citizenship": "USA",
+      "ntk": [],
+      "roles": ["analyst"],
+      "accessible_tenant_ids": ["t1"]
+    },
+    "resource": {
+      "tenant_id": "t1",
+      "classification": "CUI",
+      "caveats": ["REL TO US"],
+      "ntk": []
+    },
+    "allow": false,
+    "reason": "caveat_not_understood"
+  },
+  {
+    "name": "wrong_tenant",
+    "action": "fleet.read",
+    "system_high": "CUI",
+    "subject": {
+      "clearance": "CUI",
+      "citizenship": "USA",
+      "ntk": [],
+      "roles": ["analyst"],
+      "accessible_tenant_ids": ["t1"]
+    },
+    "resource": {
+      "tenant_id": "t2",
+      "classification": "UNCLASSIFIED",
+      "caveats": [],
+      "ntk": []
+    },
+    "allow": false,
+    "reason": "tenant_denied"
+  },
+  {
+    "name": "operator_cannot_write",
+    "action": "fleet.write",
+    "system_high": "CUI",
+    "subject": {
+      "clearance": "CUI",
+      "citizenship": "USA",
+      "ntk": [],
+      "roles": ["operator"],
+      "accessible_tenant_ids": ["t1"]
+    },
+    "resource": {
+      "tenant_id": "t1",
+      "classification": "UNCLASSIFIED",
+      "caveats": [],
+      "ntk": []
+    },
+    "allow": false,
+    "reason": "role_denied"
+  }
+]

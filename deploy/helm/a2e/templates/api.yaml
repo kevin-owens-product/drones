@@ -1,0 +1,231 @@
+{{- if and (eq .Values.env "production") (eq .Values.authMode "test") }}
+{{- fail "test auth is forbidden in production" }}
+{{- end }}
+{{- if and (eq .Values.env "production") .Values.createDevSecrets }}
+{{- fail "dev secrets are forbidden in production" }}
+{{- end }}
+{{- if and (eq .Values.env "production") (not .Values.oidc.issuer) }}
+{{- fail "oidc.issuer is required in production" }}
+{{- end }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.serviceAccount.name }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a2e-api
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: a2e-api
+  template:
+    metadata:
+      labels:
+        app: a2e-api
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+      containers:
+        - name: api
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: A2E_ENV
+              value: {{ .Values.env | quote }}
+            - name: A2E_AUTH_MODE
+              value: {{ .Values.authMode | quote }}
+            - name: A2E_SYSTEM_HIGH
+              value: {{ .Values.systemHigh | quote }}
+            - name: A2E_SEED
+              value: {{ .Values.seed | quote }}
+            - name: A2E_DEV_LOGIN
+              value: {{ .Values.devLogin | quote }}
+            - name: A2E_RATE_LIMIT_ENABLED
+              value: {{ .Values.rateLimitEnabled | quote }}
+            - name: A2E_COOKIE_SECURE
+              value: {{ .Values.cookieSecure | quote }}
+            - name: A2E_OPA_URL
+              value: http://a2e-opa:8181
+            - name: A2E_OIDC_ISSUER
+              value: {{ .Values.oidc.issuer | quote }}
+            - name: A2E_OIDC_AUDIENCE
+              value: {{ .Values.oidc.audience | quote }}
+            - name: A2E_OIDC_PUBLIC_CLIENT_ID
+              value: {{ .Values.oidc.publicClientId | quote }}
+            - name: A2E_OIDC_REDIRECT_URI
+              value: {{ .Values.oidc.redirectUri | quote }}
+            - name: A2E_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecret }}
+                  key: databaseUrl
+            - name: A2E_MIGRATION_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecret }}
+                  key: migrationUrl
+            - name: A2E_REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecret }}
+                  key: redisUrl
+            - name: A2E_SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecret }}
+                  key: sessionSecret
+            - name: A2E_DATA_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecret }}
+                  key: dataKey
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: a2e-api
+spec:
+  selector:
+    app: a2e-api
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: a2e-api-metrics
+  labels:
+    app: a2e-api
+spec:
+  selector:
+    app: a2e-api
+  ports:
+    - name: metrics
+      port: 8000
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a2e-opa
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: a2e-opa
+  template:
+    metadata:
+      labels:
+        app: a2e-opa
+    spec:
+      containers:
+        - name: opa
+          image: "{{ .Values.opa.repository }}:{{ .Values.opa.tag }}"
+          args: ["run", "--server", "--addr=0.0.0.0:8181", "--log-format=json", "/policies"]
+          ports:
+            - containerPort: 8181
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8181
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: a2e-opa
+spec:
+  selector:
+    app: a2e-opa
+  ports:
+    - port: 8181
+      targetPort: 8181
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: a2e-api
+spec:
+  podSelector:
+    matchLabels:
+      app: a2e-api
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - ports:
+        - port: 8000
+  egress:
+    - {}
+{{- if .Values.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: a2e
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-protocols: "TLSv1.2 TLSv1.3"
+    nginx.ingress.kubernetes.io/ssl-ciphers: "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:TLS_AES_256_GCM_SHA384"
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  tls:
+    - hosts: ["{{ .Values.ingress.host }}"]
+      secretName: {{ .Values.ingress.tlsSecret }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: a2e-api
+                port:
+                  name: http
+{{- end }}
+{{- if .Values.createDevSecrets }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.existingSecret }}
+type: Opaque
+stringData:
+  databaseUrl: {{ .Values.devSecretValues.databaseUrl | quote }}
+  migrationUrl: {{ .Values.devSecretValues.migrationUrl | quote }}
+  redisUrl: {{ .Values.devSecretValues.redisUrl | quote }}
+  sessionSecret: {{ .Values.devSecretValues.sessionSecret | quote }}
+  dataKey: {{ .Values.devSecretValues.dataKey | quote }}
+{{- end }}

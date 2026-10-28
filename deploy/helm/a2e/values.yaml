@@ -1,0 +1,37 @@
+env: production
+authMode: oidc
+systemHigh: CUI
+seed: false
+devLogin: false
+rateLimitEnabled: true
+cookieSecure: true
+createDevSecrets: false
+image:
+  repository: a2e-api
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+opa:
+  repository: a2e-opa
+  tag: "0.1.0"
+replicas: 2
+existingSecret: a2e-secrets
+oidc:
+  issuer: ""
+  audience: a2e-api
+  publicClientId: a2e-ui
+  redirectUri: ""
+database:
+  host: ""
+  name: a2e
+  user: a2e_app
+postgres:
+  devInstance: false
+keycloak:
+  enabled: false
+ingress:
+  enabled: true
+  className: nginx
+  host: ""
+  tlsSecret: a2e-tls
+serviceAccount:
+  name: a2e-api

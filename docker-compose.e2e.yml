@@ -1,0 +1,9 @@
+services:
+  api:
+    environment:
+      A2E_ENV: test
+      A2E_AUTH_MODE: test
+      A2E_DEV_LOGIN: "1"
+      A2E_OTEL_ENABLED: "0"
+      A2E_RATE_LIMIT_ENABLED: "0"
+      A2E_SEED: "1"

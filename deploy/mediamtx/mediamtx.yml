@@ -1,0 +1,8 @@
+# Local RTSP/SRT/HLS. No cloud. Anonymous publish is a dev STUB; production uses per-tenant credentials.
+logLevel: info
+rtspAddress: :8554
+hlsAddress: :8888
+hlsAlwaysRemux: true
+paths:
+  all:
+    source: publisher
