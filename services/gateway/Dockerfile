@@ -1,8 +1,8 @@
-FROM golang:1.22-alpine AS build
+FROM golang:1.26-alpine AS build
 WORKDIR /src
-COPY services/gateway/go.mod ./
+ENV CGO_ENABLED=0
 COPY services/gateway ./
-RUN go test ./... && go build -o /gateway ./cmd/gateway
+RUN go mod tidy && go test ./... && go build -o /gateway ./cmd/gateway
 
 FROM alpine:3.20
 RUN adduser -D -u 10001 gateway

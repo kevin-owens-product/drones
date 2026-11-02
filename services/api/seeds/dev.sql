@@ -83,19 +83,19 @@ INSERT INTO platforms (
     '33333333-3333-4333-8333-333333333301',
     '11111111-1111-4111-8111-111111111104',
     'N-001', 'A2E-G1-QUAD', 'group_1', 'SN-N-001', 'airworthy',
-    'Demo Range', '0.1.0', 'CUI', ARRAY['NOFORN'], ARRAY['isr-demo']
+    'Demo Range North', '0.1.0', 'CUI', ARRAY['NOFORN'], ARRAY['isr-demo']
   ),
   (
     '33333333-3333-4333-8333-333333333302',
     '11111111-1111-4111-8111-111111111104',
     'N-002', 'A2E-G2-VTOL', 'group_2', 'SN-N-002', 'airworthy',
-    'Demo Range', '0.1.0', 'CUI', ARRAY['REL TO USA, GBR'], ARRAY[]::text[]
+    'Demo Range North', '0.1.0', 'CUI', ARRAY['REL TO USA, GBR'], ARRAY[]::text[]
   ),
   (
     '33333333-3333-4333-8333-333333333303',
     '11111111-1111-4111-8111-111111111104',
     'N-003', 'A2E-G3-FW', 'group_3', 'SN-N-003', 'restricted',
-    'Demo Range', '0.1.0', 'UNCLASSIFIED', ARRAY[]::text[], ARRAY[]::text[]
+    'Demo Range North', '0.1.0', 'UNCLASSIFIED', ARRAY[]::text[], ARRAY[]::text[]
   ),
   (
     '33333333-3333-4333-8333-333333333304',
@@ -123,6 +123,36 @@ VALUES (
   1450,
   'UNCLASSIFIED',
   '{}'
+),
+(
+  '66666666-6666-4666-8666-666666666602',
+  '11111111-1111-4111-8111-111111111104',
+  'Demo Range East',
+  40.2000,
+  -80.4000,
+  280,
+  'UNCLASSIFIED',
+  '{}'
+),
+(
+  '66666666-6666-4666-8666-666666666603',
+  '11111111-1111-4111-8111-111111111104',
+  'Demo Range West',
+  37.4000,
+  -121.8000,
+  20,
+  'UNCLASSIFIED',
+  '{}'
+),
+(
+  '66666666-6666-4666-8666-666666666604',
+  '11111111-1111-4111-8111-111111111105',
+  'Demo Range South',
+  28.6000,
+  -82.4000,
+  15,
+  'UNCLASSIFIED',
+  '{}'
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO software_loads (id, platform_id, tenant_id, component, version, classification, caveats, ntk_programs)
@@ -145,3 +175,30 @@ INSERT INTO maintenance_events (
   '{}',
   '{}'
 ) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO missions (id, tenant_id, name, state, requested_by, approved_by, summary, classification, caveats)
+VALUES
+  ('44444444-4444-4444-8444-444444444401', '11111111-1111-4111-8111-111111111104', 'North range survey', 'review', '22222222-2222-4222-8222-222222222203', NULL, 'Transit, search, and return over the demo range. Waiting on a second person to approve.', 'CUI', '{"REL TO USA, GBR"}'),
+  ('44444444-4444-4444-8444-444444444402', '11111111-1111-4111-8111-111111111104', 'North track custody', 'approved', '22222222-2222-4222-8222-222222222203', '22222222-2222-4222-8222-222222222202', 'Hold sensor custody on the north track. Execute stays with a human.', 'CUI', '{"REL TO USA, GBR"}'),
+  ('44444444-4444-4444-8444-444444444403', '11111111-1111-4111-8111-111111111104', 'Return-to-base drill', 'draft', '22222222-2222-4222-8222-222222222203', NULL, 'Draft only. Not submitted for review.', 'UNCLASSIFIED', '{}')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO mission_tasks (id, mission_id, tenant_id, platform_id, kind, classification, caveats)
+VALUES
+  ('55555555-5555-4555-8555-555555555501', '44444444-4444-4444-8444-444444444401', '11111111-1111-4111-8111-111111111104', '33333333-3333-4333-8333-333333333302', 'transit', 'CUI', '{"REL TO USA, GBR"}'),
+  ('55555555-5555-4555-8555-555555555502', '44444444-4444-4444-8444-444444444401', '11111111-1111-4111-8111-111111111104', '33333333-3333-4333-8333-333333333302', 'search', 'CUI', '{"REL TO USA, GBR"}'),
+  ('55555555-5555-4555-8555-555555555503', '44444444-4444-4444-8444-444444444401', '11111111-1111-4111-8111-111111111104', '33333333-3333-4333-8333-333333333303', 'rtb', 'UNCLASSIFIED', '{}')
+ON CONFLICT (id) DO NOTHING;
+
+UPDATE mission_tasks SET geometry = '{"order":1,"label":"Depart the demo range","lat":34.05,"lon":-106.2,"alt_m":150}'::jsonb WHERE id = '55555555-5555-4555-8555-555555555501';
+UPDATE mission_tasks SET geometry = '{"order":2,"label":"Search the range box","lat":34.12,"lon":-105.9,"alt_m":200}'::jsonb WHERE id = '55555555-5555-4555-8555-555555555502';
+UPDATE mission_tasks SET geometry = '{"order":3,"label":"Return to the range","lat":34.05,"lon":-106.2,"alt_m":120}'::jsonb WHERE id = '55555555-5555-4555-8555-555555555503';
+
+INSERT INTO mission_tasks (id, mission_id, tenant_id, kind, geometry, classification, caveats)
+VALUES
+  ('55555555-5555-4555-8555-555555555511', '44444444-4444-4444-8444-444444444403', '11111111-1111-4111-8111-111111111104', 'transit', '{"order":1,"label":"Depart demo range","lat":34.05,"lon":-106.2,"alt_m":120}', 'UNCLASSIFIED', '{}'),
+  ('55555555-5555-4555-8555-555555555512', '44444444-4444-4444-8444-444444444403', '11111111-1111-4111-8111-111111111104', 'search', '{"order":2,"label":"Search the North Atlantic","lat":36.5,"lon":-40.0,"alt_m":250}', 'UNCLASSIFIED', '{}'),
+  ('55555555-5555-4555-8555-555555555513', '44444444-4444-4444-8444-444444444403', '11111111-1111-4111-8111-111111111104', 'sensor_custody', '{"order":3,"label":"Hold the Gulf of Guinea track","lat":3.8,"lon":5.6,"alt_m":300}', 'UNCLASSIFIED', '{}'),
+  ('55555555-5555-4555-8555-555555555514', '44444444-4444-4444-8444-444444444403', '11111111-1111-4111-8111-111111111104', 'loiter', '{"order":4,"label":"Loiter over the Mediterranean","lat":35.2,"lon":18.4,"alt_m":180}', 'UNCLASSIFIED', '{}'),
+  ('55555555-5555-4555-8555-555555555515', '44444444-4444-4444-8444-444444444403', '11111111-1111-4111-8111-111111111104', 'rtb', '{"order":5,"label":"Recover at the demo range","lat":34.05,"lon":-106.2,"alt_m":80}', 'UNCLASSIFIED', '{}')
+ON CONFLICT (id) DO NOTHING;

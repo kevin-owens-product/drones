@@ -26,14 +26,14 @@ func New() *Latest {
 	}
 }
 
-func (l *Latest) Ingest(item sample.Sample, topicTenant, topicTail string) error {
+func (l *Latest) Ingest(item sample.Sample, topicTenant, topicTail string) (bool, error) {
 	if err := sample.Validate(item, topicTenant, topicTail); err != nil {
 		l.drop++
-		return err
+		return false, err
 	}
 	if !l.limit.Allow(item.TenantID + "/" + item.Tail) {
 		l.drop++
-		return nil
+		return false, nil
 	}
 	l.mu.Lock()
 	l.items[item.TenantID+"/"+item.Tail] = item
@@ -43,7 +43,7 @@ func (l *Latest) Ingest(item sample.Sample, topicTenant, topicTail string) error
 	case l.notify <- struct{}{}:
 	default:
 	}
-	return nil
+	return true, nil
 }
 
 func (l *Latest) Count() int {

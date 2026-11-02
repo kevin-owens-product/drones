@@ -53,6 +53,16 @@ def test_system_high_cannot_exceed_cui() -> None:
         _settings(system_high="SECRET")
 
 
+def test_dev_login_token_works_beside_oidc() -> None:
+    settings = _settings(auth_mode="oidc", dev_login=True)
+    auth = Authenticator(settings)
+    token = auth.issue_test_token("22222222-2222-4222-8222-222222222202")
+    assert auth.validate(token) == "22222222-2222-4222-8222-222222222202"
+    closed = Authenticator(_settings(auth_mode="oidc", dev_login=False))
+    with pytest.raises(AuthError):
+        closed.validate(token)
+
+
 def test_test_token_round_trip() -> None:
     settings = _settings()
     auth = Authenticator(settings)

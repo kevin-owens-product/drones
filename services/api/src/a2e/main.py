@@ -30,7 +30,8 @@ STATIC = Path(__file__).resolve().parent / "static"
 class SessionMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):  # type: ignore[no-untyped-def]
         started = time.perf_counter()
-        if request.url.path in {"/health", "/metrics"}:
+        path = request.url.path
+        if path in {"/health", "/metrics", "/"} or path.startswith(("/assets/", "/cesium/")):
             response = await call_next(request)
             for key, value in SECURITY_HEADERS.items():
                 response.headers.setdefault(key, value)
@@ -77,7 +78,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.authenticator = Authenticator(current)
     app.state.opa = OpaClient(current)
     app.state.redis = None
-    if current.rate_limit_enabled:
+    if current.redis_url:
         from redis.asyncio import Redis
 
         app.state.redis = Redis.from_url(current.redis_url, decode_responses=True)
@@ -106,11 +107,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def index() -> FileResponse:
         return FileResponse(STATIC / "index.html")
 
-    @app.get("/assets/{path:path}")
-    async def assets(path: str) -> FileResponse:
-        candidate = (STATIC / "assets" / path).resolve()
-        root = (STATIC / "assets").resolve()
-        if not str(candidate).startswith(str(root)) or not candidate.is_file():
+    @app.get("/{file_path:path}")
+    async def static_file(file_path: str) -> FileResponse:
+        root = STATIC.resolve()
+        candidate = (STATIC / file_path).resolve()
+        if root != candidate and root not in candidate.parents:
+            return fail(404, "not_found")  # type: ignore[return-value]
+        if not candidate.is_file():
             return fail(404, "not_found")  # type: ignore[return-value]
         return FileResponse(candidate)
 

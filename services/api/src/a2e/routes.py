@@ -509,12 +509,61 @@ async def list_platforms(
     rows = await fetch_all(
         session,
         """
-        SELECT id, tenant_id, tail_number, designation, group_size::text AS group_size,
-               serial_number, airworthiness::text AS airworthiness, home_station,
-               software_version, classification::text AS classification, caveats,
-               ntk_programs, portion_mark
-        FROM platforms
-        ORDER BY tail_number
+        SELECT p.id, p.tenant_id, p.tail_number, p.designation, p.group_size::text AS group_size,
+               p.serial_number, p.airworthiness::text AS airworthiness, p.home_station,
+               p.software_version, p.classification::text AS classification, p.caveats,
+               p.ntk_programs, p.portion_mark, t.name AS owner_name
+        FROM platforms p
+        LEFT JOIN tenants t ON t.id = p.tenant_id
+        ORDER BY p.tail_number
+        """,
+    )
+    banner = set_banner(request, request.app.state.settings.system_high, [_row_mark(row) for row in rows])
+    return JSONResponse({"banner": banner, "items": _jsonify(rows)})
+
+
+@router.get("/v1/maintenance")
+@transactional
+async def list_maintenance(
+    request: Request,
+    principal: Principal = Depends(require_principal),
+    session: AsyncSession = Depends(get_session),
+) -> JSONResponse:
+    denied = await _authz(request, session, principal, "fleet.read")
+    if denied:
+        return denied
+    rows = await fetch_all(
+        session,
+        """
+        SELECT m.id, m.platform_id, p.tail_number, m.summary, m.status, m.opened_at, m.closed_at,
+               m.classification::text AS classification, m.caveats, m.portion_mark
+        FROM maintenance_events m
+        JOIN platforms p ON p.id = m.platform_id
+        ORDER BY m.opened_at DESC
+        LIMIT 100
+        """,
+    )
+    banner = set_banner(request, request.app.state.settings.system_high, [_row_mark(row) for row in rows])
+    return JSONResponse({"banner": banner, "items": _jsonify(rows)})
+
+
+@router.get("/v1/payloads")
+@transactional
+async def list_payloads(
+    request: Request,
+    principal: Principal = Depends(require_principal),
+    session: AsyncSession = Depends(get_session),
+) -> JSONResponse:
+    denied = await _authz(request, session, principal, "fleet.read")
+    if denied:
+        return denied
+    rows = await fetch_all(
+        session,
+        """
+        SELECT id, platform_id, kind, name, firmware,
+               classification::text AS classification, caveats, portion_mark
+        FROM payloads
+        ORDER BY name
         """,
     )
     banner = set_banner(request, request.app.state.settings.system_high, [_row_mark(row) for row in rows])
@@ -619,6 +668,58 @@ async def get_platform(
         return denied
     banner = set_banner(request, request.app.state.settings.system_high, [_row_mark(row)])
     return JSONResponse({"banner": banner, "item": _jsonify(row)})
+
+
+@router.patch("/v1/platforms/{platform_id}")
+@transactional
+async def patch_platform(
+    platform_id: UUID,
+    request: Request,
+    body: PlatformPatch,
+    principal: Principal = Depends(require_principal),
+    session: AsyncSession = Depends(get_session),
+) -> JSONResponse:
+    row = await fetch_one(
+        session,
+        """
+        SELECT id, tenant_id, tail_number, airworthiness::text AS airworthiness,
+               classification::text AS classification, caveats, ntk_programs
+        FROM platforms WHERE id = :id
+        """,
+        {"id": platform_id},
+    )
+    if row is None:
+        return fail(404, "not_found")
+    row["resource_type"] = "platform"
+    denied = await _authz(request, session, principal, "fleet.write", row)
+    if denied:
+        return denied
+    status = body.airworthiness or row["airworthiness"]
+    await scalar(
+        session,
+        """
+        UPDATE platforms
+        SET airworthiness = CAST(:status AS airworthiness_status)
+        WHERE id = :id
+        RETURNING id
+        """,
+        {"status": status, "id": platform_id},
+    )
+    await append_audit(
+        session,
+        actor_id=principal.user_id,
+        tenant_id=row["tenant_id"],
+        action="fleet.write",
+        resource_type="platform",
+        resource_id=platform_id,
+        decision="allow",
+        reason_codes=[str(status)],
+        classification=str(row["classification"]),
+        caveats=list(row["caveats"] or []),
+        ntk_programs=list(row["ntk_programs"] or []),
+    )
+    banner = set_banner(request, request.app.state.settings.system_high, [_row_mark(row)])
+    return JSONResponse({"banner": banner, "id": str(platform_id), "airworthiness": status})
 
 
 @router.post("/v1/exports")
@@ -833,7 +934,7 @@ async def list_audit(
                decision, reason_codes, classification::text AS classification, caveats,
                ntk_programs, portion_mark, prev_hash, row_hash
         FROM audit_events
-        ORDER BY seq
+        ORDER BY seq DESC
         LIMIT 200
         """,
     )
@@ -930,11 +1031,22 @@ async def list_users(
     rows = await fetch_all(
         session,
         """
-        SELECT id, username, display_name, citizenship, clearance::text AS clearance,
-               ntk_programs, classification::text AS classification, caveats, portion_mark,
-               disabled_at
-        FROM users
-        ORDER BY username
+        SELECT u.id, u.username, u.display_name, u.citizenship, u.clearance::text AS clearance,
+               u.ntk_programs, u.classification::text AS classification, u.caveats, u.portion_mark,
+               u.disabled_at,
+               COALESCE((
+                 SELECT string_agg(m.role::text, ', ' ORDER BY m.role::text)
+                 FROM user_memberships m
+                 WHERE m.user_id = u.id AND m.valid_to IS NULL
+               ), '') AS roles,
+               COALESCE((
+                 SELECT string_agg(t.name, ', ' ORDER BY t.name)
+                 FROM user_memberships m
+                 JOIN tenants t ON t.id = m.tenant_id
+                 WHERE m.user_id = u.id AND m.valid_to IS NULL
+               ), '') AS teams
+        FROM users u
+        ORDER BY u.username
         """,
     )
     banner = set_banner(request, request.app.state.settings.system_high, [_row_mark(row) for row in rows])

@@ -25,11 +25,13 @@ make ui    # optional; builds the React console into the API image tree
 make up    # docker compose up --build
 ```
 
-Open `http://localhost:8000`. The dev realm is `a2e-dev`. Dev users share the password `dev-only-change-me` (Keycloak only). Banner floor is CUI.
+Open `http://localhost:18080`. The dev realm is `a2e-dev` at `http://localhost:18081`. Dev users share the password `dev-only-change-me`. The laptop `.env` turns on the dev-login form as well as the IdP link. Banner floor is CUI.
 
-Sign in as `gwen.analyst` (GBR, CUI). She sees tails `N-002` and `N-003`. She does not see `N-001`, which is `CUI//NOFORN`.
+Sign in as `gwen.analyst` (GBR, CUI). She sees tails `N-002` and `N-003`. She does not see `N-001`, which is `CUI//NOFORN`. With `A2E_GATEWAY_DEMO=1`, those two tails move on the map.
 
-Postgres is published on **5433** in the integration notes below so it does not collide with another local Postgres on 5432. Compose itself publishes 5432; stop anything else bound there first, or change the host port in `docker-compose.yml`.
+Host ports stay off the usual local defaults: API `18080`, Keycloak `18081`, Postgres `15432`, Redis `16379`, Grafana `13000`. Container ports are unchanged.
+
+Postgres for the integration notes below is a separate container on host port **5433**.
 
 ## Tests
 

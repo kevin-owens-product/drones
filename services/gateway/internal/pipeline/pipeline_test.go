@@ -26,7 +26,8 @@ func TestTenThousandVehiclesAtFiveHertz(t *testing.T) {
 				AltM:           100,
 				Classification: "UNCLASSIFIED",
 			}
-			if err := pipe.Ingest(item, item.TenantID, item.Tail); err != nil {
+			ok, err := pipe.Ingest(item, item.TenantID, item.Tail)
+			if err != nil || !ok {
 				t.Fatal(err)
 			}
 		}
@@ -47,11 +48,11 @@ func TestTenThousandVehiclesAtFiveHertz(t *testing.T) {
 
 func TestRejectsCrossTenantTopic(t *testing.T) {
 	pipe := New()
-	err := pipe.Ingest(sample.Sample{
+	ok, err := pipe.Ingest(sample.Sample{
 		Tail: "N-001", TenantID: "a", Time: "2026-10-28T00:00:00Z", Lat: 1, Lon: 1,
 		Classification: "UNCLASSIFIED",
 	}, "b", "N-001")
-	if err == nil {
+	if err == nil || ok {
 		t.Fatal("expected tenant mismatch")
 	}
 }

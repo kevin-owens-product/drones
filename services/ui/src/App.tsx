@@ -1,5 +1,31 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { api, type PlatformRow, type SessionConfig } from "./api";
+import { api, sessionLost, type SessionConfig } from "./api";
+import { AuditPage } from "./pages/Audit";
+import { DebriefPage } from "./pages/Debrief";
+import { FleetPage } from "./pages/Fleet";
+import { LivePage } from "./pages/Live";
+import { MissionsPage } from "./pages/Missions";
+import { OrganizationPage } from "./pages/Organization";
+import { OverviewPage } from "./pages/Overview";
+import { PeoplePage } from "./pages/People";
+import { SharingPage } from "./pages/Sharing";
+import { VideoPage } from "./pages/Video";
+import { Login } from "./shell/Login";
+import { Shell } from "./shell/Shell";
+import type { Section, Viewer } from "./shell/types";
+
+const SECTIONS: readonly Section[] = [
+  "overview",
+  "live",
+  "fleet",
+  "video",
+  "missions",
+  "debrief",
+  "organization",
+  "people",
+  "sharing",
+  "audit",
+];
 
 function bannerClass(text: string): string {
   const level = text.startsWith("TOP SECRET")
@@ -14,15 +40,19 @@ function bannerClass(text: string): string {
   return `banner banner-${level}`;
 }
 
+function sectionFromHash(): Section {
+  const raw = window.location.hash.replace(/^#/, "");
+  return SECTIONS.find((item) => item === raw) ?? "overview";
+}
+
 export function App() {
   const [banner, setBanner] = useState("CUI");
   const [config, setConfig] = useState<SessionConfig | null>(null);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [me, setMe] = useState<string>("");
-  const [rows, setRows] = useState<PlatformRow[]>([]);
+  const [viewer, setViewer] = useState<Viewer | null>(null);
   const [fault, setFault] = useState("");
-  const [exportResult, setExportResult] = useState("");
+  const [section, setSection] = useState<Section>(sectionFromHash);
 
   useEffect(() => {
     void api<SessionConfig>("/v1/session/config")
@@ -31,15 +61,34 @@ export function App() {
         setConfig(body);
       })
       .catch((error: unknown) => setFault(error instanceof Error ? error.message : "config failed"));
+    void api<Viewer>("/v1/me")
+      .then(({ banner: next, body }) => {
+        setBanner(next);
+        setViewer(body);
+      })
+      .catch(() => setViewer(null));
   }, []);
 
-  async function refresh() {
-    const who = await api<{ username: string }>("/v1/me");
-    setMe(who.body.username);
-    setBanner(who.banner);
-    const fleet = await api<{ items: PlatformRow[] }>("/v1/platforms");
-    setRows(fleet.body.items);
-    setBanner(fleet.banner);
+  useEffect(() => {
+    function onLost() {
+      setViewer(null);
+      setFault("The session ended. Sign in again.");
+    }
+    sessionLost.addEventListener("lost", onLost);
+    return () => sessionLost.removeEventListener("lost", onLost);
+  }, []);
+
+  useEffect(() => {
+    function onHash() {
+      setSection(sectionFromHash());
+    }
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+
+  function onSection(next: Section) {
+    window.location.hash = next;
+    setSection(next);
   }
 
   async function onLogin(event: FormEvent) {
@@ -50,73 +99,56 @@ export function App() {
         method: "POST",
         body: JSON.stringify({ username, password }),
       });
-      await refresh();
+      const who = await api<Viewer>("/v1/me");
+      setBanner(who.banner);
+      setViewer(who.body);
     } catch (error) {
       setFault(error instanceof Error ? error.message : "login failed");
     }
   }
 
-  async function onExport(id: string) {
-    setExportResult("");
+  async function onLogout() {
     try {
-      const result = await api<{ allowed: boolean; banner: string }>("/v1/exports", {
-        method: "POST",
-        body: JSON.stringify({
-          resource_type: "platform",
-          resource_id: id,
-          recipient_user_id: "22222222-2222-4222-8222-222222222202",
-          purpose: "console self-check",
-          format: "json",
-        }),
-      });
-      setBanner(result.banner);
-      setExportResult(result.body.allowed ? "export allowed" : "export denied");
-    } catch (error) {
-      setExportResult(error instanceof Error ? error.message : "export failed");
+      await api("/v1/session/logout", { method: "POST" });
+    } catch {
+      /* the cookie is cleared locally either way */
     }
+    setViewer(null);
   }
+
+  const page = viewer ? (
+    <Shell banner={banner} viewer={viewer} section={section} onSection={onSection} onLogout={() => void onLogout()}>
+      {section === "overview" ? <OverviewPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "live" ? <LivePage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "fleet" ? <FleetPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "video" ? <VideoPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "missions" ? <MissionsPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "debrief" ? <DebriefPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "organization" ? <OrganizationPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "people" ? <PeoplePage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "sharing" ? <SharingPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "audit" ? <AuditPage viewer={viewer} onBanner={setBanner} /> : null}
+    </Shell>
+  ) : (
+    <Login
+      bannerClass={bannerClass}
+      banner={banner}
+      config={config}
+      fault={fault}
+      username={username}
+      password={password}
+      onUsername={setUsername}
+      onPassword={setPassword}
+      onSubmit={(event) => void onLogin(event)}
+    />
+  );
 
   return (
     <>
-      <header id="banner" className={bannerClass(banner)}>{banner}</header>
-      <main>
-        <h1>A2E Mission Cloud</h1>
-        <p>Sensor custody and navigation only. No weapons employment.</p>
-        {fault ? <p className="fault" id="fault">{fault}</p> : null}
-        {!me && config?.dev_login ? (
-          <form id="login-form" onSubmit={(event) => void onLogin(event)}>
-            <input id="username" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" />
-            <input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" />
-            <button type="submit">Sign in</button>
-          </form>
-        ) : null}
-        {!me && config && !config.dev_login ? (
-          <p><a href={config.login_url}>Sign in with organization IdP</a></p>
-        ) : null}
-        {me ? (
-          <>
-            <p id="who">Signed in as {me}</p>
-            <table id="fleet">
-              <thead>
-                <tr><th>Tail</th><th>Designation</th><th>Group</th><th>Portion</th><th>Status</th><th></th></tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.id}>
-                    <td>{row.tail_number}</td>
-                    <td>{row.designation}</td>
-                    <td>{row.group_size}</td>
-                    <td>{row.portion_mark}</td>
-                    <td>{row.airworthiness}</td>
-                    <td><button type="button" onClick={() => void onExport(row.id)}>Export</button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <p id="export-result">{exportResult}</p>
-          </>
-        ) : null}
-      </main>
+      <header id="banner" className={bannerClass(banner)}>
+        {banner}
+      </header>
+      {page}
       <footer className={`${bannerClass(banner)} banner-bottom`}>{banner}</footer>
     </>
   );

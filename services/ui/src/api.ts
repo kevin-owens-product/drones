@@ -21,6 +21,14 @@ export class BannerMissing extends Error {
   }
 }
 
+export class SessionLost extends Error {
+  constructor() {
+    super("unauthenticated");
+  }
+}
+
+export const sessionLost = new EventTarget();
+
 export async function api<T>(path: string, init?: RequestInit): Promise<{ banner: string; body: T }> {
   const response = await fetch(path, {
     ...init,
@@ -35,6 +43,12 @@ export async function api<T>(path: string, init?: RequestInit): Promise<{ banner
     throw new BannerMissing();
   }
   const body = (await response.json()) as T;
+  if (response.status === 401) {
+    if (path !== "/v1/me") {
+      sessionLost.dispatchEvent(new Event("lost"));
+    }
+    throw new SessionLost();
+  }
   if (!response.ok) {
     const detail = typeof body === "object" && body && "detail" in body ? String((body as { detail: unknown }).detail) : response.statusText;
     throw new Error(detail);

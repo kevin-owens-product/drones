@@ -54,6 +54,7 @@
     "user.read",
     "mission.read",
     "mission.draft",
+    "mission.review",
     "video.read",
     "telemetry.read",
     "sim.run",

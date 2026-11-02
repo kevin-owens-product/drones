@@ -25,9 +25,9 @@ class Authenticator:
         self._private: Any = None
         self._public: Any = None
         self._jwks: PyJWKClient | None = None
-        if settings.auth_mode == "test":
+        if settings.auth_mode == "test" or settings.dev_login:
             self._load_test_key(settings)
-        else:
+        if settings.auth_mode != "test":
             url = settings.oidc_jwks_url or (
                 settings.oidc_internal_issuer.rstrip("/") + "/protocol/openid-connect/certs"
             )
@@ -46,8 +46,6 @@ class Authenticator:
         self._public = self._private.public_key()
 
     def issue_test_token(self, subject: str, ttl_seconds: int = 3600) -> str:
-        if self._private is None:
-            raise AuthError("test tokens are not available")
         now = int(time.time())
         payload = {
             "sub": subject,
@@ -56,22 +54,32 @@ class Authenticator:
             "iat": now,
             "exp": now + ttl_seconds,
         }
-        token = jwt.encode(payload, self._private, algorithm="RS256")
+        token = jwt.encode(payload, self._settings.session_secret, algorithm="HS256")
         if isinstance(token, bytes):
             return token.decode("ascii")
         return token
 
     def validate(self, token: str) -> str:
         try:
-            if self._settings.auth_mode == "test":
+            unverified = jwt.decode(
+                token,
+                options={"verify_signature": False},
+                algorithms=["RS256", "ES256", "HS256"],
+            )
+            issuer = unverified.get("iss")
+            if issuer == TEST_ISSUER:
+                if self._settings.auth_mode != "test" and not self._settings.dev_login:
+                    raise AuthError("invalid token")
                 claims = jwt.decode(
                     token,
-                    self._public,
-                    algorithms=["RS256"],
+                    self._settings.session_secret,
+                    algorithms=["HS256"],
                     audience=self._settings.oidc_audience,
                     issuer=TEST_ISSUER,
                     options={"require": ["exp", "iat", "sub", "iss", "aud"]},
                 )
+            elif self._settings.auth_mode == "test":
+                raise AuthError("invalid token")
             else:
                 assert self._jwks is not None
                 key = self._jwks.get_signing_key_from_jwt(token)
@@ -83,6 +91,8 @@ class Authenticator:
                     issuer=self._settings.oidc_issuer,
                     options={"require": ["exp", "iat", "sub", "iss", "aud"]},
                 )
+        except AuthError:
+            raise
         except Exception as exc:
             raise AuthError("invalid token") from exc
         subject = claims.get("sub")

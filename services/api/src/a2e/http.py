@@ -14,14 +14,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from a2e.classification import Marking, banner_text
 
+# Cesium's shipped bundle evaluates a string while it starts. The globe cannot load without it.
 SECURITY_HEADERS = {
     "Cache-Control": "no-store",
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "no-referrer",
     "X-Frame-Options": "DENY",
     "Content-Security-Policy": (
-        "default-src 'self'; img-src 'self' data:; style-src 'self'; "
-        "script-src 'self'; frame-ancestors 'none'; base-uri 'self'"
+        "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; "
+        "script-src 'self' 'unsafe-eval'; worker-src 'self' blob:; "
+        "frame-ancestors 'none'; base-uri 'self'"
     ),
 }
 
