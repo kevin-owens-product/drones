@@ -21,3 +21,14 @@ clang -std=c17 -O1 -g -fsanitize=fuzzer,address -Iinclude \
 ```
 
 Until that runtime is present, `make test` runs the same entry point on 100,000 deterministic inputs.
+
+## Cortex-M4 size
+
+`deploy/crsf-m4` runs Bazel 7.4.1, which calls `arm-none-eabi-gcc` 13.2.1 for `-mcpu=cortex-m4 -mthumb` and links with newlib nosys. `docker run --rm a2e-crsf-m4:7.4.1` printed:
+
+| Artifact | text | data | bss |
+| --- | --- | --- | --- |
+| Linked elf, parser plus a main and newlib stubs | 2126 | 12 | 748 |
+| Parser object only | 802 | 0 | 0 |
+
+There is no cycle count. This image does not run the parser on an STM32 or in QEMU. The 802-byte text size is the parser itself. The elf is larger because the C library stubs are linked in.

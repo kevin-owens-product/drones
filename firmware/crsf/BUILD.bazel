@@ -1,0 +1,30 @@
+genrule(
+    name = "crsf_m4_size",
+    srcs = [
+        "src/crsf.c",
+        "include/crsf.h",
+        "m4/main.c",
+    ],
+    outs = ["crsf_m4_size.txt"],
+    cmd = """
+set -eu
+HDR=$(location include/crsf.h)
+SRC=$(location src/crsf.c)
+MAIN=$(location m4/main.c)
+INC=$$(dirname $$HDR)
+SYS=""
+for dir in /usr/include/newlib /usr/lib/arm-none-eabi/include; do
+  if [ -f "$$dir/string.h" ]; then SYS="$$SYS -isystem $$dir"; fi
+done
+arm-none-eabi-gcc -std=c17 -Os -mcpu=cortex-m4 -mthumb \\
+  -ffunction-sections -fdata-sections -Wl,--gc-sections \\
+  --specs=nosys.specs $$SYS \\
+  -I$$INC $$SRC $$MAIN -o crsf.elf
+arm-none-eabi-size crsf.elf > $@
+echo "--- object ---" >> $@
+arm-none-eabi-gcc -std=c17 -Os -mcpu=cortex-m4 -mthumb $$SYS \\
+  -I$$INC -c $$SRC -o crsf.o
+arm-none-eabi-size crsf.o >> $@
+""",
+    local = True,
+)
