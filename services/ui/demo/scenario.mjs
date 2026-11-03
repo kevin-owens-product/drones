@@ -2,6 +2,7 @@
 // picture, and training sessions. Pure JavaScript with no Node imports, so the
 // same code runs behind demo/server.mjs and, for the hosted static demo, inside
 // the browser (src/staticDemo.ts). All data is synthetic and labelled so.
+import { plan as planConfig } from "./configure.mjs";
 import { denialPicture } from "./denial.mjs";
 import { FLEET_SHARE, fileReport, seedReports, triage } from "./fieldvoice.mjs";
 import { acknowledge, RESPONSES, scorecard, startSession, visible } from "./training.mjs";
@@ -466,6 +467,12 @@ export function createDemo(opts = {}) {
     handle(method, url, raw = "") {
       if (url.pathname.startsWith("/v1/attrition")) return attrition(method, url, raw);
       if (url.pathname === "/v1/field-reports") return fieldReports(method, raw);
+      if (url.pathname === "/v1/configure") {
+        const q = url.searchParams;
+        const num = (k, d) => (Number.isFinite(Number(q.get(k))) && q.get(k) !== null ? Number(q.get(k)) : d);
+        const jam = ["none", "light", "heavy"].includes(q.get("jamming") ?? "") ? q.get("jamming") : "none";
+        return { status: 200, body: planConfig({ range_km: num("range_km", 3), wind_mps: num("wind_mps", 4), temp_c: num("temp_c", 20), loiter_min: num("loiter_min", 5), jamming: jam }) };
+      }
       if (url.pathname === "/v1/denial-map") return { status: 200, body: denialPicture(Number(url.searchParams.get("passes") ?? 4)) };
       if (url.pathname.startsWith("/v1/training/")) {
         const out = training(method, url, raw);

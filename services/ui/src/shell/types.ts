@@ -10,6 +10,7 @@ export type Section =
   | "attrition"
   | "reports"
   | "denial"
+  | "configure"
   | "organization"
   | "people"
   | "sharing"

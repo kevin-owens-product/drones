@@ -322,3 +322,41 @@
 .dm-key-clear {
   background: var(--ok);
 }
+
+/* Configure */
+.ins-page > .panel.cf-inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px 24px;
+}
+
+.cf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.cf-answer {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.cf-answer.is-none {
+  border-color: var(--warn);
+  background: transparent;
+  color: var(--warn);
+}
+
+.cf-best td {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.cf-no td {
+  color: var(--faint);
+}
