@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { api, sessionLost, type SessionConfig } from "./api";
 import { AttritionPage } from "./pages/Attrition";
 import { AuditPage } from "./pages/Audit";
+import { ConfigurePage } from "./pages/Configure";
 import { DebriefPage } from "./pages/Debrief";
 import { DenialMapPage } from "./pages/DenialMap";
 import { EvalPage } from "./pages/Eval";
@@ -31,6 +32,7 @@ const SECTIONS: readonly Section[] = [
   "attrition",
   "reports",
   "denial",
+  "configure",
   "organization",
   "people",
   "sharing",
@@ -139,6 +141,7 @@ export function App() {
       {section === "attrition" ? <AttritionPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "reports" ? <FieldReportsPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "denial" ? <DenialMapPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "configure" ? <ConfigurePage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "organization" ? <OrganizationPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "people" ? <PeoplePage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "sharing" ? <SharingPage viewer={viewer} onBanner={setBanner} /> : null}

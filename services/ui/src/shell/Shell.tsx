@@ -11,6 +11,7 @@ const PRIMARY: readonly { id: Section; label: string }[] = [
   { id: "attrition", label: "Attrition" },
   { id: "reports", label: "Reports" },
   { id: "denial", label: "Denial map" },
+  { id: "configure", label: "Configure" },
 ];
 
 const ADMIN: readonly { id: Section; label: string }[] = [
