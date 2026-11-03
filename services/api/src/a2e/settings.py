@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     cookie_secure: bool = False
     test_jwt_private_key_pem: str = ""
     ui_origin: str = "http://localhost:8000"
+    gateway_url: str = ""
 
     @field_validator("env")
     @classmethod

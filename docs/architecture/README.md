@@ -13,7 +13,7 @@ The deployed accreditation target is DoD Impact Level 5 and an air-gapped theate
 | [C4 components](c4-components.md) | Modules inside the API, gateway, sim, and UI |
 | [Data model](data-model.md) | Tenancy, markings, fleet, missions, telemetry, video, edge |
 | [Threat model](threat-model.md) | STRIDE, trust boundaries, residual risk |
-| [Control mapping](control-mapping.md) | NIST SP 800-171 and SP 800-53 Moderate |
+| [Control mapping](../governance/control-mapping.md) | NIST SP 800-171 and SP 800-53 Moderate |
 | [Sequences](sequences.md) | Login, request authorization, release, edge sync |
 | [ADRs](adrs/README.md) | Technology and security decisions |
 

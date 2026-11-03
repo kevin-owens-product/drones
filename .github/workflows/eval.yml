@@ -1,0 +1,12 @@
+name: eval
+
+on:
+  pull_request:
+
+jobs:
+  onboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Onboard regression
+        run: make eval

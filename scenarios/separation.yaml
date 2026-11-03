@@ -1,0 +1,4 @@
+name: separation
+phase: Phase 4
+metric: Guided minimum separation
+min: 4

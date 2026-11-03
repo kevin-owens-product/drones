@@ -16,8 +16,10 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
 	"a2e.local/gateway/internal/forward"
+	"a2e.local/gateway/internal/mavlink"
 	"a2e.local/gateway/internal/pipeline"
 	"a2e.local/gateway/internal/sample"
+	"a2e.local/gateway/internal/wire"
 )
 
 func main() {
@@ -30,10 +32,45 @@ func main() {
 	if os.Getenv("A2E_GATEWAY_DEMO") == "1" {
 		go demo(pipe, publish)
 	}
+	if raw := os.Getenv("A2E_MAVLINK_ENDPOINTS"); raw != "" {
+		tenant := env("A2E_MAVLINK_TENANT", "11111111-1111-4111-8111-111111111104")
+		for _, addr := range strings.Split(raw, ",") {
+			addr = strings.TrimSpace(addr)
+			if addr == "" {
+				continue
+			}
+			go serveMAVLink(addr, tenant, pipe, publish, fan)
+		}
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	})
+	mux.HandleFunc("/flight-metrics", func(w http.ResponseWriter, _ *http.Request) {
+		p50, p99, perSec, received, dropped := mavlink.Snapshot()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"p50_us":%d,"p99_us":%d,"per_sec":%.2f,"received":%d,"unrecognized":%d}`, p50, p99, perSec, received, dropped)
+	})
+	mux.HandleFunc("/command", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method", http.StatusMethodNotAllowed)
+			return
+		}
+		var body struct {
+			SystemID byte    `json:"system_id"`
+			Command  uint16  `json:"command"`
+			Param1   float32 `json:"param1"`
+		}
+		if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&body); err != nil || body.SystemID == 0 || body.Command == 0 {
+			http.Error(w, "json", http.StatusBadRequest)
+			return
+		}
+		if err := mavlink.Send(body.SystemID, body.Command, body.Param1); err != nil {
+			http.Error(w, err.Error(), http.StatusServiceUnavailable)
+			return
+		}
+		w.WriteHeader(http.StatusAccepted)
 	})
 	mux.HandleFunc("/ingest", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -228,6 +265,31 @@ func demo(pipe *pipeline.Latest, publish func(sample.Sample)) {
 			}
 		}
 		tick++
+	}
+}
+
+func serveMAVLink(addr, tenant string, pipe *pipeline.Latest, publish func(sample.Sample), fan *forward.Fanout) {
+	_, err := mavlink.Listen(addr, func(item wire.Sample) {
+		fan.Publish(fmt.Sprintf("telemetry.v1.%d.%s", item.SystemID, item.Name), wire.Marshal(item))
+		if item.Name != "GLOBAL_POSITION_INT" {
+			return
+		}
+		row := sample.Sample{
+			Tail:           fmt.Sprintf("PX4-%d", item.SystemID),
+			TenantID:       tenant,
+			Time:           time.Unix(0, item.ReceivedUnixNs).UTC().Format(time.RFC3339Nano),
+			Lat:            float64(item.LatE7) / 1e7,
+			Lon:            float64(item.LonE7) / 1e7,
+			AltM:           float64(item.AltMM) / 1000,
+			Classification: "UNCLASSIFIED",
+		}
+		ok, err := pipe.Ingest(row, row.TenantID, row.Tail)
+		if err == nil && ok {
+			publish(row)
+		}
+	})
+	if err != nil {
+		log.Printf("mavlink %s: %v", addr, err)
 	}
 }
 

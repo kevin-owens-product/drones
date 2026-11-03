@@ -1,0 +1,5 @@
+name: lock
+phase: Phase 3
+runs: 50
+metric: Lock retention
+min: 45
