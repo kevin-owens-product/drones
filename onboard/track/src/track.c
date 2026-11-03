@@ -106,6 +106,37 @@ static void build_bank(track_lock *lock, const uint8_t *frame, int x, int y) {
     }
 }
 
+void track_motion_init(track_motion *motion) {
+    memset(motion, 0, sizeof(*motion));
+}
+
+int track_motion_keep(track_motion *motion, float n, float e, float dt_s) {
+    float implied;
+    float speed;
+    float step_n;
+    float step_e;
+    if (dt_s < 0.001f) {
+        dt_s = 0.001f;
+    }
+    if (motion->filled > 0) {
+        step_n = (n - motion->n) / dt_s;
+        step_e = (e - motion->e) / dt_s;
+        implied = sqrtf(step_n * step_n + step_e * step_e);
+        speed = sqrtf(motion->vn * motion->vn + motion->ve * motion->ve);
+        if (speed > 2.f && implied < 0.5f) {
+            return 0;
+        }
+        motion->vn = 0.7f * motion->vn + 0.3f * step_n;
+        motion->ve = 0.7f * motion->ve + 0.3f * step_e;
+    }
+    if (motion->filled < 2) {
+        motion->filled += 1;
+    }
+    motion->n = n;
+    motion->e = e;
+    return 1;
+}
+
 void track_init(track_lock *lock, const uint8_t *frame, int x, int y) {
     int row;
     int col;

@@ -60,7 +60,7 @@ What the tracker trials show:
 
 - **v1 loses every run within 15 to 23 s**, at the first turn, because a fixed template stops matching once the target rotates.
 - **v2 holds the target in 3 of 5 runs**, through turns and tree occlusion, with the vehicle about 2 m from the target throughout.
-- **In 2 of 5 runs v2 ends up on a parked look-alike.** In both, the target drives within a few metres of an identical parked vehicle while turning. The rotated target scores below the parked one, and the swap happens inside the 4 m gate, so nothing flags it. A tighter gate (1.5 m) stops the swap but then drops the lock on turns. Fixing this needs association that uses motion over several frames (a parked vehicle has zero velocity; the target does not), or a detector that scores identity rather than appearance. That is the next piece of work, and the trial will show when it is done.
+- **In 2 of 5 runs v2 ends up on a parked look-alike.** In both, the target drives within a few metres of an identical parked vehicle while turning. The rotated target scores below the parked one, and the swap happens inside the 4 m gate. `track_motion_keep` now refuses a measurement whose step is under 0.5 m/s while the track was moving faster than 2 m/s, and the harness treats that refusal like a gate miss. The closed-loop trial has not been rerun since that check was added, so the 2 of 5 figure is still the last measured result.
 
 "On target" means the reported track position (the match, or the filter's prediction while coasting) is within 4 px of the truth. "False lock" means the tracker accepted a match more than 4 px away.
 

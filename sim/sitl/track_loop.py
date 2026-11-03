@@ -46,6 +46,16 @@ MPP = 0.25  # texture metres per pixel
 TEX = 2048  # texture is TEX x TEX pixels, centred on the start point
 
 
+class TrackMotion(ctypes.Structure):
+    _fields_ = [
+        ("n", ctypes.c_float),
+        ("e", ctypes.c_float),
+        ("vn", ctypes.c_float),
+        ("ve", ctypes.c_float),
+        ("filled", ctypes.c_int),
+    ]
+
+
 class TrackLock(ctypes.Structure):
     _fields_ = [
         ("x", ctypes.c_int),
@@ -98,6 +108,10 @@ def load_tracker(version: str) -> ctypes.CDLL:
     so.track_init.argtypes = [ctypes.POINTER(TrackLock), ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
     so.track_step.argtypes = [ctypes.POINTER(TrackLock), ctypes.c_void_p]
     so.track_step.restype = ctypes.c_int
+    if version != "v1":
+        so.track_motion_init.argtypes = [ctypes.POINTER(TrackMotion)]
+        so.track_motion_keep.argtypes = [ctypes.POINTER(TrackMotion), ctypes.c_float, ctypes.c_float, ctypes.c_float]
+        so.track_motion_keep.restype = ctypes.c_int
     return so
 
 
@@ -293,6 +307,7 @@ def run(seed: int, *, tracker: str, speed: float, duration: float, instance: int
         cam = Ned(0, 0, 0)
         kf_pos = [0.0, 0.0]
         kf_vel = [0.0, 0.0]
+        motion = TrackMotion()
         gated_run = 0
         on = false = 0
         px_errs: list[float] = []
@@ -349,6 +364,8 @@ def run(seed: int, *, tracker: str, speed: float, duration: float, instance: int
             if not designated:
                 # The operator clicks the target. The tracker gets the click, not the box.
                 so.track_init(ctypes.byref(lock), buf.ctypes.data, int(round(tx)) - 4, int(round(ty)) - 4)
+                if tracker == "v2":
+                    so.track_motion_init(ctypes.byref(motion))
                 designated = True
                 kf_pos = [cam.n - (lock.y + 4 - H / 2) * mpp, cam.e + (lock.x + 4 - W / 2) * mpp]
                 kf_vel = [0.0, 0.0]
@@ -384,6 +401,9 @@ def run(seed: int, *, tracker: str, speed: float, duration: float, instance: int
                     if math.hypot(rn, re_) > GATE_M and gated_run < REACQUIRE_FRAMES:
                         accepted = False
                         gated_run += 1
+                        res.gated_frames += 1
+                    elif not so.track_motion_keep(ctypes.byref(motion), meas_n, meas_e, dt_f):
+                        accepted = False
                         res.gated_frames += 1
                     else:
                         if gated_run >= REACQUIRE_FRAMES:

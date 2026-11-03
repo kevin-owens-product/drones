@@ -192,8 +192,35 @@ static int test_hidden_on_texture(void) {
     return 0;
 }
 
+static int test_motion_rejects_a_stop(void) {
+    track_motion motion;
+    int i;
+    int kept = 0;
+    int rejected = 0;
+    float speed;
+    track_motion_init(&motion);
+    for (i = 0; i < 12; i++) {
+        kept += track_motion_keep(&motion, 0.f, 0.8f * (float)i, 0.2f);
+    }
+    for (i = 0; i < 6; i++) {
+        rejected += track_motion_keep(&motion, 0.f, 0.8f * 11.f, 0.2f) == 0;
+    }
+    speed = sqrtf(motion.vn * motion.vn + motion.ve * motion.ve);
+    printf("motion_moving_kept %d motion_stop_rejected %d motion_speed_mps %.2f\n", kept, rejected, speed);
+    if (kept != 12) {
+        return fail("a steady 4 m/s track was dropped");
+    }
+    if (rejected < 1) {
+        return fail("a stop was adopted as the moving track");
+    }
+    if (speed < 2.f) {
+        return fail("rejecting the stop pulled the track speed down");
+    }
+    return 0;
+}
+
 int main(void) {
-    if (test_servo_centers() || test_fifty() || test_hidden_on_texture()) {
+    if (test_servo_centers() || test_fifty() || test_hidden_on_texture() || test_motion_rejects_a_stop()) {
         return 1;
     }
     printf("track tests passed\n");

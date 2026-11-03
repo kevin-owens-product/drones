@@ -43,6 +43,21 @@ typedef struct {
     float vz;
 } track_vel;
 
+/* Ground-frame motion. A measurement that stops while the track was moving
+ * is a parked look-alike, not the designated object. */
+typedef struct {
+    float n;
+    float e;
+    float vn;
+    float ve;
+    int filled;
+} track_motion;
+
+void track_motion_init(track_motion *motion);
+/* Returns 1 when the measurement is adopted. Returns 0 when it is stationary
+ * and the track was not, and leaves the track state unchanged. */
+int track_motion_keep(track_motion *motion, float n, float e, float dt_s);
+
 void track_init(track_lock *lock, const uint8_t *frame, int x, int y);
 /* Returns 1 when the peak correlation is above the lock threshold. */
 int track_step(track_lock *lock, const uint8_t *frame);
