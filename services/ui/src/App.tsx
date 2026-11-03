@@ -7,6 +7,7 @@ import { FleetPage } from "./pages/Fleet";
 import { LivePage } from "./pages/Live";
 import { MissionsPage } from "./pages/Missions";
 import { OrganizationPage } from "./pages/Organization";
+import { OperatePage } from "./operate/Operate";
 import { OverviewPage } from "./pages/Overview";
 import { PeoplePage } from "./pages/People";
 import { SharingPage } from "./pages/Sharing";
@@ -16,6 +17,7 @@ import { Shell } from "./shell/Shell";
 import type { Section, Viewer } from "./shell/types";
 
 const SECTIONS: readonly Section[] = [
+  "operate",
   "overview",
   "live",
   "fleet",
@@ -44,7 +46,7 @@ function bannerClass(text: string): string {
 
 function sectionFromHash(): Section {
   const raw = window.location.hash.replace(/^#/, "");
-  return SECTIONS.find((item) => item === raw) ?? "overview";
+  return SECTIONS.find((item) => item === raw) ?? "operate";
 }
 
 export function App() {
@@ -120,6 +122,7 @@ export function App() {
 
   const page = viewer ? (
     <Shell banner={banner} viewer={viewer} section={section} onSection={onSection} onLogout={() => void onLogout()}>
+      {section === "operate" ? <OperatePage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "overview" ? <OverviewPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "live" ? <LivePage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "fleet" ? <FleetPage viewer={viewer} onBanner={setBanner} /> : null}

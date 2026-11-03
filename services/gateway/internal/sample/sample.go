@@ -12,6 +12,17 @@ type Sample struct {
 	AltM           float64  `json:"alt_m"`
 	Classification string   `json:"classification"`
 	Caveats        []string `json:"caveats"`
+
+	// Vehicle state for the operator console. All optional: a sample with
+	// only a position is still valid.
+	HeadingDeg  *float64 `json:"heading_deg,omitempty"`
+	GroundMps   *float64 `json:"ground_mps,omitempty"`
+	ClimbMps    *float64 `json:"climb_mps,omitempty"`
+	BatteryPct  *float64 `json:"battery_pct,omitempty"`
+	Mode        string   `json:"mode,omitempty"`
+	Armed       *bool    `json:"armed,omitempty"`
+	NavSource   string   `json:"nav_source,omitempty"`
+	GNSSTrusted *bool    `json:"gnss_trusted,omitempty"`
 }
 
 func Validate(item Sample, topicTenant, topicTail string) error {
@@ -26,6 +37,12 @@ func Validate(item Sample, topicTenant, topicTail string) error {
 	}
 	if item.Lat < -90 || item.Lat > 90 || item.Lon < -180 || item.Lon > 180 {
 		return fmt.Errorf("position out of range")
+	}
+	if item.BatteryPct != nil && (*item.BatteryPct < 0 || *item.BatteryPct > 100) {
+		return fmt.Errorf("battery out of range")
+	}
+	if item.HeadingDeg != nil && (*item.HeadingDeg < 0 || *item.HeadingDeg >= 360) {
+		return fmt.Errorf("heading out of range")
 	}
 	switch item.Classification {
 	case "UNCLASSIFIED", "CUI", "":

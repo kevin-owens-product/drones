@@ -50,7 +50,7 @@ const KIND_LABEL: Record<string, string> = {
   rtb: "Recover",
 };
 
-const TAIL_COLOR = ["#c8f58c", "#7dcea0", "#b6a5ff", "#f6b98a", "#8eb4ff"];
+const TAIL_COLOR = ["#5cc8ff", "#7dcea0", "#b6a5ff", "#f6b98a", "#8eb4ff"];
 
 export function MissionRoute({ stops, keepouts = [] }: { stops: RouteStop[]; keepouts?: RouteKeepOut[] }) {
   const host = useRef<HTMLDivElement>(null);
@@ -77,9 +77,9 @@ export function MissionRoute({ stops, keepouts = [] }: { stops: RouteStop[]; kee
           keepouts: { type: "geojson", data: { type: "FeatureCollection", features: [] } },
         },
         layers: [
-          { id: "ocean", type: "background", paint: { "background-color": "#07141a" } },
-          { id: "land", type: "fill", source: "countries", paint: { "fill-color": "#1a3a32" } },
-          { id: "coast", type: "line", source: "countries", paint: { "line-color": "#8fb56a", "line-width": 0.7 } },
+          { id: "ocean", type: "background", paint: { "background-color": "#090c10" } },
+          { id: "land", type: "fill", source: "countries", paint: { "fill-color": "#151d26" } },
+          { id: "coast", type: "line", source: "countries", paint: { "line-color": "#3a4b5d", "line-width": 0.7 } },
           {
             id: "keepouts-fill",
             type: "fill",
@@ -96,7 +96,7 @@ export function MissionRoute({ stops, keepouts = [] }: { stops: RouteStop[]; kee
             id: "route-line",
             type: "line",
             source: "route",
-            paint: { "line-color": "#c8f58c", "line-width": 2 },
+            paint: { "line-color": "#5cc8ff", "line-width": 2 },
           },
         ],
       },
@@ -162,7 +162,7 @@ export function MissionRoute({ stops, keepouts = [] }: { stops: RouteStop[]; kee
       }
       for (const marker of markers.current) marker.remove();
       markers.current = current.map((stop) => {
-        const color = TAIL_COLOR[Math.max(tails.indexOf(stop.tail || "unassigned"), 0) % TAIL_COLOR.length] ?? "#c8f58c";
+        const color = TAIL_COLOR[Math.max(tails.indexOf(stop.tail || "unassigned"), 0) % TAIL_COLOR.length] ?? "#5cc8ff";
         const el = document.createElement("button");
         el.type = "button";
         el.className = "tail-marker";

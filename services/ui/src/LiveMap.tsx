@@ -252,13 +252,13 @@ export function LiveMap({
           },
         },
         layers: [
-          { id: "ocean", type: "background", paint: { "background-color": "#07141a" } },
-          { id: "land", type: "fill", source: "countries", paint: { "fill-color": "#1a3a32" } },
+          { id: "ocean", type: "background", paint: { "background-color": "#090c10" } },
+          { id: "land", type: "fill", source: "countries", paint: { "fill-color": "#151d26" } },
           {
             id: "coast",
             type: "line",
             source: "countries",
-            paint: { "line-color": "#8fb56a", "line-width": 0.8 },
+            paint: { "line-color": "#3a4b5d", "line-width": 0.8 },
           },
           {
             id: "clusters",
@@ -266,7 +266,7 @@ export function LiveMap({
             source: AIRCRAFT,
             filter: ["has", "point_count"],
             paint: {
-              "circle-color": "#c8f58c",
+              "circle-color": "#5cc8ff",
               "circle-radius": [
                 "interpolate",
                 ["linear"],

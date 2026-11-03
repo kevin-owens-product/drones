@@ -2,7 +2,17 @@
 
 Flight software and an autonomy testbed for small quadcopters. Simulated vehicles fly through PX4 and Betaflight, a MAVLink gateway, and one ground-control screen. The same loop measures GPS-denied navigation, operator-designated visual tracking, and multi-vehicle tasking.
 
-Demo recording, once the six-quad flight is captured: `docs/media/demo.gif`.
+![The Operate screen: vehicles that need the operator first, a tactical picture, the flight display, and the event timeline](docs/media/operate.gif)
+
+The console is one Operate screen. Vehicles that need the operator sort to the top with the reason (link lost, GNSS rejected by the spoof gate, low battery). The tactical picture is a local metric plane that needs no map tiles, so it works air-gapped. `⌘K` jumps to any vehicle, page, or filter, and `J`/`K`, `F`, `A`, and `/` drive it from the keyboard. It monitors; it does not send flight commands.
+
+To see it without the stack:
+
+```bash
+cd services/ui && npm ci && npm run build && npm run demo   # http://localhost:4173
+```
+
+The demo server plays a scripted nine-vehicle sortie and marks every page `DEMO DATA`.
 
 ## Architecture
 

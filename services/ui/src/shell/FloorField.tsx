@@ -63,7 +63,7 @@ export function FloorField() {
           size: dot.size,
         };
       });
-      context.strokeStyle = "rgba(200, 245, 140, 0.16)";
+      context.strokeStyle = "rgba(92, 200, 255, 0.16)";
       for (let index = 0; index < points.length; index += 1) {
         const left = points[index];
         const right = points[(index + 5) % points.length];
@@ -77,7 +77,7 @@ export function FloorField() {
         context.stroke();
       }
       for (const point of points) {
-        context.fillStyle = point.size > 2 ? "#c8f58c" : "#7f9a6f";
+        context.fillStyle = point.size > 2 ? "#5cc8ff" : "#4a6a82";
         context.beginPath();
         context.arc(point.x, point.y, point.size, 0, Math.PI * 2);
         context.fill();
