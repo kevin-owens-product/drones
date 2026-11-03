@@ -7,6 +7,7 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
+import { acknowledge, RESPONSES, scorecard, startSession, visible } from "./training.mjs";
 
 const DIST = fileURLToPath(new URL("../dist/", import.meta.url));
 const PORT = Number(process.env.PORT ?? 4173);
@@ -129,8 +130,42 @@ const ROUTES = {
 
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".woff2": "font/woff2", ".svg": "image/svg+xml", ".json": "application/json" };
 
+// Training mode: open the console with ?scenario=qual-1. One session at a time.
+let session = null;
+async function training(req, url) {
+  const name = url.searchParams.get("scenario");
+  if (url.pathname === "/v1/training/start") {
+    session = startSession(name, Date.now());
+    return session ? { scenario: session.name, title: session.title, responses: RESPONSES } : { error: "unknown scenario" };
+  }
+  if (!session) return { error: "no session" };
+  if (url.pathname === "/v1/training/state") return { alerts: visible(session, Date.now()), scorecard: scorecard(session) };
+  if (url.pathname === "/v1/training/ack" && req.method === "POST") {
+    let body = "";
+    for await (const chunk of req) body += chunk;
+    let msg = {};
+    try {
+      msg = JSON.parse(body);
+    } catch {
+      return { error: "json" };
+    }
+    return acknowledge(session, String(msg.id), String(msg.action), Date.now());
+  }
+  if (url.pathname === "/v1/training/scorecard") return scorecard(session);
+  return { error: "unknown" };
+}
+
 createServer(async (req, res) => {
-  const path = new URL(req.url ?? "/", "http://x").pathname;
+  const url = new URL(req.url ?? "/", "http://x");
+  const path = url.pathname;
+  if (path.startsWith("/v1/training/")) {
+    const out = await training(req, url);
+    res.setHeader("X-A2E-Banner", BANNER);
+    res.setHeader("content-type", "application/json");
+    res.statusCode = out.error ? 400 : 200;
+    res.end(JSON.stringify(out));
+    return;
+  }
   if (path.startsWith("/v1/")) {
     const route = ROUTES[path];
     res.setHeader("X-A2E-Banner", BANNER);

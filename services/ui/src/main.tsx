@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { Training, scenarioParam } from "./operate/Training";
 import "@fontsource-variable/inter";
 import "@fontsource-variable/jetbrains-mono";
 import "./styles.css";
@@ -13,5 +14,6 @@ if (!root) {
 createRoot(root).render(
   <StrictMode>
     <App />
+    {scenarioParam() && <Training scenario={scenarioParam() ?? ""} />}
   </StrictMode>,
 );
