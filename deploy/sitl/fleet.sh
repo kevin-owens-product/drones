@@ -19,6 +19,10 @@ airframe="$PX4_PREFIX/etc/init.d-posix/airframes/4001_gz_x500"
 if ! grep -q MAV_0_BROADCAST "$airframe"; then
     printf '\nparam set-default MAV_0_BROADCAST 1\nparam set-default MAV_1_BROADCAST 1\n' >> "$airframe"
 fi
+# Keep only the newest ulog directories per instance. The default keeps all of them.
+if ! grep -q SDLOG_DIRS_MAX "$airframe"; then
+    printf '\nparam set-default SDLOG_DIRS_MAX 3\n' >> "$airframe"
+fi
 
 DOCKER_HOST_IP=$(getent ahostsv4 host.docker.internal 2>/dev/null | awk '/STREAM/ {print $1; exit}')
 if [ -n "$DOCKER_HOST_IP" ]; then
@@ -36,11 +40,13 @@ while [ "$i" -lt "$COUNT" ]; do
         standalone=1
     fi
     echo "spawn instance $i pose $pose"
+    # -d runs without the pxh shell. A background job has no stdin, so pxh reprints
+    # its prompt in a tight loop, and that output filled 1.5 TiB of container logs.
     PX4_SYS_AUTOSTART=4001 \
     PX4_SIM_MODEL=x500_a2e \
     PX4_GZ_MODEL_POSE="$pose" \
     PX4_GZ_STANDALONE="$standalone" \
-        "$PX4_PREFIX/bin/px4" -i "$i" &
+        "$PX4_PREFIX/bin/px4" -d -i "$i" &
     if [ "$i" -eq 0 ]; then
         sleep 8
     else

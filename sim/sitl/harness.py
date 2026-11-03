@@ -72,6 +72,7 @@ class Sih:
         subprocess.run(
             [
                 "docker", "run", "-d", "--name", self.name, "--network", "host",
+                "--log-opt", "max-size=10m", "--log-opt", "max-file=3",
                 "-e", "PX4_SIMULATOR=sihsim",
                 "-e", "PX4_SIM_MODEL=sihsim_quadx",
                 "-e", "PX4_SYS_AUTOSTART=10040",
