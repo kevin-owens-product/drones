@@ -34,7 +34,8 @@ const FLEET = [
   // They cycle every PAD_CYCLE demo seconds so the launch view always has something to show.
   { tail: "NX-10", kind: "pad", x: -2400, y: -1250, boot: 60, fix: 210, battery: 97 },
   { tail: "NX-11", kind: "pad", x: -2650, y: -1450, boot: 90, fix: 140, battery: 41 },
-  { tail: "NX-12", kind: "pad", x: -2150, y: -1450, boot: 30, fix: 90, battery: 100 },
+  // NX-12 is grounded by its factory birth record, so it stays NO-GO with the reason shown.
+  { tail: "NX-12", kind: "pad", x: -2150, y: -1450, boot: 30, fix: 90, battery: 100, grounded: "EOL hover test failed: IMU cal out of range" },
 ];
 const PAD_CYCLE = 360;
 const PAD_DOWN = 330;
@@ -107,7 +108,8 @@ const PLATFORMS = FLEET.map((c, i) => ({
   designation: i < 7 || c.kind === "pad" ? "Quad, 7 in, VIO + GNSS" : "Quad, 5 in, GNSS",
   group_size: "Group 1",
   portion_mark: "(U)",
-  airworthiness: c.tail === "NX-08" ? "restricted" : "airworthy",
+  airworthiness: c.grounded ? "grounded" : c.tail === "NX-08" ? "restricted" : "airworthy",
+  airworthiness_reason: c.grounded ?? null,
   classification: "UNCLASSIFIED",
 }));
 

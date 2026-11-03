@@ -35,7 +35,8 @@ export function checks(v: Vehicle): Check[] {
       id: "airworthy",
       label: "Airworthiness",
       ok: airworthiness !== "restricted" && airworthiness !== "grounded",
-      detail: airworthiness ? airworthiness[0]!.toUpperCase() + airworthiness.slice(1) : "Not recorded",
+      // Carry the birth-record or maintenance reason when there is one, so the operator sees why.
+      detail: v.airworthinessReason || (airworthiness ? airworthiness[0]!.toUpperCase() + airworthiness.slice(1) : "Not recorded"),
     },
     {
       id: "battery",
