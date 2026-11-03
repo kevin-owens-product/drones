@@ -5,6 +5,7 @@ export interface DemoOptions {
   extra?: number | string;
   terrain?: unknown;
   assetBase?: string;
+  attrition?: unknown;
 }
 
 export interface Demo {

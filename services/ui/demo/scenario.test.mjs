@@ -31,3 +31,19 @@ test("unknown routes answer with an empty list, training errors with 400", () =>
   assert.deepEqual(get(demo, "/v1/nothing"), { items: [] });
   assert.equal(demo.handle("GET", new URL("/v1/training/state", "http://x")).status, 400);
 });
+
+test("attrition: report served as baked, hold recorded once, nothing without a bake", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const report = JSON.parse(await readFile(new URL("./assets/attrition.json", import.meta.url), "utf8"));
+  const demo = createDemo({ attrition: report });
+  const body = get(demo, "/v1/attrition");
+  assert.match(body.source, /simulated/i);
+  assert.ok(body.autopsy.alerts.length >= 1);
+  const alert = body.autopsy.alerts[0];
+  const post = (msg) => demo.handle("POST", new URL("/v1/attrition/hold", "http://x"), JSON.stringify(msg));
+  assert.equal(post({ attribute: alert.attribute, value: alert.value, by: "Demo Operator" }).status, 200);
+  post({ attribute: alert.attribute, value: alert.value, by: "Demo Operator" });
+  assert.equal(get(demo, "/v1/attrition").holds.length, 1);
+  assert.equal(post({ attribute: "esc_lot", value: "nope" }).status, 404);
+  assert.equal(createDemo().handle("GET", new URL("/v1/attrition", "http://x")).status, 404);
+});

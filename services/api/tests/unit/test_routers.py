@@ -18,6 +18,7 @@ REQUIRED = (
     "/v1/eval/runs",
     "/v1/logs/ulg/series",
     "/v1/logs/blackbox/series",
+    "/v1/attrition",
 )
 
 

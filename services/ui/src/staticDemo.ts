@@ -1,4 +1,5 @@
 import { BANNER, createDemo } from "../demo/scenario.mjs";
+import attrition from "../demo/assets/attrition.json";
 import terrain from "../demo/assets/terrain.json";
 
 /**
@@ -13,6 +14,7 @@ export function installStaticDemo(): void {
     speed: 6,
     extra: Number(params.get("fleet") ?? 0) || 0,
     terrain,
+    attrition,
     assetBase: `${import.meta.env.BASE_URL}demo-assets/`,
   });
   const real = window.fetch.bind(window);
