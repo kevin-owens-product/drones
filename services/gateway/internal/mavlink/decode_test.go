@@ -102,6 +102,55 @@ func TestDecodeOverUDP(t *testing.T) {
 	}
 }
 
+func TestCommandRoundTrip(t *testing.T) {
+	server := &gomavlib.Node{
+		Endpoints:        []gomavlib.EndpointConf{gomavlib.EndpointUDPServer{Address: "127.0.0.1:17661"}},
+		Dialect:          common.Dialect,
+		OutVersion:       gomavlib.V2,
+		OutSystemID:      1,
+		HeartbeatDisable: true,
+	}
+	if err := server.Initialize(); err != nil {
+		t.Fatal(err)
+	}
+	defer server.Close()
+	client := &gomavlib.Node{
+		Endpoints:        []gomavlib.EndpointConf{gomavlib.EndpointUDPClient{Address: "127.0.0.1:17661"}},
+		Dialect:          common.Dialect,
+		OutVersion:       gomavlib.V2,
+		OutSystemID:      255,
+		HeartbeatDisable: true,
+	}
+	if err := client.Initialize(); err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	time.Sleep(50 * time.Millisecond)
+	if err := client.WriteMessageAll(Command(1, CommandArm, 1)); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.After(2 * time.Second)
+	for {
+		select {
+		case evt := <-server.Events():
+			frame, ok := evt.(*gomavlib.EventFrame)
+			if !ok {
+				continue
+			}
+			sample, ok := Decode(frame.SystemID(), frame.Message(), time.Now())
+			if !ok || sample.Name != "COMMAND_LONG" {
+				continue
+			}
+			if sample.Command != CommandArm || sample.Param1 != 1 {
+				t.Fatalf("command %+v", sample)
+			}
+			return
+		case <-deadline:
+			t.Fatal("arm command was not delivered")
+		}
+	}
+}
+
 func TestSustainedDecodeRate(t *testing.T) {
 	msg := &common.MessageHeartbeat{CustomMode: 4, BaseMode: 81, SystemStatus: 4}
 	start := time.Now()
