@@ -8,5 +8,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Onboard regression
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Runs the onboard unit suites, then fails the PR if any scenarios/*.yaml
+      # bound is broken. The hour-long PX4 run is not repeated here; its
+      # committed summary in docs/eval/sitl.txt is read as-is.
+      - name: Onboard regression and scenario gate
         run: make eval
+      - name: Scenario gate summary
+        if: always()
+        run: |
+          test -f docs/eval/latest.txt || { echo "### Scenario gate: no eval log, onboard tests did not finish" >> "$GITHUB_STEP_SUMMARY"; exit 1; }
+          .venv/bin/python -m a2e.evalreport docs/eval/latest.txt --scenarios scenarios
+      - name: Failure-mode triage of committed SITL rows
+        if: always()
+        run: |
+          {
+            echo "### Failure modes in committed SITL rows (advisory)"
+            echo
+            .venv/bin/python -m a2e.triage docs/eval/sitl_gnss.jsonl docs/eval/sitl_track.jsonl
+          } >> "$GITHUB_STEP_SUMMARY"
