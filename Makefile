@@ -11,17 +11,23 @@ demo:
 down:
 	docker compose down
 
-test-unit:
-	cd services/api && python -m pytest tests/unit --cov=a2e --cov-report=term-missing
+PY := $(CURDIR)/.venv/bin/python
 
-test-integration:
+$(PY):
+	python3 -m venv $(CURDIR)/.venv
+	$(PY) -m pip install -e "$(CURDIR)/services/api[dev]"
+
+test-unit: $(PY)
+	cd services/api && $(PY) -m pytest tests/unit --cov=a2e --cov-report=term-missing
+
+test-integration: $(PY)
 	@test -f .env || (echo "Copy .env.example to .env and start postgres + opa" && exit 1)
-	set -a && . ./.env && set +a && cd services/api && python -m pytest tests/integration
+	set -a && . ./.env && set +a && cd services/api && $(PY) -m pytest tests/integration
 
 test: test-unit
 
-lint:
-	cd services/api && ruff check src tests && mypy src
+lint: $(PY)
+	cd services/api && $(PY) -m ruff check src tests && $(PY) -m mypy src
 
 opa:
 	docker run --rm -v "$(CURDIR)/policies:/policies" openpolicyagent/opa:0.70.0 test /policies -v
