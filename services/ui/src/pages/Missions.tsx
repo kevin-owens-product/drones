@@ -455,7 +455,7 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
       if (result.body.state === "active") {
         const tail = objectives.map((item) => item.tail.trim()).find((item) => item.length > 0);
         if (tail) sessionStorage.setItem("a2e-live-tail", tail);
-        window.location.hash = "live";
+        window.location.hash = "operate";
       }
       await loadMissions();
     } catch (error) {
@@ -571,7 +571,7 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
                       const tail = objectives.map((item) => item.tail.trim()).find((item) => item.length > 0);
                       if (!tail) return;
                       sessionStorage.setItem("a2e-live-tail", tail);
-                      window.location.hash = "live";
+                      window.location.hash = "operate";
                     }}
                   >
                     Watch a tail

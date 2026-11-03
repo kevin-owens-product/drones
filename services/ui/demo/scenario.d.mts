@@ -10,7 +10,7 @@ export interface DemoOptions {
 
 export interface Demo {
   extra: number;
-  handle(method: string, url: URL, raw?: string): { status: number; body: unknown };
+  handle(method: string, url: URL, raw?: string, who?: { display_name: string; roles: string[] } | null): { status: number; body: unknown };
 }
 
 export declare function createDemo(opts?: DemoOptions): Demo;

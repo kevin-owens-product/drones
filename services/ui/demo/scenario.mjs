@@ -6,13 +6,16 @@ import { plan as planConfig } from "./configure.mjs";
 import { denialPicture } from "./denial.mjs";
 import { propose } from "./intent.mjs";
 import { FLEET_SHARE, fileReport, seedReports, triage } from "./fieldvoice.mjs";
+import { ACCOUNTS, birthRecord, birthVerdict, can, createLedger } from "./ledger.mjs";
 import { acknowledge, RESPONSES, scorecard, startSession, visible } from "./training.mjs";
 
 export const BANNER = "UNCLASSIFIED // DEMO DATA";
 
 /**
  * @param {{ speed?: number, extra?: number, terrain?: object | null, assetBase?: string, attrition?: object | null }} opts
- * @returns {{ handle: (method: string, url: URL, body: string) => { status: number, body: unknown } }}
+ * `who` is the signed-in demo account when the caller knows it (the hosted demo does);
+ * without it every request is allowed and the actor is whatever the page sent as `by`.
+ * @returns {{ handle: (method: string, url: URL, body: string, who?: { display_name: string, roles: string[] } | null) => { status: number, body: unknown } }}
  */
 export function createDemo(opts = {}) {
   const SPEED = Number(opts.speed ?? 6);
@@ -192,9 +195,23 @@ export function createDemo(opts = {}) {
     group_size: "Group 1",
     portion_mark: "(U)",
     airworthiness: c.grounded ? "grounded" : c.tail === "NX-08" ? "restricted" : "airworthy",
-    airworthiness_reason: c.grounded ?? null,
+    airworthiness_reason: c.grounded ?? (c.tail === "NX-08" ? "Prop strike on recovery; hover check before next sortie" : null),
     classification: "UNCLASSIFIED",
   }));
+
+  // Factory birth records for the named tails, and the audit log. The log opens
+  // with the two airworthiness calls the scenario starts with, then records
+  // every proposal, approval, hold and field report made this session.
+  const BIRTH = FLEET.map((c, i) => {
+    const rec = birthRecord(c.tail, i, c.grounded);
+    return { ...rec, verdict: birthVerdict(rec) };
+  });
+  const audit = createLedger();
+  const opened = T0 - 40 * 60_000;
+  audit.append({ actor: "EOL bench 2", action: "platform.ground", resource_type: "platform", resource_id: "NX-12", reason_codes: ["birth_record"], detail: "EOL hover test failed: IMU cal out of range", at: opened });
+  audit.append({ actor: "Demo Maintainer", action: "platform.restrict", resource_type: "platform", resource_id: "NX-08", reason_codes: ["maintenance"], detail: "Prop strike on recovery; hover check before next sortie", at: opened + 9 * 60_000 });
+  audit.append({ actor: "Demo Operator", action: "mission.approve", resource_type: "mission", resource_id: "Survey grid north", decision: "deny", reason_codes: ["role_denied"], at: opened + 18 * 60_000 });
+  audit.append({ actor: "Demo Mission Commander", action: "mission.approve", resource_type: "mission", resource_id: "Survey grid north", detail: "Nine vehicles, survey and overwatch", at: opened + 22 * 60_000 });
 
   function loopTime() {
     // The sortie loops every ten minutes of demo time so it never runs dry.
@@ -389,6 +406,9 @@ export function createDemo(opts = {}) {
     },
     "/v1/operations/picture": picture,
     "/v1/operations/board": () => ({ items: [] }),
+    "/v1/users": () => ({ items: ACCOUNTS }),
+    "/v1/birth-records": () => ({ items: BIRTH }),
+    "/v1/audit": () => ({ items: audit.items() }),
     "/v1/session/dev-login": () => ({ ok: true }),
     "/v1/session/logout": () => ({ ok: true }),
   };
@@ -408,8 +428,16 @@ export function createDemo(opts = {}) {
       }
       const alert = opts.attrition.autopsy.alerts.find((a) => a.attribute === msg.attribute && a.value === msg.value);
       if (!alert) return { status: 404, body: { error: "no such alert" } };
+      const actor = caller?.display_name ?? String(msg.by ?? "operator");
+      if (caller && !can(caller.roles, "fleet.write")) {
+        audit.append({ actor, action: "attrition.hold", resource_type: "lot", resource_id: alert.value, decision: "deny", reason_codes: ["role_denied"] });
+        return { status: 403, body: { detail: "Holding a lot needs the maintainer, mission commander or admin role." } };
+      }
       if (!holds.some((h) => h.attribute === alert.attribute && h.value === alert.value)) {
-        holds.push({ attribute: alert.attribute, value: alert.value, serials: alert.in_service_count, by: String(msg.by ?? "operator"), at: new Date().toISOString() });
+        audit.append({ actor, action: "attrition.hold", resource_type: "lot", resource_id: alert.value, detail: `${alert.in_service_count} airframes in service held for inspection` });
+      }
+      if (!holds.some((h) => h.attribute === alert.attribute && h.value === alert.value)) {
+        holds.push({ attribute: alert.attribute, value: alert.value, serials: alert.in_service_count, by: actor, at: new Date().toISOString() });
       }
       return { status: 200, body: { holds } };
     }
@@ -426,7 +454,9 @@ export function createDemo(opts = {}) {
       } catch {
         return { status: 400, body: { error: "json" } };
       }
+      if (caller) msg.by = caller.display_name;
       const out = fileReport(reports, msg);
+      if (!out.error) audit.append({ actor: out.by, action: "field_report.file", resource_type: "field_report", resource_id: out.id, detail: `${out.tail}: ${out.text.slice(0, 80)}` });
       return { status: out.error ? 400 : 200, body: out };
     }
     return {
@@ -464,14 +494,22 @@ export function createDemo(opts = {}) {
     if (url.pathname === "/v1/intent/propose") {
       const p = propose(String(msg.brief ?? "").slice(0, 600), briefFleet());
       proposals.push(p);
+      audit.append({ actor: caller?.display_name ?? "operator", action: "brief.propose", resource_type: "proposal", resource_id: p.id, detail: String(msg.brief ?? "").slice(0, 80) });
       return { status: 200, body: p };
     }
     if (url.pathname === "/v1/intent/approve") {
       const p = proposals.find((x) => x.id === msg.id);
       if (!p) return { status: 404, body: { error: "no such proposal" } };
       if (p.status !== "awaiting approval") return { status: 409, body: { error: `proposal is ${p.status}` } };
+      const action = msg.decision === "reject" ? "brief.reject" : "brief.approve";
+      const actor = caller?.display_name ?? String(msg.by ?? "operator");
+      if (caller && !can(caller.roles, "mission.approve")) {
+        audit.append({ actor, action, resource_type: "proposal", resource_id: p.id, decision: "deny", reason_codes: ["role_denied"] });
+        return { status: 403, body: { detail: "Approving or rejecting a plan needs the mission commander or admin role." } };
+      }
       p.status = msg.decision === "reject" ? "rejected" : "approved";
-      p.decided_by = String(msg.by ?? "operator");
+      p.decided_by = actor;
+      audit.append({ actor, action, resource_type: "proposal", resource_id: p.id, detail: p.status === "approved" ? "Filed as a draft for mission review; nothing sent to a vehicle" : "" });
       p.decided_at = new Date().toISOString();
       return { status: 200, body: p };
     }
@@ -501,9 +539,12 @@ export function createDemo(opts = {}) {
     return { error: "unknown" };
   }
 
+  let caller = null;
   return {
     extra: EXTRA,
-    handle(method, url, raw = "") {
+    handle(method, url, raw = "", who = null) {
+      caller = who;
+      if (url.pathname === "/v1/audit" && caller && !can(caller.roles, "audit.read")) return { status: 403, body: { detail: "role_denied" } };
       if (url.pathname.startsWith("/v1/attrition")) return attrition(method, url, raw);
       if (url.pathname === "/v1/field-reports") return fieldReports(method, raw);
       if (url.pathname.startsWith("/v1/intent")) return intent(method, url, raw);

@@ -20,6 +20,8 @@ interface AuditRow {
   resource_type: string;
   decision: string;
   reason_codes: string[];
+  resource_id?: string;
+  detail?: string;
   prev_hash: string;
   row_hash: string;
 }
@@ -34,7 +36,7 @@ function explain(error: unknown): string {
     return "The audit chain could not be found.";
   }
   if (code === "role_denied" || code === "denied") {
-    return "The audit chain is limited to the auditor role.";
+    return "The audit log needs the auditor or admin role.";
   }
   return "The audit chain could not be loaded.";
 }
@@ -49,6 +51,30 @@ function hashPrefix(value: string): string {
     return "—";
   }
   return hex.length <= 12 ? hex : hex.slice(0, 12);
+}
+
+const ACTION_TEXT: Record<string, string> = {
+  "brief.propose": "Brief read into a plan",
+  "brief.approve": "Plan approved",
+  "brief.reject": "Plan rejected",
+  "mission.approve": "Mission approved",
+  "attrition.hold": "Parts lot held",
+  "field_report.file": "Field report filed",
+  "platform.ground": "Airframe grounded",
+  "platform.restrict": "Airframe restricted",
+};
+
+function actionText(action: string): string {
+  return ACTION_TEXT[action] ?? action;
+}
+
+/** Row index where a row stops pointing at the hash of the row before it, or -1. Scheme-independent. */
+function brokenLink(rows: readonly AuditRow[]): number {
+  const bySeq = [...rows].sort((a, b) => a.seq - b.seq);
+  for (let i = 1; i < bySeq.length; i += 1) {
+    if (bySeq[i]?.prev_hash !== bySeq[i - 1]?.row_hash) return bySeq[i]?.seq ?? i;
+  }
+  return -1;
 }
 
 function decisionClass(decision: string): string {
@@ -109,16 +135,27 @@ export function AuditPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b: 
     <section className="page page-fill" id="page-audit">
       <header className="page-head">
         <div>
-          <p className="kicker">Tenant</p>
+          <p className="kicker">Admin</p>
           <h1 className="page-title">Audit</h1>
-          <p className="lede">Each row is chained to the hash before it.</p>
+          <p className="lede">Every plan approval, hold, grounding and field report, including the ones a role was refused. Each row carries the hash of the row before it, so an edited row shows.</p>
         </div>
       </header>
       {access === "limited" ? (
-        <div className="denied panel">The audit chain is limited to the auditor role.</div>
+        <div className="denied panel">The audit log needs the auditor or admin role.</div>
       ) : null}
       {access === "failed" ? <p className="fault" role="alert">{fault}</p> : null}
       {access === "loading" ? <p className="meta">Loading the audit chain.</p> : null}
+      {access === "open" && items.length > 1 ? (
+        brokenLink(items) === -1 ? (
+          <p className="meta" data-testid="chain-status">
+            <span className="pill pill-ok">Chain intact</span> {items.length} events, each linked to the one before it.
+          </p>
+        ) : (
+          <p className="fault" role="alert" data-testid="chain-status">
+            The chain breaks at event {brokenLink(items)}: it does not point at the hash of the event before it.
+          </p>
+        )
+      ) : null}
       {access === "open" ? (
         <div className="role-switch">
           <button type="button" className={decisionFilter === "all" ? "btn btn-primary" : "btn"} onClick={() => setDecisionFilter("all")}>All</button>
@@ -133,8 +170,12 @@ export function AuditPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b: 
             <article className="chain-row" key={row.id}>
               <p className="meta">{compactTime(row.occurred_at)}</p>
               <div>
-                <strong>{row.action}</strong>
-                <p className="meta">{row.resource_type} · {reasonText(row.reason_codes)}</p>
+                <strong>{actionText(row.action)}{row.resource_id ? ` · ${row.resource_id}` : ""}</strong>
+                <p className="meta">
+                  {row.actor_id}
+                  {row.detail ? ` · ${row.detail}` : ""}
+                  {(row.reason_codes ?? []).length > 0 ? ` · ${reasonText(row.reason_codes)}` : ""}
+                </p>
                 <p className="meta"><code>{hashPrefix(row.prev_hash)} → {hashPrefix(row.row_hash)}</code></p>
               </div>
               <span className={decisionClass(row.decision)}>{row.decision}</span>

@@ -1,9 +1,6 @@
 export type Section =
   | "operate"
-  | "overview"
-  | "live"
   | "fleet"
-  | "video"
   | "missions"
   | "debrief"
   | "eval"
@@ -12,9 +9,7 @@ export type Section =
   | "denial"
   | "configure"
   | "brief"
-  | "organization"
-  | "people"
-  | "sharing"
+  | "access"
   | "audit";
 
 export type Viewer = {
