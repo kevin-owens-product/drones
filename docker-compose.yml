@@ -139,6 +139,14 @@ services:
       - "18554:8554"
       - "18888:8888"
 
+  betaflight:
+    profiles: ["fpv"]
+    build:
+      context: ./deploy/betaflight
+      dockerfile: Dockerfile
+    ports:
+      - "15761:5761"
+
   px4:
     image: px4io/px4-sitl-gazebo:v1.18.0-rc1@sha256:aa4bbf35f0bd6bdb3269cc96e317c8e78b87f1fc769c734c0818094074e1cc0a
     environment:
