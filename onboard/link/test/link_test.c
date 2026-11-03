@@ -1,5 +1,6 @@
 #include "link.h"
 
+#include <math.h>
 #include <stdio.h>
 
 static int fail(const char *message) {
@@ -18,7 +19,47 @@ static double rate(double distance, const link_jammer *jammer, double sx, double
     return (double)ok / 2000.0;
 }
 
-int main(void) {
+static double axis_x(double distance_m) {
+    return 48.0 + (log10(distance_m) - 1.0) / 3.0 * 552.0;
+}
+
+static double axis_y(double probability) {
+    return 300.0 - probability * 250.0;
+}
+
+static int write_plot(const char *path, double near, double far, double jammed, double outside) {
+    FILE *out;
+    int i;
+    out = fopen(path, "w");
+    if (out == 0) {
+        return fail("could not write the link plot");
+    }
+    fprintf(out, "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 640 360\">\n");
+    fprintf(out, "<polyline fill=\"none\" stroke=\"#d0d0d0\" stroke-width=\"2\" points=\"");
+    for (i = 0; i <= 60; i++) {
+        double distance = pow(10.0, 1.0 + 3.0 * i / 60.0);
+        fprintf(out, "%s%.1f,%.1f", i ? " " : "", axis_x(distance), axis_y(link_success_prob(distance, 0)));
+    }
+    fprintf(out, "\"/>\n");
+    fprintf(out, "<polyline fill=\"none\" stroke=\"#c45c26\" stroke-width=\"2\" points=\"");
+    for (i = 0; i <= 60; i++) {
+        double distance = pow(10.0, 1.0 + 3.0 * i / 60.0);
+        fprintf(out, "%s%.1f,%.1f", i ? " " : "", axis_x(distance), axis_y(link_success_prob(distance, 60)));
+    }
+    fprintf(out, "\"/>\n");
+    fprintf(out, "<circle cx=\"%.1f\" cy=\"%.1f\" r=\"4\" fill=\"#d0d0d0\"/>\n", axis_x(50), axis_y(near));
+    fprintf(out, "<circle cx=\"%.1f\" cy=\"%.1f\" r=\"4\" fill=\"#d0d0d0\"/>\n", axis_x(5000), axis_y(far));
+    fprintf(out, "<circle cx=\"%.1f\" cy=\"%.1f\" r=\"4\" fill=\"#c45c26\"/>\n", axis_x(50), axis_y(jammed));
+    fprintf(out, "<circle cx=\"%.1f\" cy=\"%.1f\" r=\"4\" fill=\"#d0d0d0\"/>\n", axis_x(50), axis_y(outside));
+    fprintf(out, "</svg>\n");
+    if (fclose(out) != 0) {
+        return fail("could not close the link plot");
+    }
+    printf("link_plot %s\n", path);
+    return 0;
+}
+
+int main(int argc, char **argv) {
     link_jammer jammer = {0, 0, 100, 60};
     double near = rate(50, 0, 0, 0);
     double far = rate(5000, 0, 0, 0);
@@ -42,6 +83,9 @@ int main(void) {
     }
     if (outside + 0.02 < near || outside < jammed || near < far) {
         return fail("success rate is not ordered");
+    }
+    if (argc > 1 && write_plot(argv[1], near, far, jammed, outside)) {
+        return 1;
     }
     printf("link tests passed\n");
     return 0;

@@ -12,3 +12,5 @@ Two thousand seeded trials:
 | 50 m inside the jammer | 0.004 |
 
 The test fails if 50 m drops below 0.90, 5 km rises above 0.15, or the jammer leaves more than 0.20 of packets through.
+
+`docs/eval/link.svg` is written by that test. The pale curve is success against range. The rust curve adds the 60 dB jammer. The dots are the four seeded trial rates above.
