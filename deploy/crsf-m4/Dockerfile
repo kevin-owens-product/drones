@@ -5,6 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates curl gcc-arm-none-eabi libnewlib-arm-none-eabi python3 build-essential \
+        qemu-system-arm \
     && rm -rf /var/lib/apt/lists/*
 
 ARG BAZELISK_VERSION=1.25.0
@@ -17,5 +18,7 @@ COPY MODULE.bazel .bazelversion ./
 COPY firmware/crsf firmware/crsf
 ENV USE_BAZEL_VERSION=7.4.1
 RUN bazel build //firmware/crsf:crsf_m4_size \
-    && cp bazel-bin/firmware/crsf/crsf_m4_size.txt /crsf_m4_size.txt
+    && cp bazel-bin/firmware/crsf/crsf_m4_size.txt /crsf_m4_size.txt \
+    && chmod +x firmware/crsf/m4/qemu-time.sh \
+    && firmware/crsf/m4/qemu-time.sh >> /crsf_m4_size.txt
 CMD ["cat", "/crsf_m4_size.txt"]

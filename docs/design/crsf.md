@@ -31,4 +31,4 @@ Until that runtime is present, `make test` runs the same entry point on 100,000 
 | Linked elf, parser plus a main and newlib stubs | 2126 | 12 | 748 |
 | Parser object only | 802 | 0 | 0 |
 
-There is no cycle count. This image does not run the parser on an STM32 or in QEMU. The 802-byte text size is the parser itself. The elf is larger because the C library stubs are linked in.
+`firmware/crsf/m4/qemu-time.sh` compiles that parser for Cortex-M4 and runs it on `qemu-system-arm -M mps2-an386`. The DWT cycle counter is enabled and reads 0 for the whole run, so this is not a cycle count. QEMU's exec trace retired 1435 instructions for one push and 2762 for two. The difference, one extra push on the second binary, is 1327 instructions. A third run retired 4092, and 4092 − 2762 is 1330. The two binaries are not identical because the loop bound is compiled in. Inside the one-push trace the tags were `crsf_parser_push` 157, `crsf_crc8` 324, `memset` 614, `memcpy` 70. There is still no STM32, no ESP32, and no board.
