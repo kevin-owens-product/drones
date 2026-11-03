@@ -55,3 +55,51 @@ test("launch view gives each vehicle on the ground a go or no-go and times power
   await expect(page.getByTestId("ready-median")).toContainText(/median \d+ s/, { timeout: 130_000 });
   await expect(page.locator(".timeline-list")).toContainText(/Ready to launch, \d+ s from power-on/);
 });
+
+test("operating picture draws labelled sim overlays that the operator can switch off", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("map-legend")).toContainText("SIM");
+  await expect(page.locator(".tac-zone-label")).toHaveText("GNSS jamming (sim)");
+  await expect(page.locator(".tac-area")).toHaveCount(4);
+  await expect(page.locator(".tac-task")).toHaveCount(4);
+  await page.getByRole("button", { name: "Coverage" }).click();
+  await expect(page.locator(".tac-area")).toHaveCount(0);
+  await page.getByRole("button", { name: "Coverage" }).click();
+  await expect(page.locator(".tac-area")).toHaveCount(4);
+});
+
+test("a vehicle on VIO shows its position error on the map and in the detail", async ({ page }) => {
+  await page.goto("/");
+  await page.locator('#fleet [data-tail="NX-04"]').click();
+  await expect(page.locator(".tac-error-label")).toContainText(/±\d+ m \(95%\)/);
+  await expect(page.locator(".op-detail")).toContainText("Position error (95%)");
+});
+
+test("dragging the timeline replays what the console received, and Esc returns to live", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("#fleet [data-tail]")).toHaveCount(12);
+  await page.waitForTimeout(4000);
+  const strip = page.getByTestId("replay-strip");
+  const box = await strip.boundingBox();
+  if (!box) throw new Error("no strip");
+  await page.mouse.click(box.x + box.width - 25, box.y + box.height / 2);
+  await expect(page.getByTestId("replay-banner")).toContainText("REPLAY");
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("replay-banner")).toHaveCount(0);
+});
+
+test("when a vehicle drops off the link its tasks are re-planned on the map and in the log", async ({ page }) => {
+  // NX-07 leaves the network once per sortie loop, about every 100 s.
+  test.setTimeout(150_000);
+  await page.goto("/");
+  await expect(page.locator(".timeline-list")).toContainText(/Re-plan: T\d NX-07 → NX-0\d/, { timeout: 130_000 });
+  await expect(page.locator(".tac-task.is-fresh").first()).toBeVisible();
+});
+
+test("a large fleet switches to the density view with exceptions drawn individually", async ({ page }) => {
+  const origin = process.env.A2E_DEMO_SCALE_ORIGIN;
+  test.skip(!origin, "needs a second demo server: A2E_DEMO_FLEET=300 PORT=4174 npm run demo, then A2E_DEMO_SCALE_ORIGIN=http://localhost:4174");
+  await page.goto(`${origin}/`);
+  await expect(page.getByTestId("density-summary")).toContainText(/\d{3} vehicles/);
+  await expect(page.getByRole("button", { name: "Density" })).toHaveAttribute("aria-pressed", "true");
+});

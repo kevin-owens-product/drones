@@ -4,12 +4,67 @@ import type { LivePoint } from "../live";
 import { setPageCommands, type Command } from "../shell/commands";
 import type { Viewer } from "../shell/types";
 import { Hud } from "./Hud";
-import { TacMap, type Trail } from "./TacMap";
+import { DEFAULT_LAYERS, LAYER_NAMES, loadPicture, replanText, replans, type Layers, type Picture } from "./picture";
+import { TacMap, type Pulse, type Trail } from "./TacMap";
 import { Timeline } from "./Timeline";
 import { blocker, checks, isGo, median, onGround, seconds, tick, type Check, type ReadyClock } from "./readiness";
 import { ago, diffEvents, fmt, mergeFleet, type OpsEvent, type Vehicle } from "./vehicle";
 
 type Filter = "all" | "attention" | "denied" | "launch";
+
+/** One poll as the console received it, kept for replay. */
+interface Snapshot {
+  at: number;
+  points: LivePoint[];
+  picture: Picture | null;
+}
+
+const HISTORY_MS = 10 * 60_000;
+const HISTORY_POINTS = 150_000;
+const TRAIL_MS = 90_000;
+const PULSE_MS = 3200;
+const DENSITY_ABOVE = 60;
+
+function loadLayers(): Layers {
+  try {
+    const raw = localStorage.getItem("a2e-map-layers");
+    return raw ? { ...DEFAULT_LAYERS, ...(JSON.parse(raw) as Partial<Layers>) } : DEFAULT_LAYERS;
+  } catch {
+    return DEFAULT_LAYERS;
+  }
+}
+
+/** Trails from received history up to a moment: one point per sample that moved. */
+function trailsAt(history: readonly Snapshot[], until: number): Map<string, Trail> {
+  const out = new Map<string, [number, number][]>();
+  for (const snap of history) {
+    if (snap.at > until) break;
+    if (snap.at < until - TRAIL_MS) continue;
+    for (const p of snap.points) {
+      const list = out.get(p.tail_number) ?? [];
+      const last = list[list.length - 1];
+      if (!last || last[0] !== p.lat || last[1] !== p.lon) list.push([p.lat, p.lon]);
+      out.set(p.tail_number, list);
+    }
+  }
+  return out;
+}
+
+/** The newest snapshot at or before a moment. */
+function snapshotAt(history: readonly Snapshot[], at: number): Snapshot | null {
+  let lo = 0;
+  let hi = history.length - 1;
+  let found: Snapshot | null = null;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const snap = history[mid]!;
+    if (snap.at <= at) {
+      found = snap;
+      lo = mid + 1;
+    } else hi = mid - 1;
+  }
+  return found ?? history[0] ?? null;
+}
 
 function messageOf(error: unknown, fallback: string): string {
   return error instanceof Error && error.message.length > 0 ? error.message : fallback;
@@ -30,12 +85,13 @@ function Battery({ pct }: { pct: number | undefined }): JSX.Element {
   );
 }
 
-function RailRow({ v, selected, onSelect, launch }: { v: Vehicle; selected: boolean; onSelect: () => void; launch?: readonly Check[] | undefined }): JSX.Element {
+function RailRow({ v, selected, onSelect, launch, pulse }: { v: Vehicle; selected: boolean; onSelect: () => void; launch?: readonly Check[] | undefined; pulse?: Pulse | undefined }): JSX.Element {
   const p = v.live;
   const go = launch ? isGo(launch) : false;
   return (
     <li>
       <button type="button" className={`vrow health-${v.health}${selected ? " is-selected" : ""}`} aria-pressed={selected} onClick={onSelect} data-tail={v.tail}>
+        {pulse ? <span key={pulse.id} className={`vrow-flash flash-${pulse.level}`} aria-hidden="true" /> : null}
         <span className="vrow-dot" aria-hidden="true" />
         <span className="vrow-main">
           <span className="vrow-top">
@@ -107,7 +163,13 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
   const [query, setQuery] = useState("");
   const [fault, setFault] = useState("");
   const [events, setEvents] = useState<OpsEvent[]>([]);
-  const [trails, setTrails] = useState<Map<string, Trail>>(() => new Map());
+  const [picture, setPicture] = useState<Picture | null>(null);
+  const [layers, setLayers] = useState<Layers>(loadLayers);
+  const [densityPref, setDensityPref] = useState<boolean | null>(null);
+  const history = useRef<Snapshot[]>([]);
+  const historyPoints = useRef(0);
+  const [replayAt, setReplayAt] = useState<number | null>(null);
+  const [playing, setPlaying] = useState(false);
   const search = useRef<HTMLInputElement>(null);
   const previous = useRef<Map<string, Vehicle> | null>(null);
   const eventId = useRef(0);
@@ -137,21 +199,19 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
     let stopped = false;
     async function poll() {
       try {
-        const live = await api<{ items: LivePoint[]; withheld?: number }>("/v1/telemetry/live");
+        const [live, pic] = await Promise.all([api<{ items: LivePoint[]; withheld?: number }>("/v1/telemetry/live"), loadPicture()]);
         if (stopped) return;
         onBannerRef.current(live.banner);
         const items = Array.isArray(live.body.items) ? live.body.items : [];
+        const at = Date.now();
+        const list = history.current;
+        list.push({ at, points: items, picture: pic });
+        historyPoints.current += items.length;
+        while (list.length > 1 && (list[0]!.at < at - HISTORY_MS || historyPoints.current > HISTORY_POINTS)) {
+          historyPoints.current -= list.shift()!.points.length;
+        }
         setPoints(items);
-        setTrails((old) => {
-          const next = new Map<string, Trail>();
-          for (const point of items) {
-            const prev = old.get(point.tail_number) ?? [];
-            const last = prev[prev.length - 1];
-            const moved = !last || last[0] !== point.lat || last[1] !== point.lon;
-            next.set(point.tail_number, moved ? [...prev, [point.lat, point.lon] as const].slice(-90) : prev);
-          }
-          return next;
-        });
+        setPicture(pic);
         setWithheld(typeof live.body.withheld === "number" ? live.body.withheld : 0);
         setFault("");
       } catch (error) {
@@ -169,14 +229,79 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
   }, []);
 
   const fleet = useMemo(() => mergeFleet(registry, points, now), [registry, points, now]);
+
+  const lastPicture = useRef<Picture | null>(null);
+  useEffect(() => {
+    const changes = replans(lastPicture.current, picture);
+    if (picture) lastPicture.current = picture;
+    if (changes.length === 0) return;
+    const at = Date.now();
+    const fresh = replanText(changes).map<OpsEvent>((r) => ({ id: ++eventId.current, at, tail: r.tail, level: "info", text: r.text }));
+    setEvents((list) => [...fresh, ...list].slice(0, 200));
+  }, [picture]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("a2e-map-layers", JSON.stringify(layers));
+    } catch {
+      // Private window or blocked storage: layers reset next visit.
+    }
+  }, [layers]);
+
+  // Replay: show the fleet as this console received it at an earlier moment.
+  // Events, readiness and alerts keep running on live data underneath.
+  const replaySnap = replayAt === null ? null : snapshotAt(history.current, replayAt);
+  const shownAt = replaySnap ? replaySnap.at : now;
+  const view = useMemo(
+    () => (replaySnap ? mergeFleet(registry, replaySnap.points, replaySnap.at) : fleet),
+    [replaySnap, registry, fleet],
+  );
+  const viewPicture = replaySnap ? replaySnap.picture : picture;
+  const trails = useMemo(() => trailsAt(history.current, shownAt), [shownAt]);
+  const historyFrom = history.current[0]?.at ?? now;
+
+  useEffect(() => {
+    if (!playing || replayAt === null) return;
+    let last = performance.now();
+    const timer = window.setInterval(() => {
+      const t = performance.now();
+      const dt = t - last;
+      last = t;
+      setReplayAt((at) => {
+        if (at === null) return null;
+        const next = at + dt;
+        if (next >= Date.now() - 1000) {
+          setPlaying(false);
+          return null;
+        }
+        return next;
+      });
+    }, 200);
+    return () => window.clearInterval(timer);
+  }, [playing, replayAt === null]);
+
+  // A fresh warning or alert pulses its vehicle on the map, in the list and on
+  // the timeline at once, so the eye lands on it wherever it is.
+  const pulses = useMemo(() => {
+    const out = new Map<string, Pulse>();
+    if (replayAt !== null) return out;
+    for (const e of events) {
+      if (now - e.at > PULSE_MS) break;
+      if (e.level === "info" && !e.text.startsWith("Re-plan")) continue;
+      if (!out.has(e.tail)) out.set(e.tail, { id: e.id, level: e.level });
+    }
+    return out;
+  }, [events, now, replayAt]);
   const launch = useMemo(() => new Map(fleet.filter(onGround).map((v) => [v.tail, checks(v)] as const)), [fleet]);
 
   useEffect(() => {
     const before = previous.current;
-    if (before) {
+    // Until the console has heard at least one vehicle, nothing has changed yet:
+    // the first fleet with live data seeds the log with what already needs attention.
+    if (before && [...before.values()].some((v) => v.live !== null)) {
       const fresh = diffEvents(before, fleet, now, () => ++eventId.current);
       if (fresh.length > 0) setEvents((list) => [...fresh.reverse(), ...list].slice(0, 200));
-    } else if (fleet.length > 0) {
+    } else if (fleet.some((v) => v.live !== null)) {
       const seed = fleet
         .filter((v) => v.health === "alert" || v.health === "warn")
         .map<OpsEvent>((v) => ({ id: ++eventId.current, at: now, tail: v.tail, level: v.health === "alert" ? "alert" : "warn", text: v.reasons.join(" · ") }));
@@ -199,18 +324,20 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
   }, [fleet, launch, now]);
 
   const needle = query.trim().toLowerCase();
-  const shown = fleet.filter((v) => {
+  const shown = view.filter((v) => {
     if (needle && !v.tail.toLowerCase().includes(needle) && !v.designation.toLowerCase().includes(needle)) return false;
     if (filter === "attention") return v.health === "alert" || v.health === "warn";
     if (filter === "denied") return v.live?.gnss_trusted === false;
     if (filter === "launch") return launch.has(v.tail);
     return true;
   });
-  const current = fleet.find((v) => v.tail === selected) ?? null;
+  const current = view.find((v) => v.tail === selected) ?? null;
+  const liveCount = view.filter((v) => v.live !== null).length;
+  const density = densityPref ?? liveCount > DENSITY_ABOVE;
   const counts = {
-    live: fleet.filter((v) => v.live !== null).length,
-    attention: fleet.filter((v) => v.health === "alert" || v.health === "warn").length,
-    denied: fleet.filter((v) => v.live?.gnss_trusted === false).length,
+    live: liveCount,
+    attention: view.filter((v) => v.health === "alert" || v.health === "warn").length,
+    denied: view.filter((v) => v.live?.gnss_trusted === false).length,
     ready: [...launch.values()].filter(isGo).length,
     ground: launch.size,
   };
@@ -249,13 +376,18 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
       } else if (key === "l") {
         setFilter((f) => (f === "launch" ? "all" : "launch"));
       } else if (event.key === "Escape") {
+        if (replayAt !== null) {
+          setReplayAt(null);
+          setPlaying(false);
+          return;
+        }
         setSelected(null);
         setFollow(false);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [step]);
+  }, [step, replayAt]);
 
   useEffect(() => {
     if (!selected) return;
@@ -314,16 +446,43 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
         ) : null}
         <ul id="fleet" className="vlist">
           {shown.map((v) => (
-            <RailRow key={v.tail} v={v} launch={filter === "launch" ? launch.get(v.tail) : undefined} selected={v.tail === selected} onSelect={() => setSelected(v.tail === selected ? null : v.tail)} />
+            <RailRow key={v.tail} v={v} pulse={pulses.get(v.tail)} launch={filter === "launch" ? launch.get(v.tail) : undefined} selected={v.tail === selected} onSelect={() => setSelected(v.tail === selected ? null : v.tail)} />
           ))}
           {shown.length === 0 ? <li className="meta vlist-empty">No vehicles match.</li> : null}
         </ul>
         {withheld > 0 ? <p className="meta op-withheld">{withheld} tracks withheld by classification</p> : null}
       </aside>
 
-      <div className="op-map">
+      <div className={replayAt === null ? "op-map" : "op-map is-replay"}>
         {fault ? <p className="fault op-fault" role="alert">{fault}</p> : null}
-        <TacMap fleet={fleet} trails={trails} selected={selected} follow={follow} onSelect={setSelected} />
+        <TacMap fleet={view} trails={trails} selected={selected} follow={follow} onSelect={setSelected} picture={viewPicture} layers={layers} pulses={pulses} density={density} />
+        {picture || liveCount > 20 ? (
+          <div className="op-layers chips" role="group" aria-label="Map layers">
+            {picture
+              ? (Object.keys(LAYER_NAMES) as (keyof Layers)[])
+                  .filter((k) => k !== "terrain" || picture.basemap)
+                  .map((k) => (
+                    <button key={k} type="button" className={layers[k] ? "chip is-on" : "chip"} aria-pressed={layers[k]} onClick={() => setLayers((l) => ({ ...l, [k]: !l[k] }))}>
+                      {LAYER_NAMES[k]}
+                    </button>
+                  ))
+              : null}
+            {liveCount > 20 ? (
+              <button type="button" className={density ? "chip is-on" : "chip"} aria-pressed={density} onClick={() => setDensityPref(!density)}>
+                Density
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        {replaySnap ? (
+          <div className="op-replay" role="status" data-testid="replay-banner">
+            <span className="op-replay-tag">REPLAY</span>
+            <span className="mono">{new Date(replaySnap.at).toISOString().slice(11, 19)}Z</span>
+            <span className="meta">{seconds(now - replaySnap.at)} ago · as this console received it</span>
+            <button type="button" className="chip" onClick={() => setPlaying((p) => !p)}>{playing ? "Pause" : "Play"}</button>
+            <button type="button" className="chip is-on" onClick={() => { setReplayAt(null); setPlaying(false); }}>Back to live <kbd>Esc</kbd></button>
+          </div>
+        ) : null}
         <div className="op-map-tools">
           <button type="button" className={follow ? "chip is-on" : "chip"} aria-pressed={follow} disabled={!selected} onClick={() => setFollow((on) => !on)}>
             Follow <kbd>F</kbd>
@@ -355,6 +514,7 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
               <Stat label="Battery" value={fmt(p?.battery_pct, 0, "%")} />
               <Stat label="Last sample" value={ago(current.linkAgeMs)} />
               <Stat label="Position" value={p ? `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}` : "—"} />
+              <Stat label="Position error (95%)" value={typeof p?.pos_sigma_m === "number" ? `±${Math.round(2.45 * p.pos_sigma_m)} m` : "—"} />
               <Stat label="Marking" value={p?.classification ?? "—"} />
             </dl>
             {current.reasons.length > 0 ? (
@@ -390,6 +550,12 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
       <Timeline
         events={events}
         now={now}
+        historyFrom={historyFrom}
+        replayAt={replayAt}
+        onScrub={(at) => {
+          setPlaying(false);
+          setReplayAt(at === null || at >= Date.now() - 1500 ? null : Math.max(historyFrom, at));
+        }}
         onTail={(tail) => {
           setSelected(tail);
           setFollow(true);

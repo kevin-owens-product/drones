@@ -14,6 +14,10 @@ cd services/ui && npm ci && npm run build && npm run demo   # http://localhost:4
 
 The demo server plays a scripted sortie, nine vehicles in the air and three on the pad, and marks every page `DEMO DATA`.
 
+The map draws the operating picture from the demo scenario, each overlay labelled `SIM`: real terrain baked offline, survey coverage filling in, a GNSS jamming zone with the position error of the vehicle flying on VIO, link quality, and task lines that re-plan when NX-07 drops off the link about every 100 s. Drag the timeline to replay what the console received. For the fleet-scale view, run a second server with `A2E_DEMO_FLEET=300 PORT=4174 npm run demo`. [Design](docs/design/operating-picture.md).
+
+![The Operate map with terrain, survey coverage, the jamming zone, link quality and task allocation](docs/media/operating-picture.png)
+
 ### Launch readiness
 
 ![The launch view: a go or no-go for every vehicle on the ground, the failing check, and the power-on-to-ready time](docs/media/launch.png)

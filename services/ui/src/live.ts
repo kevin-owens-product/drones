@@ -15,4 +15,6 @@ export interface LivePoint {
   armed?: boolean;
   nav_source?: string;
   gnss_trusted?: boolean;
+  /** Horizontal position error, 1-sigma, metres (for example PX4's EKF eph). */
+  pos_sigma_m?: number;
 }
