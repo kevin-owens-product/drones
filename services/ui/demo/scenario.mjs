@@ -2,6 +2,7 @@
 // picture, and training sessions. Pure JavaScript with no Node imports, so the
 // same code runs behind demo/server.mjs and, for the hosted static demo, inside
 // the browser (src/staticDemo.ts). All data is synthetic and labelled so.
+import { denialPicture } from "./denial.mjs";
 import { FLEET_SHARE, fileReport, seedReports, triage } from "./fieldvoice.mjs";
 import { acknowledge, RESPONSES, scorecard, startSession, visible } from "./training.mjs";
 
@@ -465,6 +466,7 @@ export function createDemo(opts = {}) {
     handle(method, url, raw = "") {
       if (url.pathname.startsWith("/v1/attrition")) return attrition(method, url, raw);
       if (url.pathname === "/v1/field-reports") return fieldReports(method, raw);
+      if (url.pathname === "/v1/denial-map") return { status: 200, body: denialPicture(Number(url.searchParams.get("passes") ?? 4)) };
       if (url.pathname.startsWith("/v1/training/")) {
         const out = training(method, url, raw);
         return { status: out.error ? 400 : 200, body: out };

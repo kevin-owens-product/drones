@@ -9,6 +9,7 @@ export type Section =
   | "eval"
   | "attrition"
   | "reports"
+  | "denial"
   | "organization"
   | "people"
   | "sharing"
