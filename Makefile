@@ -24,13 +24,16 @@ test-integration: $(PY)
 	@test -f .env || (echo "Copy .env.example to .env and start postgres + opa" && exit 1)
 	set -a && . ./.env && set +a && cd services/api && $(PY) -m pytest tests/integration
 
-test: test-unit test-crsf test-spoof
+test: test-unit test-crsf test-spoof test-failsafe
 
 test-crsf:
 	$(MAKE) -C firmware/crsf test
 
 test-spoof:
 	$(MAKE) -C onboard/spoof test
+
+test-failsafe:
+	$(MAKE) -C onboard/failsafe test
 
 lint: $(PY)
 	cd services/api && $(PY) -m ruff check src tests && $(PY) -m mypy src
