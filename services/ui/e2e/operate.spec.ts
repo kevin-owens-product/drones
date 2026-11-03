@@ -14,8 +14,11 @@ test("operate screen ranks vehicles that need the operator first", async ({ page
 test("keyboard and palette select a vehicle and show its flight display", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("#fleet [data-tail]")).toHaveCount(9);
-  await page.keyboard.press("j");
-  await expect(page.locator(".op-detail h2")).toHaveText(/NX-0\d/);
+  // The list can paint before the page's key handler is attached, so retry the key.
+  await expect(async () => {
+    await page.keyboard.press("j");
+    await expect(page.locator(".op-detail h2")).toHaveText(/NX-0\d/, { timeout: 500 });
+  }).toPass();
   await page.keyboard.press("Control+k");
   await page.getByRole("combobox").fill("NX-04");
   await page.keyboard.press("Enter");

@@ -129,8 +129,71 @@ static int test_fifty(void) {
     return 0;
 }
 
+/* Textured ground: the target sits on it, then is hidden. The tracker must not
+ * call ground a hit, and must not adapt its template into the ground. */
+static void ground(uint8_t *frame, unsigned *rng) {
+    int i;
+    for (i = 0; i < TRACK_W * TRACK_H; i++) {
+        *rng = *rng * 1103515245u + 12345u;
+        frame[i] = (uint8_t)(110 + ((*rng >> 16) % 40));
+    }
+}
+
+static void stamp(uint8_t *frame, int x, int y) {
+    int row;
+    int col;
+    for (row = 0; row < TRACK_T; row++) {
+        for (col = 0; col < TRACK_T; col++) {
+            frame[(y + row) * TRACK_W + (x + col)] = ((col / 2 + row / 2) & 1) ? 230 : 20;
+        }
+    }
+}
+
+static int test_hidden_on_texture(void) {
+    uint8_t frame[TRACK_W * TRACK_H];
+    track_lock lock;
+    unsigned rng = 7;
+    int i;
+    int false_hits = 0;
+    int back = -1;
+    ground(frame, &rng);
+    stamp(frame, 28, 20);
+    track_init(&lock, frame, 28, 20);
+    for (i = 0; i < 10; i++) {
+        ground(frame, &rng);
+        stamp(frame, 28, 20);
+        track_step(&lock, frame);
+    }
+    for (i = 0; i < 40; i++) {
+        ground(frame, &rng);
+        /* Hold the search where the target was, as the ground filter does. */
+        lock.fx = 28;
+        lock.fy = 20;
+        lock.vx = 0;
+        lock.vy = 0;
+        false_hits += track_step(&lock, frame);
+    }
+    for (i = 0; i < 10 && back < 0; i++) {
+        ground(frame, &rng);
+        stamp(frame, 28, 20);
+        lock.fx = 28;
+        lock.fy = 20;
+        if (track_step(&lock, frame) && abs(lock.x - 28) <= 1 && abs(lock.y - 20) <= 1) {
+            back = i;
+        }
+    }
+    printf("hidden_false_hits %d/40 reacquired_after %d frames\n", false_hits, back);
+    if (false_hits > 2) {
+        return fail("tracker matched bare ground while the target was hidden");
+    }
+    if (back < 0 || back > 2) {
+        return fail("tracker did not reacquire the target after it reappeared");
+    }
+    return 0;
+}
+
 int main(void) {
-    if (test_servo_centers() || test_fifty()) {
+    if (test_servo_centers() || test_fifty() || test_hidden_on_texture()) {
         return 1;
     }
     printf("track tests passed\n");
