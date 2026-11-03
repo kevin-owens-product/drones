@@ -14,6 +14,7 @@ services/ui/dist/
 firmware/crsf/build/
 onboard/spoof/build/
 onboard/failsafe/build/
+onboard/alloc/build/
 services/ui/test-results/
 services/ui/playwright-report/
 sbom/
