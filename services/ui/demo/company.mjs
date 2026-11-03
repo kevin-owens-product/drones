@@ -75,6 +75,11 @@ function addWorkdays(iso, days) {
  */
 export function createCompany({ births = [] } = {}) {
   const supply = createSupply({ births });
+  // Per-session copies: actions change these.
+  const orders = ORDERS.map((o) => ({ ...o, shipped: 0, export: o.export ? { ...o.export } : null }));
+  const ecos = ECOS.map((e) => ({ ...e }));
+  const courses = COURSES.map((c) => ({ ...c }));
+  let courseSeq = 330;
 
   /**
    * Sales and operations plan per SKU: open orders plus the Attrition
@@ -88,10 +93,10 @@ export function createCompany({ births = [] } = {}) {
     const stock = supply.usable(holds);
     const backlogBySku = {};
     const rows = [];
-    const open = ORDERS.filter((o) => o.qty > o.delivered).sort((a, b) => Number(Boolean(b.dpas)) - Number(Boolean(a.dpas)) || a.due.localeCompare(b.due));
+    const open = orders.filter((o) => o.qty > o.delivered + o.shipped).sort((a, b) => Number(Boolean(b.dpas)) - Number(Boolean(a.dpas)) || a.due.localeCompare(b.due));
     const dayCursor = {};
     for (const o of open) {
-      const left = o.qty - o.delivered;
+      const left = o.qty - o.delivered - o.shipped;
       backlogBySku[o.sku] = (backlogBySku[o.sku] ?? 0) + left;
       const exportHold = o.export && o.export.status !== "approved";
       const fromStock = exportHold ? 0 : Math.min(fg[o.sku] ?? 0, left);
@@ -157,7 +162,7 @@ export function createCompany({ births = [] } = {}) {
 
   function training(snap) {
     return snap.units.map((u) => {
-      const booked = COURSES.filter((c) => c.unit === u.unit && c.status === "booked");
+      const booked = courses.filter((c) => c.unit === u.unit && c.status === "booked");
       const gaps = [];
       if (u.instructors === 0) gaps.push("No AD-I instructor to sustain training");
       if (u.operators < u.airframes / 2) gaps.push(`${u.operators} operators for ${u.airframes} airframes`);
@@ -181,7 +186,7 @@ export function createCompany({ births = [] } = {}) {
     const birth = births.find((b) => b.tail_number === tail);
     if (!birth) return null;
     const sku = skuForTail(tail);
-    const order = ORDERS.find((o) => o.customer === "CUS-A" && o.sku === sku);
+    const order = orders.find((o) => o.customer === "CUS-A" && o.sku === sku);
     const unit = UNITS.find((u) => u.sku === sku)?.unit ?? "Alpha";
     const parts = birth.parts.map((p) => {
       const lot = snap.lots.find((l) => l.lot === p.lot);
@@ -232,18 +237,90 @@ export function createCompany({ births = [] } = {}) {
       customers: CUSTOMERS,
       ...p,
       ...snap,
-      ecos: ECOS,
-      courses: COURSES.map((c) => ({ ...c, name: nameOf(c.sku) })),
+      ecos,
+      courses: courses.map((c) => ({ ...c, name: nameOf(c.sku) })),
       training: train,
       routing: ROUTING,
       units_catalog: UNITS,
     };
   }
 
+  // ---- Actions ----
+
+  /** Ship finished goods against an order line. Serials are assigned at pack. */
+  function shipOrder(id, qty, by) {
+    const o = orders.find((x) => x.id === id);
+    if (!o) return { error: "no such order", status: 404 };
+    if (o.export && o.export.status !== "approved") return { error: `Export licence (${o.export.licence}) is ${o.export.status}`, status: 409 };
+    const left = o.qty - o.delivered - o.shipped;
+    const n = Math.min(left, Math.round(Number(qty)));
+    if (!Number.isFinite(n) || n <= 0) return { error: "nothing left to ship on this line", status: 409 };
+    if (!supply.pick(o.sku, n)) return { error: `Only ${supply.finished[o.sku] ?? 0} ${nameOf(o.sku)} in finished goods; build first`, status: 409 };
+    o.shipped += n;
+    const unit = CUSTOMERS.find((c) => c.id === o.customer)?.units.find((u) => UNITS.find((x) => x.unit === u)?.sku === o.sku) ?? null;
+    const dg = Boolean(BOMS[o.sku]);
+    const s = supply.addShipment({ customer: o.customer, order: o.id, unit, sku: o.sku, qty: n, spares: [], dg, by, serials: serials(o.sku, n) });
+    return { ok: true, shipment: s, message: `${s.id}: ${n} ${nameOf(o.sku)} to ${CUSTOMERS.find((c) => c.id === o.customer)?.name.split(":")[0]}${dg ? ", lithium packs as dangerous goods" : ""}` };
+  }
+
+  let serialSeq = 4100;
+  function serials(sku, n) {
+    if (!BOMS[sku]) return [];
+    const code = sku.replace("ARCHER-", "A");
+    return Array.from({ length: n }, () => `${code}-${(serialSeq += 1)}`);
+  }
+
+  /** The customer signs for a shipment: an order line's quantity moves from shipped to delivered. */
+  function deliver(shipment) {
+    const o = orders.find((x) => x.id === shipment.order);
+    if (o) {
+      o.shipped = Math.max(0, o.shipped - shipment.qty);
+      o.delivered += shipment.qty;
+    }
+  }
+
+  /** Records a licence decision that arrived from the government; it does not grant anything itself. */
+  function recordLicence(id) {
+    const o = orders.find((x) => x.id === id);
+    if (!o?.export) return { error: "no export licence on this order", status: 404 };
+    if (o.export.status === "approved") return { error: "already recorded", status: 409 };
+    o.export.status = "approved";
+    return { ok: true, message: `${o.export.licence} approval recorded for ${o.id}; the line can ship` };
+  }
+
+  function approveEco(id) {
+    const e = ecos.find((x) => x.id === id);
+    if (!e) return { error: "no such change", status: 404 };
+    if (e.status !== "in review") return { error: `change is ${e.status}`, status: 409 };
+    e.status = "approved";
+    return { ok: true, message: `${e.id} approved: ${e.title}. Effective: ${e.effectivity}` };
+  }
+
+  function bookCourse(customer, unit, sku, seats, start) {
+    const c = { id: `CLS-${(courseSeq += 1)}`, sku, customer, unit, seats, start, status: "booked" };
+    courses.push(c);
+    return c;
+  }
+
   return {
     overview,
     thread,
     ship,
+    orders,
+    ecos,
+    courses,
+    supply,
+    shipOrder,
+    deliver,
+    recordLicence,
+    approveEco,
+    bookCourse,
+    plan: (holds, demand) => {
+      const snap = supply.snapshot({ holds, demand });
+      const p = plan(snap, holds);
+      delete p.stock_left;
+      return { snap, ...p };
+    },
     closeWorkOrder: supply.closeWorkOrder,
     openWorkOrders: supply.openWorkOrders,
   };

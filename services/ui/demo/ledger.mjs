@@ -21,10 +21,12 @@ export function can(roles, permission) {
 
 // The four hosted-demo sign-ins (passwords are shared out of band; see staticDemo.ts).
 export const ACCOUNTS = [
-  { id: "demo-admin", username: "admin", display_name: "Demo Admin", roles: ["admin"] },
-  { id: "demo-commander", username: "commander", display_name: "Demo Mission Commander", roles: ["mission_commander", "planner"] },
-  { id: "demo-operator", username: "operator", display_name: "Demo Operator", roles: ["operator"] },
-  { id: "demo-maintainer", username: "maintainer", display_name: "Demo Maintainer", roles: ["maintainer"] },
+  // `org` picks the workspace: "neros" runs operations, a customer id runs its own fleet (demo/ops.mjs).
+  { id: "demo-admin", username: "admin", display_name: "Demo Admin", roles: ["admin"], org: "neros" },
+  { id: "demo-ops", username: "ops", display_name: "Demo Ops Lead (Neros)", roles: ["ops_lead"], org: "neros" },
+  { id: "demo-commander", username: "commander", display_name: "Demo Mission Commander", roles: ["mission_commander", "planner"], org: "CUS-A" },
+  { id: "demo-operator", username: "operator", display_name: "Demo Operator", roles: ["operator"], org: "CUS-A" },
+  { id: "demo-maintainer", username: "maintainer", display_name: "Demo Maintainer", roles: ["maintainer"], org: "CUS-A" },
 ];
 
 // ---- SHA-256 (FIPS 180-4), synchronous, UTF-8 input, lowercase hex output ----

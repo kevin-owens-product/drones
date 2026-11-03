@@ -41,6 +41,7 @@ First slices, each measured in sim or unit checks only, not in the field:
 - **Fleet updates**: signed manifests and staged rollouts that halt and roll back a bad build at the canary stage. [Design](docs/design/fleet-updates.md).
 - **Training and integration**: scripted training scenarios with an operator scorecard in the demo console, and a conformance test for non-PX4 adapters. [Design](docs/design/training-integration.md).
 - **Company view** (`#company`): the Neros product line as published, plus simulated orders, production, supply chain, logistics, sustainment, training and engineering change, joined by SKU and serial. [Design](docs/design/company.md).
+- **Two workspaces** (`#ops`, `#supply`): Neros runs its operations from a work queue where every item carries the action that clears it; customers run their own fleets and ask Neros for airframes, spares, training and repairs from a Supply & support portal. Requests, shipments and shared loss data connect the two. [Design](docs/design/workspaces.md).
 
 ## Architecture
 

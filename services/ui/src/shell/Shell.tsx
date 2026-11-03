@@ -1,21 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { usePageCommands, type Command } from "./commands";
 import { Palette } from "./Palette";
+import "../pages/ops.css";
 import type { Section, Viewer } from "./types";
-
-const PRIMARY: readonly { id: Section; label: string }[] = [
-  { id: "operate", label: "Operate" },
-  { id: "brief", label: "Brief" },
-  { id: "missions", label: "Missions" },
-  { id: "debrief", label: "Debrief" },
-  { id: "fleet", label: "Fleet" },
-  { id: "company", label: "Company" },
-  { id: "eval", label: "Eval" },
-  { id: "attrition", label: "Attrition" },
-  { id: "reports", label: "Reports" },
-  { id: "denial", label: "Denial map" },
-  { id: "configure", label: "Configure" },
-];
+import { canSwitch, NAV, type Workspace } from "./workspace";
 
 const ADMIN: readonly { id: Section; label: string }[] = [
   { id: "access", label: "Access" },
@@ -69,6 +57,8 @@ export function Shell(props: {
   viewer: Viewer;
   section: Section;
   onSection: (s: Section) => void;
+  workspace: Workspace;
+  onWorkspace: (w: Workspace) => void;
   onLogout: () => void;
   children: React.ReactNode;
 }): JSX.Element {
@@ -79,16 +69,22 @@ export function Shell(props: {
   const [adminOpen, setAdminOpen] = useState(false);
   const adminRef = useRef<HTMLDivElement>(null);
   const pageCommands = usePageCommands();
-  const { onSection, onLogout } = props;
+  const { onSection, onLogout, onWorkspace } = props;
+  const PRIMARY = useMemo(() => NAV.filter((n) => n.in.includes(props.workspace)), [props.workspace]);
+  const switchable = canSwitch(props.viewer);
+  const orgLabel = props.workspace === "customer" && switchable ? "Customer view" : props.viewer.org_name?.split(":")[0]?.replace(" (operations)", "");
 
   const commands = useMemo<Command[]>(
     () => [
       ...pageCommands,
       ...[...PRIMARY, ...ADMIN].map((item) => ({ id: `go-${item.id}`, label: item.label, group: "Go to", run: () => onSection(item.id) })),
+      ...(switchable
+        ? [{ id: "workspace", label: props.workspace === "customer" ? "Switch to Neros operations" : "Switch to the customer view", group: "Workspace", run: () => onWorkspace(props.workspace === "customer" ? "neros" : "customer") }]
+        : []),
       { id: "help", label: "Keyboard shortcuts", group: "Help", hint: "?", run: () => setHelp(true) },
       { id: "logout", label: "Log out", group: "Session", run: onLogout },
     ],
-    [pageCommands, onSection, onLogout],
+    [pageCommands, onSection, onLogout, onWorkspace, PRIMARY, switchable, props.workspace],
   );
 
   useEffect(() => {
@@ -132,6 +128,16 @@ export function Shell(props: {
           </svg>
           <span>A2E</span>
         </div>
+        {switchable ? (
+          <div className="ws-switch" role="group" aria-label="Workspace">
+            <button type="button" className={props.workspace === "neros" ? "is-on" : undefined} aria-pressed={props.workspace === "neros"} onClick={() => onWorkspace("neros")}>
+              Neros ops
+            </button>
+            <button type="button" className={props.workspace === "customer" ? "is-on" : undefined} aria-pressed={props.workspace === "customer"} onClick={() => onWorkspace("customer")}>
+              Customer
+            </button>
+          </div>
+        ) : null}
         <nav className="tabs" aria-label="Sections">
           {PRIMARY.map((item) => {
             const active = props.section === item.id;
@@ -177,7 +183,7 @@ export function Shell(props: {
             <span className="avatar" aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>
             <span className="who-text">
               <strong>{name}</strong>
-              <span className="meta">{formatRoles(props.viewer.roles)}</span>
+              <span className="meta">{orgLabel ? `${orgLabel} · ` : ""}{formatRoles(props.viewer.roles)}</span>
             </span>
           </div>
           <button type="button" className="btn btn-quiet" onClick={onLogout}>

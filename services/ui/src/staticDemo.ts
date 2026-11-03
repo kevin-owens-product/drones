@@ -13,13 +13,16 @@ import readme from "../../../README.md?raw";
 // browser: it keeps casual visitors and crawlers out, it is not a security
 // boundary (the bundle and demo data are still fetchable). Only salted SHA-256
 // hashes of the passwords live here; the passwords are shared out of band.
-type DemoUser = { hash: string; display_name: string; roles: string[] };
+// `org` picks the workspace: Neros operations, or a customer running its own fleet.
+type DemoUser = { hash: string; display_name: string; roles: string[]; org: string };
 const DEMO_USERS: Record<string, DemoUser> = {
-  admin: { hash: "06d8638093f35fa49aba3987dd788d1a4cc1653807adabf1be186f282b5ad33a", display_name: "Demo Admin", roles: ["admin"] },
-  commander: { hash: "18e32bb2630f85d10a6fa11de2083f90402e78f9b9dbacb4d232d0e298a48619", display_name: "Demo Mission Commander", roles: ["mission_commander", "planner"] },
-  operator: { hash: "ffe651590c6442ba0b5752d8429128f244573922fbfc3277df6582cf0ba518b1", display_name: "Demo Operator", roles: ["operator"] },
-  maintainer: { hash: "37f7a353b0255284ec2aab24ae00007231ced0adc76f2ee61448b867ca70c7be", display_name: "Demo Maintainer", roles: ["maintainer"] },
+  admin: { hash: "06d8638093f35fa49aba3987dd788d1a4cc1653807adabf1be186f282b5ad33a", display_name: "Demo Admin", roles: ["admin"], org: "neros" },
+  ops: { hash: "738ce6d6e833efe6610154dd0b9123eae02efdcdc87ccf9252a29aebc47938d7", display_name: "Demo Ops Lead (Neros)", roles: ["ops_lead"], org: "neros" },
+  commander: { hash: "18e32bb2630f85d10a6fa11de2083f90402e78f9b9dbacb4d232d0e298a48619", display_name: "Demo Mission Commander", roles: ["mission_commander", "planner"], org: "CUS-A" },
+  operator: { hash: "ffe651590c6442ba0b5752d8429128f244573922fbfc3277df6582cf0ba518b1", display_name: "Demo Operator", roles: ["operator"], org: "CUS-A" },
+  maintainer: { hash: "37f7a353b0255284ec2aab24ae00007231ced0adc76f2ee61448b867ca70c7be", display_name: "Demo Maintainer", roles: ["maintainer"], org: "CUS-A" },
 };
+const ORG_NAMES: Record<string, string> = { neros: "Neros Technologies (operations)", "CUS-A": "Customer A: Army brigade programme (SIM)" };
 const SESSION_KEY = "a2e-demo-session";
 const SESSION_MS = 12 * 60 * 60_000;
 
@@ -74,7 +77,7 @@ async function gate(method: string, url: URL, raw: string): Promise<{ status: nu
   if (!who) return { status: 401, body: { detail: "unauthenticated" } };
   if (path === "/v1/me") {
     const user = DEMO_USERS[who] as DemoUser;
-    return { status: 200, body: { id: `demo-${who}`, username: who, display_name: user.display_name, citizenship: "USA", clearance: "UNCLASSIFIED", ntk_programs: [], roles: user.roles } };
+    return { status: 200, body: { id: `demo-${who}`, username: who, display_name: user.display_name, citizenship: "USA", clearance: "UNCLASSIFIED", ntk_programs: [], roles: user.roles, org: user.org, org_name: ORG_NAMES[user.org] ?? user.org } };
   }
   return null;
 }
