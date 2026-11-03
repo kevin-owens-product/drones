@@ -5,6 +5,7 @@ export type Section =
   | "video"
   | "missions"
   | "debrief"
+  | "eval"
   | "organization"
   | "people"
   | "sharing"

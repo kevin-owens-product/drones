@@ -1,0 +1,5 @@
+name: jammer
+phase: Phase 5
+jammer_extra_loss_db: 60
+metric: Link success inside jammer
+max: 0.2

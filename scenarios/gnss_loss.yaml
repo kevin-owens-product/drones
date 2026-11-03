@@ -1,0 +1,5 @@
+name: gnss_loss
+phase: Phase 2
+fault: loss
+metric: GNSS loss detect
+max: 5

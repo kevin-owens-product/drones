@@ -1,0 +1,5 @@
+name: spoof_false_alarms
+phase: Phase 2
+fault: multipath
+metric: Spoof false alarms
+max: 1

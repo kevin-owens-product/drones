@@ -85,6 +85,28 @@ def splice_readme(readme: str, table: str) -> str:
     return f"{head}{START}\n\n{table}\n\n{END}{tail}"
 
 
+def check_scenarios(log: str, scenario_dir: Path) -> list[str]:
+    import yaml  # type: ignore[import-untyped]
+
+    found = parse_metrics(log)
+    failures: list[str] = []
+    for path in sorted(scenario_dir.glob("*.yaml")):
+        doc = yaml.safe_load(path.read_text())
+        if not isinstance(doc, dict) or "metric" not in doc:
+            failures.append(f"{path.name}: missing metric")
+            continue
+        name = str(doc["metric"])
+        if name not in found:
+            failures.append(f"{path.name}: {name} was not measured")
+            continue
+        value = float(found[name])
+        if "max" in doc and value > float(doc["max"]):
+            failures.append(f"{path.name}: {name} {value} above {doc['max']}")
+        if "min" in doc and value < float(doc["min"]):
+            failures.append(f"{path.name}: {name} {value} below {doc['min']}")
+    return failures
+
+
 def write_readme(path: Path, log: str) -> dict[str, str]:
     found = parse_metrics(log)
     missing = [name for name, *_rest in FIELDS if name not in found]

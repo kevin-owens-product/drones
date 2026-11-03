@@ -1,5 +1,5 @@
 build/crsf_test testdata
-crsf_frames_per_sec 11849745
+crsf_frames_per_sec 13085580
 crsf tests passed
 build/crsf_smoke
 crsf fuzz smoke 100000 inputs

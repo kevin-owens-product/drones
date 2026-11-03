@@ -55,7 +55,7 @@ eval: $(PY)
 	  $(MAKE) -C onboard/separate test; \
 	  $(MAKE) -C onboard/link test; \
 	  $(MAKE) -C onboard/track test; } > docs/eval/latest.txt
-	$(PY) -c 'from pathlib import Path; import sys; sys.path.insert(0, "services/api/src"); from a2e.evalreport import write_readme; write_readme(Path("README.md"), Path("docs/eval/latest.txt").read_text())'
+	$(PY) -c 'from pathlib import Path; import sys; sys.path.insert(0, "services/api/src"); from a2e.evalreport import check_scenarios, write_readme; log=Path("docs/eval/latest.txt").read_text(); write_readme(Path("README.md"), log); failed=check_scenarios(log, Path("scenarios")); print("\n".join(failed)); sys.exit(1 if failed else 0)'
 	@echo "wrote README results from docs/eval/latest.txt"
 
 eval-store: $(PY)

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { api, sessionLost, type SessionConfig } from "./api";
 import { AuditPage } from "./pages/Audit";
 import { DebriefPage } from "./pages/Debrief";
+import { EvalPage } from "./pages/Eval";
 import { FleetPage } from "./pages/Fleet";
 import { LivePage } from "./pages/Live";
 import { MissionsPage } from "./pages/Missions";
@@ -21,6 +22,7 @@ const SECTIONS: readonly Section[] = [
   "video",
   "missions",
   "debrief",
+  "eval",
   "organization",
   "people",
   "sharing",
@@ -124,6 +126,7 @@ export function App() {
       {section === "video" ? <VideoPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "missions" ? <MissionsPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "debrief" ? <DebriefPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "eval" ? <EvalPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "organization" ? <OrganizationPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "people" ? <PeoplePage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "sharing" ? <SharingPage viewer={viewer} onBanner={setBanner} /> : null}

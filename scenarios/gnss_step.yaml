@@ -1,0 +1,5 @@
+name: gnss_step
+phase: Phase 2
+fault: step
+metric: GNSS step detect
+max: 0.5

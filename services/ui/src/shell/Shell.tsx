@@ -17,6 +17,7 @@ const NAV: readonly { label: string; items: readonly { id: Section; label: strin
     items: [
       { id: "missions", label: "Missions" },
       { id: "debrief", label: "Debrief" },
+      { id: "eval", label: "Eval" },
     ],
   },
   {

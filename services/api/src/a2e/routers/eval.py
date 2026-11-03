@@ -112,3 +112,39 @@ async def debrief_export(
         blob = to_pdf("Debrief", banner)
         return JSONResponse({"banner": banner, "pdf_base64": __import__("base64").b64encode(blob).decode()})
     return fail(400, "format_unavailable")
+
+
+@router.get("/v1/eval/runs")
+@transactional
+async def eval_runs(
+    request: Request,
+    principal: Principal = Depends(require_principal),
+    session: AsyncSession = Depends(get_session),
+) -> JSONResponse:
+    denied = await _deny_or_none(request, session, principal, "telemetry.read")
+    if denied:
+        return denied
+    rows = await fetch_all(
+        session,
+        """
+        SELECT recorded_at, git_sha, metric, value, unit, phase
+        FROM eval_runs
+        ORDER BY recorded_at DESC, metric
+        LIMIT 200
+        """,
+    )
+    set_banner(request, request.app.state.settings.system_high, [])
+    items = []
+    for row in rows:
+        recorded = row["recorded_at"]
+        items.append(
+            {
+                "recorded_at": recorded.isoformat() if hasattr(recorded, "isoformat") else str(recorded),
+                "git_sha": str(row["git_sha"]),
+                "metric": str(row["metric"]),
+                "value": float(row["value"]),
+                "unit": str(row["unit"]),
+                "phase": str(row["phase"]),
+            }
+        )
+    return JSONResponse({"items": items})

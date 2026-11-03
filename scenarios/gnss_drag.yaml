@@ -1,0 +1,5 @@
+name: gnss_drag
+phase: Phase 2
+fault: drag
+metric: GNSS drag detect
+max: 30

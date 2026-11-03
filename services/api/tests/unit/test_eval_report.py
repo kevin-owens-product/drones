@@ -1,4 +1,8 @@
-from a2e.evalreport import metric_rows, parse_metrics, render_table, splice_readme
+from pathlib import Path
+
+from a2e.evalreport import check_scenarios, metric_rows, parse_metrics, render_table, splice_readme
+
+ROOT = Path(__file__).resolve().parents[4]
 
 
 def test_parse_and_splice_round_trip() -> None:
@@ -30,8 +34,15 @@ def test_parse_and_splice_round_trip() -> None:
     assert "1.6 s" in out
     assert "0.004 fraction" in out
     assert "50 of 50 runs" in out
+    assert out.startswith("before\n")
+    assert out.endswith("after\n")
     rows = metric_rows(log)
     assert len(rows) == 16
     assert ("GNSS loss detect", 1.6, "s", "Phase 2") in rows
-    assert out.startswith("before\n")
-    assert out.endswith("after\n")
+
+
+def test_scenario_rejects_a_slow_loss() -> None:
+    log = (ROOT / "docs" / "eval" / "latest.txt").read_text().replace("loss_detect_s 1.6", "loss_detect_s 9.0")
+    failures = check_scenarios(log, ROOT / "scenarios")
+    assert any(item.startswith("gnss_loss.yaml") for item in failures)
+    assert check_scenarios((ROOT / "docs" / "eval" / "latest.txt").read_text(), ROOT / "scenarios") == []
