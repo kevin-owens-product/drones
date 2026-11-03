@@ -1,4 +1,4 @@
-from a2e.evalreport import parse_metrics, render_table, splice_readme
+from a2e.evalreport import metric_rows, parse_metrics, render_table, splice_readme
 
 
 def test_parse_and_splice_round_trip() -> None:
@@ -30,5 +30,8 @@ def test_parse_and_splice_round_trip() -> None:
     assert "1.6 s" in out
     assert "0.004 fraction" in out
     assert "50 of 50 runs" in out
+    rows = metric_rows(log)
+    assert len(rows) == 16
+    assert ("GNSS loss detect", 1.6, "s", "Phase 2") in rows
     assert out.startswith("before\n")
     assert out.endswith("after\n")

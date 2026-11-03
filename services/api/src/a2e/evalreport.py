@@ -29,6 +29,33 @@ FIELDS: tuple[tuple[str, str, str, str], ...] = (
 )
 
 
+def metric_rows(log: str) -> list[tuple[str, float, str, str]]:
+    found = parse_metrics(log)
+    rows: list[tuple[str, float, str, str]] = []
+    for name, _pattern, unit, phase in FIELDS:
+        if name not in found:
+            continue
+        rows.append((name, float(found[name]), unit, phase))
+    return rows
+
+
+def store_metrics(dsn: str, log: str, git_sha: str) -> int:
+    import psycopg
+
+    rows = metric_rows(log)
+    with psycopg.connect(dsn) as conn:
+        with conn.cursor() as cur:
+            cur.executemany(
+                """
+                INSERT INTO eval_runs (git_sha, metric, value, unit, phase)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                [(git_sha, name, value, unit, phase) for name, value, unit, phase in rows],
+            )
+        conn.commit()
+    return len(rows)
+
+
 def parse_metrics(log: str) -> dict[str, str]:
     found: dict[str, str] = {}
     for name, pattern, _unit, _phase in FIELDS:

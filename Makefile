@@ -58,6 +58,9 @@ eval: $(PY)
 	$(PY) -c 'from pathlib import Path; import sys; sys.path.insert(0, "services/api/src"); from a2e.evalreport import write_readme; write_readme(Path("README.md"), Path("docs/eval/latest.txt").read_text())'
 	@echo "wrote README results from docs/eval/latest.txt"
 
+eval-store: $(PY)
+	$(PY) -c 'import os,subprocess,sys; from pathlib import Path; sys.path.insert(0,"services/api/src"); from a2e.evalreport import store_metrics; sha=subprocess.check_output(["git","rev-parse","--short","HEAD"],text=True).strip(); dsn=os.environ.get("A2E_EVAL_DATABASE_URL","postgresql://a2e:change-me-db@127.0.0.1:15432/a2e"); n=store_metrics(dsn, Path("docs/eval/latest.txt").read_text(), sha); print(f"stored {n} metrics at {sha}")'
+
 lint: $(PY)
 	cd services/api && $(PY) -m ruff check src tests && $(PY) -m mypy src
 
