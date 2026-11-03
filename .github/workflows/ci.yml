@@ -13,7 +13,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install API
-        run: pip install "./services/api[dev]"
+        run: pip install -e "./services/api[dev]"
       - name: Lint
         run: ruff check services/api/src services/api/tests && mypy services/api/src
       - name: Unit tests
@@ -69,7 +69,7 @@ jobs:
           A2E_OPA_URL: http://127.0.0.1:8181
           A2E_SYSTEM_HIGH: CUI
         run: |
-          pip install "./services/api[dev]"
+          pip install -e "./services/api[dev]"
           export A2E_DATA_KEY="$(python -c 'import base64; print(base64.b64encode(b"u"*32).decode())')"
           for i in $(seq 1 30); do
             curl -fsS http://127.0.0.1:8181/health >/dev/null && break
