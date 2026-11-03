@@ -26,3 +26,5 @@
 The test fails below 45/50 retention, above 1.5 px mean error, or under 200 frames/s.
 
 Closed loop against PX4 with a rendered camera, look-alikes and occlusion: [docs/design/sitl.md](sitl.md) and [docs/eval/sitl.md](../eval/sitl.md).
+
+`POST /v1/flight/track` records a lock, a loss, or an abort. The operator must confirm. A missing confirmation is an audit deny with `not_confirmed`. A confirmed event is an audit allow naming the event and the vehicle. There is no weapon command on this route.

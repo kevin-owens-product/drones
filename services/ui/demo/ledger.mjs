@@ -6,10 +6,10 @@
 
 // Mirrors policies/role_matrix/data.json; demo/ledger.test.mjs fails if they drift.
 export const ROLE_MATRIX = {
-  admin: ["fleet.read", "fleet.write", "custody.append", "org.read", "org.write", "sharing.read", "sharing.create", "sharing.approve", "audit.read", "release.export", "user.read", "user.provision", "mission.read", "mission.draft", "mission.review", "mission.approve", "mission.execute", "vehicle.command", "video.read", "video.manage", "telemetry.read", "sim.run", "behavior.read", "behavior.promote"],
-  mission_commander: ["fleet.read", "fleet.write", "custody.append", "org.read", "sharing.read", "sharing.create", "sharing.approve", "release.export", "user.read", "mission.read", "mission.draft", "mission.review", "mission.approve", "mission.execute", "vehicle.command", "video.read", "video.manage", "telemetry.read", "sim.run", "behavior.read", "behavior.promote"],
+  admin: ["fleet.read", "fleet.write", "custody.append", "org.read", "org.write", "sharing.read", "sharing.create", "sharing.approve", "audit.read", "release.export", "user.read", "user.provision", "mission.read", "mission.draft", "mission.review", "mission.approve", "mission.execute", "vehicle.command", "vehicle.track", "video.read", "video.manage", "telemetry.read", "sim.run", "behavior.read", "behavior.promote"],
+  mission_commander: ["fleet.read", "fleet.write", "custody.append", "org.read", "sharing.read", "sharing.create", "sharing.approve", "release.export", "user.read", "mission.read", "mission.draft", "mission.review", "mission.approve", "mission.execute", "vehicle.command", "vehicle.track", "video.read", "video.manage", "telemetry.read", "sim.run", "behavior.read", "behavior.promote"],
   planner: ["fleet.read", "org.read", "sharing.read", "release.export", "user.read", "mission.read", "mission.draft", "mission.review", "video.read", "telemetry.read", "sim.run", "behavior.read"],
-  operator: ["fleet.read", "custody.append", "org.read", "user.read", "mission.read", "mission.execute", "vehicle.command", "video.read", "telemetry.read"],
+  operator: ["fleet.read", "custody.append", "org.read", "user.read", "mission.read", "mission.execute", "vehicle.command", "vehicle.track", "video.read", "telemetry.read"],
   analyst: ["fleet.read", "org.read", "sharing.read", "release.export", "user.read", "mission.read", "video.read", "telemetry.read", "behavior.read"],
   maintainer: ["fleet.read", "fleet.write", "custody.append", "org.read", "user.read", "mission.read", "video.read", "telemetry.read"],
   auditor: ["fleet.read", "org.read", "sharing.read", "audit.read", "user.read", "mission.read", "video.read", "telemetry.read", "behavior.read"],
@@ -21,10 +21,12 @@ export function can(roles, permission) {
 
 // The four hosted-demo sign-ins (passwords are shared out of band; see staticDemo.ts).
 export const ACCOUNTS = [
-  { id: "demo-admin", username: "admin", display_name: "Demo Admin", roles: ["admin"] },
-  { id: "demo-commander", username: "commander", display_name: "Demo Mission Commander", roles: ["mission_commander", "planner"] },
-  { id: "demo-operator", username: "operator", display_name: "Demo Operator", roles: ["operator"] },
-  { id: "demo-maintainer", username: "maintainer", display_name: "Demo Maintainer", roles: ["maintainer"] },
+  // `org` picks the workspace: "neros" runs operations, a customer id runs its own fleet (demo/ops.mjs).
+  { id: "demo-admin", username: "admin", display_name: "Demo Admin", roles: ["admin"], org: "neros" },
+  { id: "demo-ops", username: "ops", display_name: "Demo Ops Lead (Neros)", roles: ["ops_lead"], org: "neros" },
+  { id: "demo-commander", username: "commander", display_name: "Demo Mission Commander", roles: ["mission_commander", "planner"], org: "CUS-A" },
+  { id: "demo-operator", username: "operator", display_name: "Demo Operator", roles: ["operator"], org: "CUS-A" },
+  { id: "demo-maintainer", username: "maintainer", display_name: "Demo Maintainer", roles: ["maintainer"], org: "CUS-A" },
 ];
 
 // ---- SHA-256 (FIPS 180-4), synchronous, UTF-8 input, lowercase hex output ----

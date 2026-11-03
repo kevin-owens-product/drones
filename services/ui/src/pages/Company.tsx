@@ -111,7 +111,7 @@ export function CompanyPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
       return "";
     }
   });
-  const canWrite = viewer.roles.some((r) => ["admin", "mission_commander", "maintainer"].includes(r));
+  const canWrite = viewer.roles.some((r) => ["admin", "ops_lead", "mission_commander", "maintainer"].includes(r));
 
   function setTab(next: Tab) {
     setTabState(next);
@@ -560,7 +560,7 @@ export function CompanyPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
                           {l.on_hand} of {l.qty}
                         </td>
                         <td>
-                          <span className={l.status === "quarantined" ? "pill pill-warn" : "pill pill-ok"}>{l.status === "quarantined" ? "On hold" : "Released"}</span>
+                          <span className={l.status === "released" ? "pill pill-ok" : "pill pill-warn"}>{l.status === "quarantined" ? "On hold" : l.status.charAt(0).toUpperCase() + l.status.slice(1)}</span>
                         </td>
                         <td className="meta">{l.where_used.map((w) => w.tail).join(", ") || "—"}</td>
                       </tr>

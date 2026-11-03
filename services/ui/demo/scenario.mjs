@@ -3,10 +3,13 @@
 // same code runs behind demo/server.mjs and, for the hosted static demo, inside
 // the browser (src/staticDemo.ts). All data is synthetic and labelled so.
 import { createCompany } from "./company.mjs";
+import { createOps, NEROS } from "./ops.mjs";
 import { plan as planConfig } from "./configure.mjs";
 import { nameOf, skuForTail } from "./supply.mjs";
 import { denialPicture } from "./denial.mjs";
-import { propose } from "./intent.mjs";
+import { PLACES, propose } from "./intent.mjs";
+import { createMissions } from "./missions.mjs";
+import { parseEvalTable } from "./evalrows.mjs";
 import { FLEET_SHARE, fileReport, seedReports, triage } from "./fieldvoice.mjs";
 import { ACCOUNTS, birthRecord, birthVerdict, can, createLedger } from "./ledger.mjs";
 import { acknowledge, RESPONSES, scorecard, startSession, visible } from "./training.mjs";
@@ -14,7 +17,7 @@ import { acknowledge, RESPONSES, scorecard, startSession, visible } from "./trai
 export const BANNER = "UNCLASSIFIED // DEMO DATA";
 
 /**
- * @param {{ speed?: number, extra?: number, terrain?: object | null, assetBase?: string, attrition?: object | null }} opts
+ * @param {{ speed?: number, extra?: number, terrain?: object | null, assetBase?: string, attrition?: object | null, readme?: string }} opts
  * `who` is the signed-in demo account when the caller knows it (the hosted demo does);
  * without it every request is allowed and the actor is whatever the page sent as `by`.
  * @returns {{ handle: (method: string, url: URL, body: string, who?: { display_name: string, roles: string[] } | null) => { status: number, body: unknown } }}
@@ -200,6 +203,8 @@ export function createDemo(opts = {}) {
     airworthiness: c.grounded ? "grounded" : c.tail === "NX-08" ? "restricted" : "airworthy",
     airworthiness_reason: c.grounded ?? (c.tail === "NX-08" ? "Prop strike on recovery; hover check before next sortie" : null),
     classification: "UNCLASSIFIED",
+    // The named tails are Customer A's fleet (SIM); synthetic ones belong to no one.
+    owner: c.swarm ? null : "CUS-A",
   }));
 
   // Factory birth records for the named tails, and the audit log. The log opens
@@ -404,8 +409,33 @@ export function createDemo(opts = {}) {
         }
       : null;
 
+  // Mission plans and their debriefs (demo/missions.mjs), on the same range,
+  // fleet register, attrition holds and audit log as the rest of the scenario.
+  const flagged = (opts.attrition?.autopsy?.alerts ?? []).filter((a) => a.flagged);
+  const lotOf = (tail) => BIRTH.find((b) => b.tail_number === tail)?.parts.map((p) => p.lot) ?? [];
+  const missions = createMissions({
+    toLL,
+    fromLL: (lat, lon) => [(lon - LON0) * M_LON, (lat - LAT0) * M_LAT],
+    station: STATION,
+    jamming: JAMMING,
+    places: PLACES,
+    platforms: PLATFORMS,
+    padBattery: Object.fromEntries(FLEET.filter((c) => c.kind === "pad").map((c) => [c.tail, c.battery])),
+    heldTails: () => new Map(FLEET.map((c) => [c.tail, lotOf(c.tail).find((lot) => holds.some((h) => h.value === lot))]).filter(([, lot]) => lot)),
+    watchTails: Object.fromEntries(
+      FLEET.map((c) => [c.tail, flagged.find((a) => lotOf(c.tail).includes(a.value))]).filter(([, a]) => a).map(([tail, a]) => [tail, { lot: a.value, ratio: a.ratio }]),
+    ),
+    skuForTail,
+    audit,
+    can,
+    basemap: TERRAIN,
+    now: T0,
+  });
+  const EVAL = parseEvalTable(opts.readme ?? "");
+
     const ROUTES = {
     "/v1/session/config": () => ({ auth_mode: "dev", dev_login: true, system_high: "UNCLASSIFIED", login_url: "" }),
+    // The local demo server has no sign-in and no org, so every page shows (both workspaces at once).
     "/v1/me": () => ({ id: "u1", username: "demo.operator", display_name: "Demo Operator", citizenship: "USA", clearance: "UNCLASSIFIED", ntk_programs: [], roles: ["operator"] }),
     "/v1/platforms": () => ({ items: PLATFORMS }),
     "/v1/telemetry/live": () => {
@@ -419,6 +449,7 @@ export function createDemo(opts = {}) {
     "/v1/users": () => ({ items: ACCOUNTS }),
     "/v1/birth-records": () => ({ items: BIRTH }),
     "/v1/audit": () => ({ items: audit.items() }),
+    "/v1/eval/runs": () => ({ source: "README results table, written by make eval", items: EVAL }),
     "/v1/session/dev-login": () => ({ ok: true }),
     "/v1/session/logout": () => ({ ok: true }),
   };
@@ -483,6 +514,29 @@ export function createDemo(opts = {}) {
   // Intent to plan: proposals wait for a person; approval files a draft for the
   // mission planner and commands nothing.
   const proposals = [];
+  function seedBriefs() {
+    const SEED = [
+      { brief: "Survey the west pasture with two vehicles, keep one in reserve", by: "Demo Operator", ago: 95, decide: ["approved", "Demo Mission Commander", 80] },
+      { brief: "Inspect the culvert and the road junction before 16:00", by: "Demo Planner", ago: 64, decide: ["rejected", "Demo Mission Commander", 58, "NX-07 drops off the link near the culvert. Re-brief once the ridge relay is up."] },
+      { brief: "strike the road junction", by: "Demo Operator", ago: 41 },
+      { brief: "Observe gate 3 with 2 drones for 20 minutes, relay on the ridge, avoid the jamming zone", by: "Demo Operator", ago: 12 },
+    ];
+    for (const s of SEED) {
+      const at = T0 - s.ago * 60_000;
+      const p = propose(s.brief, briefFleet(), at);
+      p.by = s.by;
+      p.at = new Date(at).toISOString();
+      if (s.decide) {
+        const [status, by, ago, note] = s.decide;
+        p.status = status;
+        p.decided_by = by;
+        p.decided_at = new Date(T0 - ago * 60_000).toISOString();
+        if (note) p.decision_note = note;
+        if (status === "approved") p.mission_id = missions.fromProposal(p, { display_name: by, roles: ["mission_commander", "planner"] });
+      }
+      proposals.push(p);
+    }
+  }
   function briefFleet() {
     return FLEET.map((c) => {
       const x = c.kind === "lawnmower" ? c.x + c.w / 2 : c.x;
@@ -503,6 +557,8 @@ export function createDemo(opts = {}) {
     }
     if (url.pathname === "/v1/intent/propose") {
       const p = propose(String(msg.brief ?? "").slice(0, 600), briefFleet());
+      p.by = caller?.display_name ?? "Demo Operator";
+      p.at = new Date().toISOString();
       proposals.push(p);
       audit.append({ actor: caller?.display_name ?? "operator", action: "brief.propose", resource_type: "proposal", resource_id: p.id, detail: String(msg.brief ?? "").slice(0, 80) });
       return { status: 200, body: p };
@@ -521,6 +577,8 @@ export function createDemo(opts = {}) {
       p.decided_by = actor;
       audit.append({ actor, action, resource_type: "proposal", resource_id: p.id, detail: p.status === "approved" ? "Filed as a draft for mission review; nothing sent to a vehicle" : "" });
       p.decided_at = new Date().toISOString();
+      if (typeof msg.note === "string" && msg.note.trim()) p.decision_note = msg.note.trim().slice(0, 300);
+      if (p.status === "approved") p.mission_id = missions.fromProposal(p, caller);
       return { status: 200, body: p };
     }
     return { status: 404, body: { error: "unknown" } };
@@ -568,7 +626,7 @@ export function createDemo(opts = {}) {
     const action = url.pathname === "/v1/company/ship" ? "kit.ship" : url.pathname === "/v1/company/work-orders/close" ? "work_order.close" : null;
     if (!action) return { status: 404, body: { error: "unknown" } };
     const resource = String(msg.plan ?? msg.id ?? "");
-    if (caller && !can(caller.roles, "fleet.write")) {
+    if (caller && !can(caller.roles, "fleet.write") && !caller.roles.includes("ops_lead")) {
       audit.append({ actor, action, resource_type: action === "kit.ship" ? "kit" : "work_order", resource_id: resource, decision: "deny", reason_codes: ["role_denied"] });
       return { status: 403, body: { detail: "This needs the maintainer, mission commander or admin role." } };
     }
@@ -592,20 +650,59 @@ export function createDemo(opts = {}) {
     return { status: 200, body: out };
   }
 
+  // Two workspaces: the Neros operations queue and each customer's portal (demo/ops.mjs).
+  const ops = createOps({ company, audit, platforms: PLATFORMS });
+  function opsRoute(method, url, raw) {
+    const ctx = { holds, demand: opts.attrition?.demand ?? null, platforms: PLATFORMS };
+    const viewer = caller ? { ...caller, org: caller.org ?? NEROS.id } : null;
+    if (method === "GET" && url.pathname === "/v1/ops/queue") {
+      if (viewer && viewer.org !== NEROS.id) return { status: 403, body: { detail: "The operations queue is Neros's own workspace." } };
+      return { status: 200, body: ops.queue(ctx) };
+    }
+    if (method === "GET" && url.pathname === "/v1/ops/portal") {
+      // Neros staff can open any customer's portal to see what the customer sees; customers only their own.
+      const asked = url.searchParams.get("org");
+      const org = viewer && viewer.org !== NEROS.id ? viewer.org : asked ?? "CUS-A";
+      const out = ops.portal(org, ctx);
+      return out ? { status: 200, body: out } : { status: 404, body: { detail: "no such customer" } };
+    }
+    if (method === "POST" && url.pathname === "/v1/ops/act") {
+      let msg = {};
+      try {
+        msg = JSON.parse(raw);
+      } catch {
+        return { status: 400, body: { error: "json" } };
+      }
+      return ops.act(viewer, String(msg.action ?? ""), msg.args ?? {}, ctx);
+    }
+    return { status: 404, body: { error: "unknown" } };
+  }
+
   let caller = null;
+  seedBriefs();
   return {
     extra: EXTRA,
     handle(method, url, raw = "", who = null) {
       caller = who;
       if (url.pathname === "/v1/audit" && caller && !can(caller.roles, "audit.read")) return { status: 403, body: { detail: "role_denied" } };
+      const customer = caller?.org && caller.org !== NEROS.id;
+      // Neros internals stay out of customer workspaces.
+      if (customer && (url.pathname.startsWith("/v1/company") || url.pathname === "/v1/ops/queue")) return { status: 403, body: { detail: "That is Neros's own workspace." } };
+      // Loss data is the customer's. Neros sees it only while Customer A shares it.
+      if (url.pathname.startsWith("/v1/attrition") && caller && !customer && !ops.sharing["CUS-A"]) return { status: 403, body: { detail: "Customer A has turned off sharing of loss data with Neros." } };
       if (url.pathname.startsWith("/v1/attrition")) return attrition(method, url, raw);
       if (url.pathname === "/v1/field-reports") return fieldReports(method, raw);
       if (url.pathname.startsWith("/v1/company")) return companyRoute(method, url, raw);
+      if (url.pathname.startsWith("/v1/ops/")) return opsRoute(method, url, raw);
       if (url.pathname === "/v1/maintenance") {
         const items = company.openWorkOrders(holds).filter((w) => w.status === "open").map((w) => ({ id: w.id, tail_number: w.tail, summary: w.summary, status: "open" }));
         return { status: 200, body: { items } };
       }
       if (url.pathname.startsWith("/v1/intent")) return intent(method, url, raw);
+      if (url.pathname === "/v1/org" || url.pathname.startsWith("/v1/missions") || url.pathname === "/v1/debrief/export") {
+        const out = missions.handle(method, url, raw, caller);
+        if (out) return out;
+      }
       if (url.pathname === "/v1/configure") {
         const q = url.searchParams;
         const num = (k, d) => (Number.isFinite(Number(q.get(k))) && q.get(k) !== null ? Number(q.get(k)) : d);

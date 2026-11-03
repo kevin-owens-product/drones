@@ -22,6 +22,14 @@ log = structlog.get_logger()
 router = APIRouter()
 
 
+class TrackEventIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    tenant_id: UUID
+    system_id: int = Field(ge=1, le=255)
+    event: Literal["lock", "loss", "abort"]
+    confirm: bool = False
+
+
 class FlightCommandIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     tenant_id: UUID
@@ -29,6 +37,52 @@ class FlightCommandIn(BaseModel):
     command: Literal["arm", "disarm", "takeoff", "land", "mode"]
     param1: float = 0
     confirm: bool = False
+
+
+@router.post("/v1/flight/track")
+@transactional
+async def flight_track(
+    body: TrackEventIn,
+    request: Request,
+    principal: Principal = Depends(require_principal),
+    session: AsyncSession = Depends(get_session),
+) -> JSONResponse:
+    resource = {
+        "tenant_id": str(body.tenant_id),
+        "classification": "CUI",
+        "caveats": [],
+        "ntk_programs": [],
+        "resource_type": "vehicle",
+    }
+    denied = await _authz(request, session, principal, "vehicle.track", resource)
+    if denied:
+        return denied
+    if not body.confirm:
+        await append_audit(
+            session,
+            actor_id=principal.user_id,
+            tenant_id=body.tenant_id,
+            action="vehicle.track",
+            resource_type="vehicle",
+            resource_id=None,
+            decision="deny",
+            reason_codes=["not_confirmed", body.event],
+            classification="CUI",
+        )
+        return fail(409, "not_confirmed")
+    await append_audit(
+        session,
+        actor_id=principal.user_id,
+        tenant_id=body.tenant_id,
+        action="vehicle.track",
+        resource_type="vehicle",
+        resource_id=None,
+        decision="allow",
+        reason_codes=[body.event, str(body.system_id)],
+        classification="CUI",
+    )
+    set_banner(request, request.app.state.settings.system_high, [])
+    return JSONResponse({"event": body.event, "system_id": body.system_id}, status_code=202)
 
 
 @router.post("/v1/flight/command")
