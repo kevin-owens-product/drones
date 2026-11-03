@@ -7,9 +7,13 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "demo": "node demo/server.mjs",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
     "cesium": "^1.124.0",
     "maplibre-gl": "^5.6.0",
     "react": "^19.0.0",

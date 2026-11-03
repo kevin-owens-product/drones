@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -252,6 +253,7 @@ func demo(pipe *pipeline.Latest, publish func(sample.Sample)) {
 				Classification: item.classification,
 				Caveats:        []string{},
 			}
+			demoState(&sampleItem, item.phase, angle, tick)
 			if item.tail == "N-002" {
 				sampleItem.Caveats = []string{"REL TO USA, GBR"}
 			}
@@ -268,12 +270,87 @@ func demo(pipe *pipeline.Latest, publish func(sample.Sample)) {
 	}
 }
 
+// vehicleState folds the slower MAVLink messages into the next position sample.
+type vehicleState struct {
+	mode    string
+	armed   *bool
+	battery *float64
+	gnssOK  *bool
+	climb   *float64
+}
+
+// px4Mode names PX4's custom main and sub mode the way an operator says it.
+func px4Mode(custom uint32) string {
+	main := (custom >> 16) & 0xFF
+	sub := (custom >> 24) & 0xFF
+	switch main {
+	case 1:
+		return "MANUAL"
+	case 2:
+		return "ALTITUDE"
+	case 3:
+		return "POSITION"
+	case 4:
+		switch sub {
+		case 2:
+			return "TAKEOFF"
+		case 3:
+			return "HOLD"
+		case 4:
+			return "MISSION"
+		case 5:
+			return "RTL"
+		case 6:
+			return "LAND"
+		}
+		return "AUTO"
+	case 5:
+		return "ACRO"
+	case 6:
+		return "OFFBOARD"
+	case 7:
+		return "STABILIZED"
+	}
+	return ""
+}
+
+const estimatorGPSGlitch = 1024 // ESTIMATOR_GPS_GLITCH
+
 func serveMAVLink(addr, tenant string, pipe *pipeline.Latest, publish func(sample.Sample), fan *forward.Fanout) {
+	var mu sync.Mutex
+	states := map[uint32]*vehicleState{}
 	_, err := mavlink.Listen(addr, func(item wire.Sample) {
 		fan.Publish(fmt.Sprintf("telemetry.v1.%d.%s", item.SystemID, item.Name), wire.Marshal(item))
+		mu.Lock()
+		st := states[item.SystemID]
+		if st == nil {
+			st = &vehicleState{}
+			states[item.SystemID] = st
+		}
+		switch item.Name {
+		case "HEARTBEAT":
+			st.mode = px4Mode(item.CustomMode)
+			armed := item.BaseMode&128 != 0
+			st.armed = &armed
+		case "BATTERY_STATUS", "SYS_STATUS":
+			if item.BatteryRemainingPct >= 0 && item.BatteryRemainingPct <= 100 {
+				pct := float64(item.BatteryRemainingPct)
+				st.battery = &pct
+			}
+		case "ESTIMATOR_STATUS":
+			ok := item.EstimatorFlags&estimatorGPSGlitch == 0
+			st.gnssOK = &ok
+		}
+		snapshot := *st
+		mu.Unlock()
 		if item.Name != "GLOBAL_POSITION_INT" {
 			return
 		}
+		vn := float64(item.VxCms) / 100
+		ve := float64(item.VyCms) / 100
+		ground := math.Hypot(vn, ve)
+		heading := math.Mod(math.Atan2(ve, vn)*180/math.Pi+360, 360)
+		climb := -float64(item.VzCms) / 100
 		row := sample.Sample{
 			Tail:           fmt.Sprintf("PX4-%d", item.SystemID),
 			TenantID:       tenant,
@@ -282,6 +359,15 @@ func serveMAVLink(addr, tenant string, pipe *pipeline.Latest, publish func(sampl
 			Lon:            float64(item.LonE7) / 1e7,
 			AltM:           float64(item.AltMM) / 1000,
 			Classification: "UNCLASSIFIED",
+			GroundMps:      &ground,
+			ClimbMps:       &climb,
+			BatteryPct:     snapshot.battery,
+			Mode:           snapshot.mode,
+			Armed:          snapshot.armed,
+			GNSSTrusted:    snapshot.gnssOK,
+		}
+		if ground > 0.5 {
+			row.HeadingDeg = &heading
 		}
 		ok, err := pipe.Ingest(row, row.TenantID, row.Tail)
 		if err == nil && ok {
@@ -291,6 +377,34 @@ func serveMAVLink(addr, tenant string, pipe *pipeline.Latest, publish func(sampl
 	if err != nil {
 		log.Printf("mavlink %s: %v", addr, err)
 	}
+}
+
+// demoState gives a demo track the vehicle state a real one reports. The
+// orbit runs counter-clockwise, so the heading leads the bearing by 90 degrees.
+func demoState(row *sample.Sample, phase, angle float64, tick int) {
+	heading := math.Mod(-angle*180/math.Pi, 360)
+	if heading < 0 {
+		heading += 360
+	}
+	ground := 14.0 + 3*math.Sin(phase*3)
+	climb := 0.0
+	battery := math.Max(18, 96-math.Mod(float64(tick)*0.15+phase*20, 70))
+	armed := true
+	row.HeadingDeg = &heading
+	row.GroundMps = &ground
+	row.ClimbMps = &climb
+	row.BatteryPct = &battery
+	row.Armed = &armed
+	row.Mode = "MISSION"
+	trusted := true
+	row.NavSource = "gnss"
+	// A fixed slice of the demo fleet flies under simulated jamming, so the
+	// console's GNSS-denied states are visible without a live PX4.
+	if int(phase*100)%7 == 0 {
+		trusted = false
+		row.NavSource = "vio"
+	}
+	row.GNSSTrusted = &trusted
 }
 
 func env(key, fallback string) string {

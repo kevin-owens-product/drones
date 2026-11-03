@@ -78,3 +78,40 @@ jobs:
           curl -fsS http://127.0.0.1:8181/health
           python -m a2e.bootstrap
           cd services/api && pytest tests/unit tests/integration --cov=a2e
+
+  console:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: services/ui/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Operate screen against the demo sortie
+        env:
+          A2E_DEMO: "1"
+          A2E_UI_ORIGIN: http://localhost:4173
+        run: |
+          node demo/server.mjs &
+          for i in $(seq 1 20); do curl -fsS http://localhost:4173/ >/dev/null && break; sleep 0.5; done
+          npx playwright test e2e/operate.spec.ts
+
+  gateway:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/gateway
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/gateway/go.mod
+      - run: go vet ./...
+      - run: go test ./...
