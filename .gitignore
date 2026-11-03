@@ -19,6 +19,7 @@ onboard/separate/build/
 onboard/link/build/
 onboard/track/build/
 onboard/mesh/build/
+onboard/flowhold/build/
 services/ui/test-results/
 services/ui/playwright-report/
 sbom/
