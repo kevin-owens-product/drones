@@ -41,6 +41,17 @@ FIELDS: tuple[tuple[str, str, str, str, str], ...] = (
     ("Link success at 50 m", r"success_50m ([0-9.]+)", "fraction", "Phase 5", UNIT),
     ("Link success at 5 km", r"success_5km ([0-9.]+)", "fraction", "Phase 5", UNIT),
     ("Link success inside jammer", r"success_jammed ([0-9.]+)", "fraction", "Phase 5", UNIT),
+    ("Fleet sorties completed under jammer, default failsafe", r"fleet_sorties_default ([0-9.]+)", "fraction", "Phase 5", UNIT),
+    (
+        "Fleet sorties completed under jammer, mesh and lost-link policy",
+        r"fleet_sorties_mesh_policy ([0-9.]+)",
+        "fraction",
+        "Phase 5",
+        UNIT,
+    ),
+    ("Dense crossing minimum separation", r"dense_min_sep_m ([0-9.]+)", "m", "Phase 4", UNIT),
+    ("Dense crossing losses of separation", r"dense_los_events ([0-9]+)", "events", "Phase 4", UNIT),
+    ("Dense crossing geofence breaches", r"geofence_breaches ([0-9]+)", "events", "Phase 4", UNIT),
     ("Lock retention", r"lock_retention ([0-9]+)/50", "of 50 runs", "Phase 3", UNIT),
     ("Reacquisition", r"reacq_frames ([0-9.]+)", "frames", "Phase 3", UNIT),
     ("Mean pixel error", r"mean_pixel_err ([0-9.]+)", "px", "Phase 3", UNIT),
@@ -108,26 +119,67 @@ def splice_readme(readme: str, table: str) -> str:
     return f"{head}{START}\n\n{table}\n\n{END}{tail}"
 
 
-def check_scenarios(log: str, scenario_dir: Path) -> list[str]:
+def scenario_results(log: str, scenario_dir: Path) -> list[tuple[str, str, str, str, list[str]]]:
+    """One row per scenario file: file, metric, value, bound, failures."""
     import yaml  # type: ignore[import-untyped]
 
     found = parse_metrics(log)
-    failures: list[str] = []
+    results: list[tuple[str, str, str, str, list[str]]] = []
     for path in sorted(scenario_dir.glob("*.yaml")):
         doc = yaml.safe_load(path.read_text())
         if not isinstance(doc, dict) or "metric" not in doc:
-            failures.append(f"{path.name}: missing metric")
+            results.append((path.name, "", "", "", [f"{path.name}: missing metric"]))
             continue
         name = str(doc["metric"])
+        bound = " ".join(f"{key} {doc[key]}" for key in ("min", "max") if key in doc)
         if name not in found:
-            failures.append(f"{path.name}: {name} was not measured")
+            results.append((path.name, name, "", bound, [f"{path.name}: {name} was not measured"]))
             continue
         value = float(found[name])
+        failures: list[str] = []
         if "max" in doc and value > float(doc["max"]):
             failures.append(f"{path.name}: {name} {value} above {doc['max']}")
         if "min" in doc and value < float(doc["min"]):
             failures.append(f"{path.name}: {name} {value} below {doc['min']}")
-    return failures
+        results.append((path.name, name, found[name], bound, failures))
+    return results
+
+
+def check_scenarios(log: str, scenario_dir: Path) -> list[str]:
+    return [item for row in scenario_results(log, scenario_dir) for item in row[4]]
+
+
+def render_gate(log: str, scenario_dir: Path) -> str:
+    """Markdown summary of the scenario gate, for $GITHUB_STEP_SUMMARY."""
+    results = scenario_results(log, scenario_dir)
+    failed = sum(1 for row in results if row[4])
+    lines = [
+        f"### Scenario gate: {len(results) - failed}/{len(results)} pass",
+        "",
+        "| Scenario | Metric | Value | Bound | Result |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    for name, metric, value, bound, failures in results:
+        lines.append(f"| {name} | {metric} | {value or 'not measured'} | {bound} | {'FAIL' if failures else 'pass'} |")
+    return "\n".join(lines) + "\n"
+
+
+def main(argv: list[str] | None = None) -> int:
+    import argparse
+    import os
+
+    parser = argparse.ArgumentParser(description="Check scenarios/*.yaml against an eval log.")
+    parser.add_argument("log", type=Path)
+    parser.add_argument("--scenarios", type=Path, default=Path("scenarios"))
+    args = parser.parse_args(argv)
+    log = args.log.read_text()
+    summary = render_gate(log, args.scenarios)
+    print(summary)
+    target = os.environ.get("GITHUB_STEP_SUMMARY")
+    if target:
+        with open(target, "a") as handle:
+            handle.write(summary)
+    return 1 if check_scenarios(log, args.scenarios) else 0
 
 
 def write_readme(path: Path, log: str) -> dict[str, str]:
@@ -138,3 +190,7 @@ def write_readme(path: Path, log: str) -> dict[str, str]:
     text = path.read_text()
     path.write_text(splice_readme(text, render_table(found)))
     return found
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

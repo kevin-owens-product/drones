@@ -7,6 +7,8 @@ export interface Registered {
   tail_number: string;
   designation: string;
   airworthiness: string;
+  /** Why, from the factory birth record or maintenance (e.g. "EOL hover test failed: IMU cal out of range"). */
+  airworthiness_reason?: string | null;
   classification: string;
 }
 
@@ -16,6 +18,7 @@ export interface Vehicle {
   tail: string;
   designation: string;
   airworthiness: string;
+  airworthinessReason?: string | null;
   live: LivePoint | null;
   linkAgeMs: number | null;
   health: Health;
@@ -63,7 +66,7 @@ export function mergeFleet(registry: readonly Registered[], live: readonly LiveP
     seen.add(row.tail_number);
     const point = byTail.get(row.tail_number) ?? null;
     const { health, reasons, age } = assess(point, row.airworthiness, now);
-    out.push({ tail: row.tail_number, designation: row.designation, airworthiness: row.airworthiness, live: point, linkAgeMs: age, health, reasons });
+    out.push({ tail: row.tail_number, designation: row.designation, airworthiness: row.airworthiness, airworthinessReason: row.airworthiness_reason ?? null, live: point, linkAgeMs: age, health, reasons });
   }
   for (const point of live) {
     if (seen.has(point.tail_number)) continue;

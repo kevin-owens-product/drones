@@ -66,3 +66,20 @@ def test_scenario_rejects_a_slow_loss() -> None:
     failures = check_scenarios(log, ROOT / "scenarios")
     assert any(item.startswith("gnss_loss.yaml") for item in failures)
     assert check_scenarios((ROOT / "docs" / "eval" / "latest.txt").read_text(), ROOT / "scenarios") == []
+
+
+def test_contested_and_dense_rows_parse() -> None:
+    log = (
+        "fleet_sorties_default 0.671 fleet_cells_default 0.735\n"
+        "fleet_sorties_mesh_policy 1.000 fleet_cells_mesh_policy 1.000\n"
+        "dense_min_sep_m 5.93 dense_los_events 0 geofence_breaches 0 dense_arrived 8/8\n"
+        "dense_unguided_min_sep_m 0.00 dense_unguided_los_events 28\n"
+    )
+    found = parse_metrics(log)
+    assert found["Fleet sorties completed under jammer, default failsafe"] == "0.671"
+    assert found["Fleet sorties completed under jammer, mesh and lost-link policy"] == "1.000"
+    assert found["Dense crossing minimum separation"] == "5.93"
+    assert found["Dense crossing losses of separation"] == "0"
+    assert found["Dense crossing geofence breaches"] == "0"
+    assert "Guided minimum separation" not in found
+    assert "Unguided minimum separation" not in found

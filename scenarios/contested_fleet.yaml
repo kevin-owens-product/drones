@@ -1,0 +1,8 @@
+name: contested_fleet
+phase: Phase 5
+jammer_extra_loss_db: 60
+jammer_radius_m: 250
+vehicles: 6
+cells: 12
+metric: Fleet sorties completed under jammer, mesh and lost-link policy
+min: 0.9

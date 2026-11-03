@@ -7,6 +7,7 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
+import { acknowledge, RESPONSES, scorecard, startSession, visible } from "./training.mjs";
 
 const DIST = fileURLToPath(new URL("../dist/", import.meta.url));
 const PORT = Number(process.env.PORT ?? 4173);
@@ -34,7 +35,8 @@ const FLEET = [
   // They cycle every PAD_CYCLE demo seconds so the launch view always has something to show.
   { tail: "NX-10", kind: "pad", x: -2400, y: -1250, boot: 60, fix: 210, battery: 97 },
   { tail: "NX-11", kind: "pad", x: -2650, y: -1450, boot: 90, fix: 140, battery: 41 },
-  { tail: "NX-12", kind: "pad", x: -2150, y: -1450, boot: 30, fix: 90, battery: 100 },
+  // NX-12 is grounded by its factory birth record, so it stays NO-GO with the reason shown.
+  { tail: "NX-12", kind: "pad", x: -2150, y: -1450, boot: 30, fix: 90, battery: 100, grounded: "EOL hover test failed: IMU cal out of range" },
 ];
 const PAD_CYCLE = 360;
 const PAD_DOWN = 330;
@@ -107,7 +109,8 @@ const PLATFORMS = FLEET.map((c, i) => ({
   designation: i < 7 || c.kind === "pad" ? "Quad, 7 in, VIO + GNSS" : "Quad, 5 in, GNSS",
   group_size: "Group 1",
   portion_mark: "(U)",
-  airworthiness: c.tail === "NX-08" ? "restricted" : "airworthy",
+  airworthiness: c.grounded ? "grounded" : c.tail === "NX-08" ? "restricted" : "airworthy",
+  airworthiness_reason: c.grounded ?? null,
   classification: "UNCLASSIFIED",
 }));
 
@@ -129,8 +132,42 @@ const ROUTES = {
 
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".woff2": "font/woff2", ".svg": "image/svg+xml", ".json": "application/json" };
 
+// Training mode: open the console with ?scenario=qual-1. One session at a time.
+let session = null;
+async function training(req, url) {
+  const name = url.searchParams.get("scenario");
+  if (url.pathname === "/v1/training/start") {
+    session = startSession(name, Date.now());
+    return session ? { scenario: session.name, title: session.title, responses: RESPONSES } : { error: "unknown scenario" };
+  }
+  if (!session) return { error: "no session" };
+  if (url.pathname === "/v1/training/state") return { alerts: visible(session, Date.now()), scorecard: scorecard(session) };
+  if (url.pathname === "/v1/training/ack" && req.method === "POST") {
+    let body = "";
+    for await (const chunk of req) body += chunk;
+    let msg = {};
+    try {
+      msg = JSON.parse(body);
+    } catch {
+      return { error: "json" };
+    }
+    return acknowledge(session, String(msg.id), String(msg.action), Date.now());
+  }
+  if (url.pathname === "/v1/training/scorecard") return scorecard(session);
+  return { error: "unknown" };
+}
+
 createServer(async (req, res) => {
-  const path = new URL(req.url ?? "/", "http://x").pathname;
+  const url = new URL(req.url ?? "/", "http://x");
+  const path = url.pathname;
+  if (path.startsWith("/v1/training/")) {
+    const out = await training(req, url);
+    res.setHeader("X-A2E-Banner", BANNER);
+    res.setHeader("content-type", "application/json");
+    res.statusCode = out.error ? 400 : 200;
+    res.end(JSON.stringify(out));
+    return;
+  }
   if (path.startsWith("/v1/")) {
     const route = ROUTES[path];
     res.setHeader("X-A2E-Banner", BANNER);
