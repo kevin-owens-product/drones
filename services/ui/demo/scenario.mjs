@@ -7,7 +7,7 @@ import { acknowledge, RESPONSES, scorecard, startSession, visible } from "./trai
 export const BANNER = "UNCLASSIFIED // DEMO DATA";
 
 /**
- * @param {{ speed?: number, extra?: number, terrain?: object | null, assetBase?: string }} opts
+ * @param {{ speed?: number, extra?: number, terrain?: object | null, assetBase?: string, attrition?: object | null }} opts
  * @returns {{ handle: (method: string, url: URL, body: string) => { status: number, body: unknown } }}
  */
 export function createDemo(opts = {}) {
@@ -389,6 +389,29 @@ export function createDemo(opts = {}) {
     "/v1/session/logout": () => ({ ok: true }),
   };
 
+  // Attrition intelligence: the report baked by `python -m a2e.attrition.report`
+  // (seeded, simulated). A hold is a fleet record kept in memory; it commands nothing.
+  const holds = [];
+  function attrition(method, url, raw) {
+    if (!opts.attrition) return { status: 404, body: { error: "attrition report not baked" } };
+    if (url.pathname === "/v1/attrition") return { status: 200, body: { ...opts.attrition, holds } };
+    if (url.pathname === "/v1/attrition/hold" && method === "POST") {
+      let msg = {};
+      try {
+        msg = JSON.parse(raw);
+      } catch {
+        return { status: 400, body: { error: "json" } };
+      }
+      const alert = opts.attrition.autopsy.alerts.find((a) => a.attribute === msg.attribute && a.value === msg.value);
+      if (!alert) return { status: 404, body: { error: "no such alert" } };
+      if (!holds.some((h) => h.attribute === alert.attribute && h.value === alert.value)) {
+        holds.push({ attribute: alert.attribute, value: alert.value, serials: alert.in_service_count, by: String(msg.by ?? "operator"), at: new Date().toISOString() });
+      }
+      return { status: 200, body: { holds } };
+    }
+    return { status: 404, body: { error: "unknown" } };
+  }
+
   // Training mode: open the console with ?scenario=qual-1. One session at a time.
   let session = null;
   function training(method, url, raw) {
@@ -415,6 +438,7 @@ export function createDemo(opts = {}) {
   return {
     extra: EXTRA,
     handle(method, url, raw = "") {
+      if (url.pathname.startsWith("/v1/attrition")) return attrition(method, url, raw);
       if (url.pathname.startsWith("/v1/training/")) {
         const out = training(method, url, raw);
         return { status: out.error ? 400 : 200, body: out };

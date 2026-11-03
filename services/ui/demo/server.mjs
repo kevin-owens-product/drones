@@ -20,7 +20,13 @@ try {
 } catch {
   terrain = null;
 }
-const demo = createDemo({ speed: process.env.A2E_DEMO_SPEED ?? 6, extra: process.env.A2E_DEMO_FLEET ?? 0, terrain });
+let attrition = null;
+try {
+  attrition = JSON.parse(await readFile(join(ASSETS, "attrition.json"), "utf8"));
+} catch {
+  attrition = null;
+}
+const demo = createDemo({ speed: process.env.A2E_DEMO_SPEED ?? 6, extra: process.env.A2E_DEMO_FLEET ?? 0, terrain, attrition });
 
 const TYPES = { ".png": "image/png", ".jpg": "image/jpeg", ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".woff2": "font/woff2", ".svg": "image/svg+xml", ".json": "application/json" };
 

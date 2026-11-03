@@ -1,0 +1,136 @@
+/* Fleet insight pages (Attrition and the ones after it). */
+.ins-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* The page scrolls; its panels keep their height instead of shrinking into each other. */
+.ins-page > *,
+.ins-page > .panel {
+  flex-shrink: 0;
+  min-height: auto;
+}
+
+.ins-source {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ins-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 16px;
+}
+
+.ins-callout {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ins-chart {
+  width: 100%;
+  height: auto;
+  margin-bottom: 4px;
+}
+
+.ins-grid line.ins-grid,
+.ins-chart .ins-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.ins-axis {
+  fill: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.ins-bar-A {
+  fill: #7f8ea0;
+  background: #7f8ea0;
+}
+
+.ins-bar-B {
+  fill: var(--accent);
+  background: var(--accent);
+}
+
+.ins-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ins-key {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-left: 8px;
+}
+
+.ins-key:first-child {
+  margin-left: 0;
+}
+
+.ins-alerts {
+  border-color: rgba(244, 180, 67, 0.45);
+}
+
+.ins-alert {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 0 12px;
+}
+
+.ins-alert + .ins-alert {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.ins-alert p {
+  margin: 0 0 4px;
+}
+
+.ins-alert-title {
+  font-weight: 600;
+}
+
+.ins-held {
+  color: var(--ok);
+  font-size: 12px;
+}
+
+.ins-tests {
+  margin-top: 8px;
+}
+
+.ins-note {
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.ins-short td {
+  color: var(--warn);
+}
+
+.ins-up {
+  color: var(--warn);
+}
+
+@media (max-width: 640px) {
+  .ins-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ins-alert {
+    flex-direction: column;
+  }
+}

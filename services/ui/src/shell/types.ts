@@ -7,6 +7,7 @@ export type Section =
   | "missions"
   | "debrief"
   | "eval"
+  | "attrition"
   | "organization"
   | "people"
   | "sharing"
