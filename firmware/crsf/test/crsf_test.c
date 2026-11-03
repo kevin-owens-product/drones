@@ -1,3 +1,5 @@
+/* clock_gettime and CLOCK_MONOTONIC are POSIX, not ISO C17. */
+#define _POSIX_C_SOURCE 200809L
 #include "crsf.h"
 
 #include <stdio.h>
