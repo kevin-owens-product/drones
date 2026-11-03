@@ -11,6 +11,7 @@ htmlcov/
 node_modules/
 services/ui/dist/
 /package-lock.json
+firmware/crsf/build/
 services/ui/test-results/
 services/ui/playwright-report/
 sbom/
