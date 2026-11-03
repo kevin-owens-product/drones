@@ -360,3 +360,67 @@
 .cf-no td {
   color: var(--faint);
 }
+
+/* Brief */
+.ins-page > .panel.br-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.br-form textarea {
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+  font-size: 15px;
+}
+
+.br-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.br-examples,
+.br-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.br-tasks {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+
+.br-tasks li + li {
+  margin-top: 8px;
+}
+
+.br-task {
+  margin: 0;
+}
+
+.br-facts {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.br-warn {
+  color: var(--warn);
+}
+
+.br-refused {
+  margin: 0;
+  color: var(--warn);
+  font-weight: 600;
+}
+
+/* Brief panels size to their content; the shell would otherwise stretch them to fill the view. */
+section.page.ins-page > .panel.br-form,
+section.page.ins-page > .panel.br-result {
+  flex: 0 0 auto;
+}
