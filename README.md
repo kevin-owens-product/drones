@@ -20,7 +20,7 @@ The map draws the operating picture from the demo scenario, each overlay labelle
 
 ### Hosted demo
 
-`npm run build:static` builds a version with no server: the same scenario code (`demo/scenario.mjs`) answers the console's API calls in the browser. `netlify.toml` builds and publishes it. Add `?fleet=300` to the URL for the fleet-scale view.
+`npm run build:static` builds a version with no server: the same scenario code (`demo/scenario.mjs`) answers the console's API calls in the browser. `render.yaml` (a Render Blueprint) builds and publishes it at drones.productexec.co. Add `?fleet=300` to the URL for the fleet-scale view.
 
 ### Launch readiness
 
