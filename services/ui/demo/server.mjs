@@ -26,7 +26,13 @@ try {
 } catch {
   attrition = null;
 }
-const demo = createDemo({ speed: process.env.A2E_DEMO_SPEED ?? 6, extra: process.env.A2E_DEMO_FLEET ?? 0, terrain, attrition });
+let readme = "";
+try {
+  readme = await readFile(new URL("../../../README.md", import.meta.url), "utf8");
+} catch {
+  /* Eval shows an empty table without the README */
+}
+const demo = createDemo({ speed: process.env.A2E_DEMO_SPEED ?? 6, extra: process.env.A2E_DEMO_FLEET ?? 0, terrain, attrition, readme });
 
 const TYPES = { ".png": "image/png", ".jpg": "image/jpeg", ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".woff2": "font/woff2", ".svg": "image/svg+xml", ".json": "application/json" };
 

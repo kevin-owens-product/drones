@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { api } from "../api";
 import { MissionRoute } from "./MissionRoute";
+import { RangeMap, colorFor, toMetres, type MapPath, type RangeFrame } from "./RangeMap";
+import "./plan.css";
 
 interface Viewer {
   id: string;
@@ -20,6 +22,27 @@ interface MissionRow {
   tenant_id: string | null;
   classification: string | null;
   portion_mark: string | null;
+  tails?: string[];
+  planned_start?: string | null;
+  created_by?: string;
+  approved_by?: string | null;
+  go?: boolean | null;
+  no_go?: number;
+  cautions?: number;
+  source?: string | null;
+}
+
+interface Check {
+  pass: boolean;
+  detail: string;
+  level?: "go" | "caution" | "no-go";
+}
+
+interface HistoryStep {
+  action: string;
+  by: string;
+  at: string;
+  note: string;
 }
 
 interface TenantRow {
@@ -187,10 +210,64 @@ function faultSentence(error: unknown, intent: "draft" | "move" | "load" | "edit
   return "The plan could not be moved.";
 }
 
+const KIND_FILL: Record<string, string> = { transit: "#8eb4ff", search: "#3fd69a", sensor_custody: "#b6a5ff", loiter: "#5cc8ff", rtb: "#5b6775" };
+
+const ACTION_LABEL: Record<string, string> = {
+  "mission.draft": "Drafted",
+  "mission.review": "Sent for review",
+  "mission.approve": "Approved",
+  "mission.execute": "Launched",
+  "mission.close": "Closed",
+};
+
+function when(iso: string | null | undefined): string {
+  if (!iso) return "not set";
+  const d = new Date(iso);
+  const mins = Math.round((d.getTime() - Date.now()) / 60_000);
+  const rel = Math.abs(mins) < 90 ? `${Math.abs(mins)} min` : Math.abs(mins) < 48 * 60 ? `${Math.round(Math.abs(mins) / 60)} h` : `${Math.round(Math.abs(mins) / 1440)} d`;
+  return `${d.toISOString().slice(5, 16).replace("T", " ")}Z (${mins >= 0 ? "in " : ""}${rel}${mins < 0 ? " ago" : ""})`;
+}
+
+function Schedule({ objectives, tails }: { objectives: Objective[]; tails: string[] }) {
+  if (objectives.length === 0) return null;
+  const end = Math.max(...objectives.map((o) => o.offset_min + o.duration_min), 10);
+  const W = 1000;
+  const left = 64;
+  const row = 20;
+  const H = tails.length * row + 22;
+  const sx = (m: number) => left + ((W - left - 10) * m) / end;
+  return (
+    <svg className="ms-gantt" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Schedule: what each vehicle does after H-hour">
+      {tails.map((tail, i) => (
+        <g key={tail}>
+          <text x={4} y={6 + i * row + 12} className="ms-g-tail" style={{ fill: colorFor(tails, tail) }}>
+            {tail}
+          </text>
+          {objectives
+            .filter((o) => o.tail === tail)
+            .map((o, k) => (
+              <rect key={k} x={sx(o.offset_min)} y={6 + i * row + 2} width={Math.max(3, sx(o.offset_min + o.duration_min) - sx(o.offset_min))} height={row - 6} fill={KIND_FILL[o.kind] ?? "#5cc8ff"} opacity={0.75}>
+                <title>
+                  {tail}: {OBJECTIVE_KINDS.find((x) => x[0] === o.kind)?.[1]} {o.label}, T+{o.offset_min} for {o.duration_min} min
+                </title>
+              </rect>
+            ))}
+        </g>
+      ))}
+      {[0, 0.25, 0.5, 0.75, 1].map((f) => (
+        <text key={f} x={sx(f * end)} y={H - 3} textAnchor={f === 0 ? "start" : f === 1 ? "end" : "middle"}>
+          T+{Math.round(f * end)} min
+        </text>
+      ))}
+    </svg>
+  );
+}
+
 export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b: string) => void }) {
   const reportBanner = useRef(onBanner);
   reportBanner.current = onBanner;
   const [missions, setMissions] = useState<MissionRow[]>([]);
+  const [range, setRange] = useState<RangeFrame | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
@@ -203,36 +280,41 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
   const [keepoutName, setKeepoutName] = useState("");
   const [keepoutLat, setKeepoutLat] = useState("");
   const [keepoutLon, setKeepoutLon] = useState("");
-  const [keepoutRadius, setKeepoutRadius] = useState("5");
+  const [keepoutRadius, setKeepoutRadius] = useState("0.3");
   const [keepoutFloor, setKeepoutFloor] = useState("0");
-  const [keepoutCeiling, setKeepoutCeiling] = useState("3000");
-  const [objectiveKind, setObjectiveKind] = useState<ObjectiveKind>("transit");
+  const [keepoutCeiling, setKeepoutCeiling] = useState("120");
+  const [objectiveKind, setObjectiveKind] = useState<ObjectiveKind>("loiter");
   const [objectiveLabel, setObjectiveLabel] = useState("");
-  const [objectiveLat, setObjectiveLat] = useState("");
-  const [objectiveLon, setObjectiveLon] = useState("");
-  const [objectiveAlt, setObjectiveAlt] = useState("120");
-  const [objectiveTail, setObjectiveTail] = useState("N-002");
+  const [objectiveLat, setObjectiveLat] = useState("35.7342");
+  const [objectiveLon, setObjectiveLon] = useState("-120.7577");
+  const [objectiveAlt, setObjectiveAlt] = useState("110");
+  const [objectiveTail, setObjectiveTail] = useState("NX-10");
   const [objectiveOffset, setObjectiveOffset] = useState("0");
-  const [objectiveDuration, setObjectiveDuration] = useState("60");
+  const [objectiveDuration, setObjectiveDuration] = useState("20");
   const [hHour, setHHour] = useState("");
-  const [checks, setChecks] = useState<{ pass: boolean; detail: string }[]>([]);
+  const [checks, setChecks] = useState<Check[]>([]);
+  const [history, setHistory] = useState<HistoryStep[]>([]);
   const [fault, setFault] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function loadMissions(): Promise<void> {
-    const listed = await api<{ items: MissionRow[] }>("/v1/missions");
+  async function loadMissions(): Promise<MissionRow[]> {
+    const listed = await api<{ items: MissionRow[]; range?: RangeFrame | null }>("/v1/missions");
     reportBanner.current(listed.banner);
     setMissions(listed.body.items);
+    if (listed.body.range) setRange(listed.body.range);
+    return listed.body.items;
   }
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
-        const listed = await api<{ items: MissionRow[] }>("/v1/missions");
+        const items = await loadMissions();
         if (cancelled) return;
-        reportBanner.current(listed.banner);
-        setMissions(listed.body.items);
+        const handed = sessionStorage.getItem("a2e-mission-id");
+        const first = items.find((m) => m.id === handed) ?? items.find((m) => m.state === "review") ?? items.find((m) => m.state === "active") ?? items[0];
+        if (handed) sessionStorage.removeItem("a2e-mission-id");
+        if (first) choose(first);
       } catch (error) {
         if (!cancelled) setFault(faultSentence(error, "load"));
       }
@@ -250,6 +332,7 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewer.username, viewer.display_name, viewer.id]);
 
   async function onCreate(event: FormEvent<HTMLFormElement>) {
@@ -268,18 +351,15 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
     try {
       const created = await api<{ id: string; state: string }>("/v1/missions", {
         method: "POST",
-        body: JSON.stringify({
-          tenant_id: tenantId,
-          name: trimmed,
-          summary: summary.trim(),
-        }),
+        body: JSON.stringify({ tenant_id: tenantId, name: trimmed, summary: summary.trim() }),
       });
       reportBanner.current(created.banner);
       setName("");
       setSummary("");
       setComposerOpen(false);
-      setSelectedId(created.body.id);
-      await loadMissions();
+      const items = await loadMissions();
+      const made = items.find((m) => m.id === created.body.id);
+      if (made) choose(made);
     } catch (error) {
       setFault(faultSentence(error, "draft"));
     } finally {
@@ -291,12 +371,13 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
     setFault("");
     setBusy(true);
     try {
-      const result = await api<{ id: string; name: string; summary: string }>(
-        `/v1/missions/${encodeURIComponent(mission.id)}`,
-        { method: "PATCH", body: JSON.stringify({ name: draftName.trim(), summary: draftSummary, planned_start: hHour ? new Date(hHour).toISOString() : null, planned_end: null }) },
-      );
+      const result = await api<{ id: string; name: string; summary: string }>(`/v1/missions/${encodeURIComponent(mission.id)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name: draftName.trim(), summary: draftSummary, planned_start: hHour ? new Date(hHour).toISOString() : null, planned_end: null }),
+      });
       reportBanner.current(result.banner);
       await loadMissions();
+      await loadObjectives(mission.id);
     } catch (error) {
       setFault(faultSentence(error, "edit"));
     } finally {
@@ -313,22 +394,11 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
     void loadObjectives(mission.id);
   }
 
-  useEffect(() => {
-    const handed = sessionStorage.getItem("a2e-mission-id");
-    if (!handed) return;
-    const mission = missions.find((item) => item.id === handed);
-    if (!mission) return;
-    sessionStorage.removeItem("a2e-mission-id");
-    choose(mission);
-  }, [missions]);
-
   async function loadObjectives(missionId: string) {
     try {
-      const listed = await api<{ items: Partial<Objective>[]; keepouts?: unknown; planned_start: string | null }>(
-        `/v1/missions/${encodeURIComponent(missionId)}/objectives`,
-      );
+      const listed = await api<{ items: Partial<Objective>[]; keepouts?: unknown; planned_start: string | null }>(`/v1/missions/${encodeURIComponent(missionId)}/objectives`);
       reportBanner.current(listed.banner);
-      setHHour(listed.body.planned_start ? listed.body.planned_start.slice(0, 16) : "");
+      setHHour(listed.body.planned_start ? toLocalInput(listed.body.planned_start) : "");
       setKeepouts(readKeepOuts(listed.body.keepouts));
       const items = Array.isArray(listed.body.items) ? listed.body.items : [];
       setObjectives(
@@ -345,15 +415,19 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
             duration_min: Number(item.duration_min ?? 30),
           })),
       );
-      const ready = await api<{ go: boolean; checks: { pass: boolean; detail: string }[] }>(
-        `/v1/missions/${encodeURIComponent(missionId)}/readiness`,
-      );
+      const ready = await api<{ go: boolean; checks: Check[] }>(`/v1/missions/${encodeURIComponent(missionId)}/readiness`);
       reportBanner.current(ready.banner);
       setChecks(ready.body.checks);
     } catch (error) {
       setObjectives([]);
       setKeepouts([]);
       setFault(faultSentence(error, "load"));
+    }
+    try {
+      const h = await api<{ items: HistoryStep[] }>(`/v1/missions/${encodeURIComponent(missionId)}/history`);
+      setHistory(Array.isArray(h.body.items) ? h.body.items : []);
+    } catch {
+      setHistory([]);
     }
   }
 
@@ -389,13 +463,13 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
   }
 
   function addKeepOut() {
-    const name = keepoutName.trim();
+    const zoneName = keepoutName.trim();
     const lat = Number(keepoutLat);
     const lon = Number(keepoutLon);
     const radius = Number(keepoutRadius);
     const floor = Number(keepoutFloor);
     const ceiling = Number(keepoutCeiling);
-    if (!name) {
+    if (!zoneName) {
       setFault("A keep-out needs a name.");
       return;
     }
@@ -416,10 +490,7 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
       return;
     }
     setFault("");
-    setKeepouts((current) => [
-      ...current,
-      { name, lat, lon, radius_km: radius, floor_m: floor, ceiling_m: ceiling },
-    ]);
+    setKeepouts((current) => [...current, { name: zoneName, lat, lon, radius_km: radius, floor_m: floor, ceiling_m: ceiling }]);
     setKeepoutName("");
   }
 
@@ -433,6 +504,7 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
       });
       reportBanner.current(result.banner);
       await loadObjectives(mission.id);
+      await loadMissions();
     } catch (error) {
       setFault(faultSentence(error, "edit"));
     } finally {
@@ -444,22 +516,20 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
     setFault("");
     setBusy(true);
     try {
-      const result = await api<{ id: string; state: string }>(
-        `/v1/missions/${encodeURIComponent(mission.id)}/transition`,
-        { method: "POST", body: JSON.stringify({ action }) },
-      );
+      const result = await api<{ id: string; state: string }>(`/v1/missions/${encodeURIComponent(mission.id)}/transition`, {
+        method: "POST",
+        body: JSON.stringify({ action }),
+      });
       reportBanner.current(result.banner);
-      setMissions((current) =>
-        current.map((item) => (item.id === result.body.id ? { ...item, state: result.body.state } : item)),
-      );
+      await loadMissions();
+      await loadObjectives(mission.id);
       if (result.body.state === "active") {
         const tail = objectives.map((item) => item.tail.trim()).find((item) => item.length > 0);
         if (tail) sessionStorage.setItem("a2e-live-tail", tail);
-        window.location.hash = "operate";
       }
-      await loadMissions();
     } catch (error) {
       setFault(faultSentence(error, "move"));
+      await loadObjectives(mission.id).catch(() => undefined);
     } finally {
       setBusy(false);
     }
@@ -467,16 +537,44 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
 
   const selected = missions.find((item) => item.id === selectedId) ?? null;
   const selectedStep = selected ? nextStep(selected.state) : null;
+  const tails = [...new Set(objectives.map((o) => o.tail).filter(Boolean))];
+  const frame = range?.frame;
+  const inRange =
+    !!range?.basemap &&
+    objectives.every((o) => {
+      const [x, y] = toMetres(frame, o.lat, o.lon);
+      const bm = range.basemap!;
+      return x >= bm.west && x <= bm.east && y >= bm.south && y <= bm.north;
+    });
+  const planPaths: MapPath[] = range
+    ? tails.map((tail) => ({
+        id: tail,
+        color: colorFor(tails, tail),
+        pts: [
+          [range.station.x, range.station.y] as [number, number],
+          ...objectives
+            .filter((o) => o.tail === tail)
+            .sort((a, b) => a.offset_min - b.offset_min)
+            .map((o) => toMetres(frame, o.lat, o.lon)),
+        ],
+        dashed: selected?.state !== "active" && selected?.state !== "closed",
+      }))
+    : [];
+  const nogo = checks.filter((c) => (c.level ? c.level === "no-go" : !c.pass));
+  const caution = checks.filter((c) => c.level === "caution");
+  const stepAllowed = selectedStep ? roleCan(viewer.roles, selectedStep.action) : false;
+  const blockedByChecks = selected?.state === "approved" && nogo.length > 0;
 
   return (
-    <section className="page page-fill">
+    <section className="page ins-page ms-page" data-testid="missions">
       <header className="page-head">
         <div>
           <p className="kicker">Plan</p>
           <h1 className="page-title">Missions</h1>
-          <p className="lede">A plan is an ordered set of objectives. A different person approves, and a behavior cannot.</p>
+          <p className="lede">A plan is an ordered set of objectives for named vehicles. Launch checks say what blocks it and why; a different person approves it, and a behavior never can. Moving a plan here commands no vehicle.</p>
         </div>
         <div className="actions">
+          <span className="pill pill-warn">SIM PLANS</span>
           <button type="button" className="btn btn-quiet" onClick={() => setComposerOpen((open) => !open)}>
             {composerOpen ? "Hide draft" : "New plan"}
           </button>
@@ -487,136 +585,115 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
           {fault}
         </p>
       ) : null}
-      <div className="stage mission-stage">
-        <div className="board">
-          {COLUMNS.map((column) => {
-            const cards = missions.filter((mission) => mission.state === column.state);
-            return (
-              <section className="board-col" key={column.state} aria-label={column.label}>
-                <p className="kicker">{column.label} · {cards.length}</p>
-                {cards.length === 0 ? (
-                  <p className="empty">None</p>
-                ) : (
-                  cards.map((mission) => (
-                    <button
-                      key={mission.id}
-                      type="button"
-                      className={mission.id === selectedId ? "ticket is-selected" : "ticket"}
-                      aria-pressed={mission.id === selectedId}
-                      onClick={() => choose(mission)}
-                    >
-                      <strong>{mission.name}</strong>
-                      <span className={pillClass(mission.state)}>{columnLabel(mission.state)}</span>
-                      <p style={summaryClamp}>{mission.summary?.trim() ? mission.summary : "No summary."}</p>
-                    </button>
-                  ))
-                )}
-              </section>
-            );
-          })}
-        </div>
-        <aside className="panel mission-editor">
-          {composerOpen ? (
-            <form id="mission-create" onSubmit={(event) => void onCreate(event)}>
+      {composerOpen ? (
+        <form className="panel" id="mission-create" onSubmit={(event) => void onCreate(event)}>
+          <div className="panel-head">
+            <h2>New plan</h2>
+            <span className="meta">{tenantId ? "Filing on your team." : "No home team is available for this account."}</span>
+          </div>
+          <div className="ms-editor">
+            <div className="field">
+              <label htmlFor="mission-name">Name</label>
+              <input id="mission-name" value={name} maxLength={120} required onChange={(event) => setName(event.target.value)} />
+            </div>
+            <div className="field" style={{ gridColumn: "span 2" }}>
+              <label htmlFor="mission-summary">Summary</label>
+              <input id="mission-summary" value={summary} onChange={(event) => setSummary(event.target.value)} />
+            </div>
+            <button className="btn btn-primary" type="submit" disabled={busy || tenantId === null}>
+              Create plan
+            </button>
+          </div>
+        </form>
+      ) : null}
+      <div className="ms-board">
+        {COLUMNS.map((column) => {
+          const cards = missions.filter((mission) => mission.state === column.state);
+          return (
+            <section className="panel ms-col" key={column.state} aria-label={column.label}>
+              <p className="kicker">
+                {column.label} · {cards.length}
+              </p>
+              {cards.length === 0 ? (
+                <p className="empty">None</p>
+              ) : (
+                cards.map((mission) => (
+                  <button key={mission.id} type="button" className={mission.id === selectedId ? "ticket is-selected" : "ticket"} aria-pressed={mission.id === selectedId} onClick={() => choose(mission)}>
+                    <strong>{mission.name}</strong>
+                    <p style={summaryClamp} className="meta">
+                      {mission.summary?.trim() ? mission.summary : "No summary."}
+                    </p>
+                    {mission.tails?.length ? (
+                      <span className="ms-tails">
+                        {mission.tails.map((t) => (
+                          <span key={t} className="ms-tail">
+                            {t}
+                          </span>
+                        ))}
+                      </span>
+                    ) : null}
+                    <span className="meta">
+                      {mission.id} · {mission.state === "closed" || mission.state === "active" ? "Flown " : "H-hour "}
+                      {when(mission.planned_start)}
+                    </span>
+                    {mission.go === false ? (
+                      <span className="ms-ready is-nogo">No-go: {mission.no_go} blocking</span>
+                    ) : mission.go === true ? (
+                      <span className={mission.cautions ? "ms-ready is-caution" : "ms-ready is-go"}>Go{mission.cautions ? ` with ${mission.cautions} caution${mission.cautions > 1 ? "s" : ""}` : ""}</span>
+                    ) : null}
+                    {mission.source ? <span className="meta">From Brief {mission.source}</span> : null}
+                  </button>
+                ))
+              )}
+            </section>
+          );
+        })}
+      </div>
+
+      {selected ? (
+        <div className="ms-detail">
+          <div className="ms-side">
+            <section className="panel">
               <div className="panel-head">
-                <h2>New plan</h2>
-              </div>
-              <div className="field">
-                <label htmlFor="mission-name">Name</label>
-                <input
-                  id="mission-name"
-                  value={name}
-                  maxLength={120}
-                  required
-                  onChange={(event) => setName(event.target.value)}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="mission-summary">Summary</label>
-                <textarea
-                  id="mission-summary"
-                  value={summary}
-                  rows={3}
-                  onChange={(event) => setSummary(event.target.value)}
-                />
-              </div>
-              <p>{tenantId ? "Filing on your team." : "No home team is available for this account."}</p>
-              <button className="btn btn-primary" type="submit" disabled={busy || tenantId === null}>
-                Create plan
-              </button>
-            </form>
-          ) : selected ? (
-            <>
-              <div className="panel-head">
-                <h2>{selected.name}</h2>
+                <h2>
+                  {selected.name} <span className="meta mono">{selected.id}</span>
+                </h2>
                 <span className={pillClass(selected.state)}>{columnLabel(selected.state)}</span>
               </div>
-              <p className="meta">{selected.portion_mark?.trim() ? selected.portion_mark : "No portion mark."}</p>
-              <div className="actions" style={{ justifyContent: "flex-start" }}>
-                <button
-                  type="button"
-                  className="btn btn-quiet"
-                  onClick={() => {
-                    sessionStorage.setItem("a2e-debrief-mission", selected.id);
-                    window.location.hash = "debrief";
-                  }}
-                >
-                  Open debrief
-                </button>
-                {objectives.some((item) => item.tail.trim().length > 0) ? (
-                  <button
-                    type="button"
-                    className="btn btn-quiet"
-                    onClick={() => {
-                      const tail = objectives.map((item) => item.tail.trim()).find((item) => item.length > 0);
-                      if (!tail) return;
-                      sessionStorage.setItem("a2e-live-tail", tail);
-                      window.location.hash = "operate";
-                    }}
-                  >
-                    Watch a tail
-                  </button>
-                ) : null}
-              </div>
-              {selected.state === "draft" ? (
-                <form
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void onSave(selected);
-                  }}
-                >
-                  <div className="field">
-                    <label htmlFor="edit-name">Name</label>
-                    <input id="edit-name" value={draftName} maxLength={120} required onChange={(event) => setDraftName(event.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="edit-summary">Summary</label>
-                    <textarea id="edit-summary" rows={3} value={draftSummary} onChange={(event) => setDraftSummary(event.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="h-hour">Launch (H-hour)</label>
-                    <input id="h-hour" type="datetime-local" value={hHour} onChange={(event) => setHHour(event.target.value)} />
-                  </div>
-                  <button className="btn btn-primary" type="submit" disabled={busy || draftName.trim().length === 0}>
-                    Save draft
-                  </button>
-                </form>
+              {range && inRange ? (
+                <RangeMap
+                  range={range}
+                  paths={planPaths}
+                  markers={tails.map((tail) => {
+                    const last = objectives.filter((o) => o.tail === tail && o.kind !== "rtb").sort((a, b) => b.offset_min - a.offset_min)[0];
+                    const [x, y] = last ? toMetres(frame, last.lat, last.lon) : [range.station.x, range.station.y];
+                    return { id: tail, label: tail, x, y, color: colorFor(tails, tail) };
+                  })}
+                  keepouts={keepouts.map((k) => {
+                    const [x, y] = toMetres(frame, k.lat, k.lon);
+                    return { name: k.name, x, y, r: k.radius_km * 1000 };
+                  })}
+                  label="Plan map: each vehicle's route from the GCS, the jamming zone and keep-outs"
+                />
               ) : (
-                <p>{selected.summary?.trim() ? selected.summary : "No summary."}</p>
+                <div className="map-frame mission-route" style={{ height: 320 }}>
+                  <MissionRoute
+                    stops={objectives.map((objective) => ({ label: objective.label, kind: objective.kind, tail: objective.tail, lat: objective.lat, lon: objective.lon, offsetMin: objective.offset_min }))}
+                    keepouts={keepouts.map((zone) => ({ name: zone.name, lat: zone.lat, lon: zone.lon, radiusKm: zone.radius_km }))}
+                  />
+                </div>
               )}
-              <div className="panel-head">
-                <h2>Launch check</h2>
+              <div className="pl-legend">
+                {Object.entries(KIND_FILL).map(([k, c]) => (
+                  <span key={k}>
+                    <i style={{ background: c }} />
+                    {OBJECTIVE_KINDS.find((x) => x[0] === k)?.[1]}
+                  </span>
+                ))}
               </div>
-              {checks.length === 0 ? <p className="empty">No launch check yet.</p> : (
-                <ul className="objective-list">
-                  {checks.map((check) => (
-                    <li key={check.detail}>
-                      <span className={check.pass ? "pill pill-ok" : "pill pill-warn"}>{check.pass ? "Go" : "No-go"}</span>
-                      <span>{check.detail}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <Schedule objectives={objectives} tails={tails} />
+            </section>
+            <section className="panel">
               <div className="panel-head">
                 <h2>Objectives</h2>
                 <span className="meta">{objectives.length}</span>
@@ -627,14 +704,24 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
                 <ol className="objective-list">
                   {objectives.map((objective, index) => (
                     <li key={`${objective.kind}-${index}`}>
-                      <strong>{objective.tail || "Unassigned"} · {OBJECTIVE_KINDS.find((item) => item[0] === objective.kind)?.[1]}</strong>
+                      <strong style={{ color: colorFor(tails, objective.tail) }}>
+                        {objective.tail || "Unassigned"} · {OBJECTIVE_KINDS.find((item) => item[0] === objective.kind)?.[1]}
+                      </strong>
                       <span>{objective.label || "Untitled"}</span>
-                      <span className="meta">T+{String(Math.floor(objective.offset_min / 60)).padStart(2, "0")}:{String(objective.offset_min % 60).padStart(2, "0")} for {objective.duration_min} min · {objective.lat.toFixed(2)}, {objective.lon.toFixed(2)} · {Math.round(objective.alt_m)} m</span>
+                      <span className="meta">
+                        T+{String(Math.floor(objective.offset_min / 60)).padStart(2, "0")}:{String(objective.offset_min % 60).padStart(2, "0")} for {objective.duration_min} min · {objective.lat.toFixed(4)}, {objective.lon.toFixed(4)} · {Math.round(objective.alt_m)} m
+                      </span>
                       {selected.state === "draft" ? (
                         <span className="row-actions">
-                          <button type="button" className="btn btn-quiet" disabled={index === 0} onClick={() => setObjectives((current) => moveObjective(current, index, -1))}>Up</button>
-                          <button type="button" className="btn btn-quiet" disabled={index === objectives.length - 1} onClick={() => setObjectives((current) => moveObjective(current, index, 1))}>Down</button>
-                          <button type="button" className="btn btn-quiet" onClick={() => setObjectives((current) => current.filter((_, item) => item !== index))}>Remove</button>
+                          <button type="button" className="btn btn-quiet" disabled={index === 0} onClick={() => setObjectives((current) => moveObjective(current, index, -1))}>
+                            Up
+                          </button>
+                          <button type="button" className="btn btn-quiet" disabled={index === objectives.length - 1} onClick={() => setObjectives((current) => moveObjective(current, index, 1))}>
+                            Down
+                          </button>
+                          <button type="button" className="btn btn-quiet" onClick={() => setObjectives((current) => current.filter((_, item) => item !== index))}>
+                            Remove
+                          </button>
                         </span>
                       ) : null}
                     </li>
@@ -642,123 +729,243 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
                 </ol>
               )}
               {selected.state === "draft" ? (
-                <div className="objective-form">
-                  <div className="field">
-                    <label htmlFor="objective-tail">Tail</label>
-                    <input id="objective-tail" value={objectiveTail} maxLength={16} onChange={(event) => setObjectiveTail(event.target.value)} />
+                <>
+                  <p className="meta">Add an objective. The default point is the road junction; places on the range are in the map labels.</p>
+                  <div className="ms-editor">
+                    <div className="field">
+                      <label htmlFor="objective-tail">Tail</label>
+                      <input id="objective-tail" value={objectiveTail} maxLength={16} onChange={(event) => setObjectiveTail(event.target.value)} />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="objective-kind">Kind</label>
+                      <select id="objective-kind" value={objectiveKind} onChange={(event) => setObjectiveKind(event.target.value as ObjectiveKind)}>
+                        {OBJECTIVE_KINDS.map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="field">
+                      <label htmlFor="objective-label">Label</label>
+                      <input id="objective-label" value={objectiveLabel} maxLength={80} onChange={(event) => setObjectiveLabel(event.target.value)} />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="objective-alt">Altitude m</label>
+                      <input id="objective-alt" value={objectiveAlt} inputMode="decimal" onChange={(event) => setObjectiveAlt(event.target.value)} />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="objective-lat">Latitude</label>
+                      <input id="objective-lat" value={objectiveLat} inputMode="decimal" onChange={(event) => setObjectiveLat(event.target.value)} />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="objective-lon">Longitude</label>
+                      <input id="objective-lon" value={objectiveLon} inputMode="decimal" onChange={(event) => setObjectiveLon(event.target.value)} />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="objective-offset">Minutes after launch</label>
+                      <input id="objective-offset" value={objectiveOffset} inputMode="numeric" onChange={(event) => setObjectiveOffset(event.target.value)} />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="objective-duration">Duration min</label>
+                      <input id="objective-duration" value={objectiveDuration} inputMode="numeric" onChange={(event) => setObjectiveDuration(event.target.value)} />
+                    </div>
                   </div>
-                  <div className="field">
-                    <label htmlFor="objective-kind">Kind</label>
-                    <select id="objective-kind" value={objectiveKind} onChange={(event) => setObjectiveKind(event.target.value as ObjectiveKind)}>
-                      {OBJECTIVE_KINDS.map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
+                  <div className="actions" style={{ justifyContent: "flex-start", marginTop: 8 }}>
+                    <button type="button" className="btn btn-quiet" onClick={addObjective}>
+                      Add objective
+                    </button>
                   </div>
-                  <div className="field">
-                    <label htmlFor="objective-label">Label</label>
-                    <input id="objective-label" value={objectiveLabel} maxLength={80} onChange={(event) => setObjectiveLabel(event.target.value)} />
+                  <div className="panel-head">
+                    <h2>Keep-outs</h2>
+                    <span className="meta">{keepouts.length}</span>
                   </div>
-                  <div className="field">
-                    <label htmlFor="objective-lat">Latitude</label>
-                    <input id="objective-lat" value={objectiveLat} inputMode="decimal" onChange={(event) => setObjectiveLat(event.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="objective-lon">Longitude</label>
-                    <input id="objective-lon" value={objectiveLon} inputMode="decimal" onChange={(event) => setObjectiveLon(event.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="objective-offset">Minutes after launch</label>
-                    <input id="objective-offset" value={objectiveOffset} inputMode="numeric" onChange={(event) => setObjectiveOffset(event.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="objective-duration">Duration min</label>
-                    <input id="objective-duration" value={objectiveDuration} inputMode="numeric" onChange={(event) => setObjectiveDuration(event.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="objective-alt">Altitude m</label>
-                    <input id="objective-alt" value={objectiveAlt} inputMode="decimal" onChange={(event) => setObjectiveAlt(event.target.value)} />
-                  </div>
-                  <button type="button" className="btn btn-quiet" onClick={addObjective}>Add objective</button>
-                </div>
-              ) : null}
-              <div className="panel-head">
-                <h2>Keep-outs</h2>
-                <span className="meta">{keepouts.length}</span>
-              </div>
-              {keepouts.length === 0 ? (
-                <p className="empty">No keep-outs yet.</p>
-              ) : (
-                <ul className="objective-list">
                   {keepouts.map((zone, index) => (
-                    <li key={`${zone.name}-${index}`}>
-                      <strong>{zone.name || "Unnamed"}</strong>
-                      <span className="meta">
-                        {zone.lat.toFixed(2)}, {zone.lon.toFixed(2)} · {zone.radius_km} km · {Math.round(zone.floor_m)}–{Math.round(zone.ceiling_m)} m
+                    <p key={`${zone.name}-${index}`} className="meta">
+                      <strong>{zone.name}</strong> {zone.lat.toFixed(4)}, {zone.lon.toFixed(4)} · {zone.radius_km} km · {Math.round(zone.floor_m)}–{Math.round(zone.ceiling_m)} m{" "}
+                      <button type="button" className="btn btn-quiet" onClick={() => setKeepouts((current) => current.filter((_, item) => item !== index))}>
+                        Remove
+                      </button>
+                    </p>
+                  ))}
+                  <div className="ms-editor">
+                    <div className="field">
+                      <label htmlFor="keepout-name">Name</label>
+                      <input id="keepout-name" value={keepoutName} maxLength={80} onChange={(event) => setKeepoutName(event.target.value)} />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="keepout-lat">Latitude</label>
+                      <input id="keepout-lat" value={keepoutLat} inputMode="decimal" onChange={(event) => setKeepoutLat(event.target.value)} />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="keepout-lon">Longitude</label>
+                      <input id="keepout-lon" value={keepoutLon} inputMode="decimal" onChange={(event) => setKeepoutLon(event.target.value)} />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="keepout-radius">Radius km</label>
+                      <input id="keepout-radius" value={keepoutRadius} inputMode="decimal" onChange={(event) => setKeepoutRadius(event.target.value)} />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="keepout-floor">Floor m</label>
+                      <input id="keepout-floor" value={keepoutFloor} inputMode="decimal" onChange={(event) => setKeepoutFloor(event.target.value)} />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="keepout-ceiling">Ceiling m</label>
+                      <input id="keepout-ceiling" value={keepoutCeiling} inputMode="decimal" onChange={(event) => setKeepoutCeiling(event.target.value)} />
+                    </div>
+                    <button type="button" className="btn btn-quiet" onClick={addKeepOut}>
+                      Add keep-out
+                    </button>
+                    <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void saveObjectives(selected)}>
+                      Save objectives
+                    </button>
+                  </div>
+                </>
+              ) : keepouts.length ? (
+                <p className="meta">Keep-outs: {keepouts.map((k) => `${k.name} (${k.radius_km} km, ${k.floor_m}–${k.ceiling_m} m)`).join("; ")}</p>
+              ) : null}
+            </section>
+          </div>
+
+          <div className="ms-side">
+            <section className="panel">
+              <div className="panel-head">
+                <h2>Next step</h2>
+                {selected.state === "active" || selected.state === "closed" ? (
+                  <button
+                    type="button"
+                    className="btn btn-quiet"
+                    onClick={() => {
+                      sessionStorage.setItem("a2e-debrief-mission", selected.id);
+                      window.location.hash = "debrief";
+                    }}
+                  >
+                    Open debrief
+                  </button>
+                ) : null}
+              </div>
+              <p>{selected.summary?.trim() ? selected.summary : "No summary."}</p>
+              <p className="meta">
+                {selected.portion_mark?.trim() ? `${selected.portion_mark} · ` : ""}H-hour {when(selected.planned_start)}
+              </p>
+              {selectedStep ? (
+                stepAllowed ? (
+                  <>
+                    <button type="button" className="btn btn-primary" disabled={busy || blockedByChecks} onClick={() => void onTransition(selected, selectedStep.action)}>
+                      {selectedStep.label}
+                    </button>
+                    {blockedByChecks ? <p className="meta">Launch is blocked until the no-go checks below clear.</p> : null}
+                    {selected.state === "review" && selected.created_by === viewer.display_name ? <p className="meta">You drafted this plan, so the two-person rule needs someone else to approve it.</p> : null}
+                    {selected.state === "approved" ? <p className="meta">Launching hands the plan to the operators. The console monitors; it does not fly or arm anything.</p> : null}
+                  </>
+                ) : (
+                  <p className="empty">
+                    {selectedStep.label} needs the {selectedStep.action === "mission.approve" ? "mission commander or admin" : selectedStep.action === "mission.review" ? "planner, mission commander or admin" : "operator, mission commander or admin"} role.
+                  </p>
+                )
+              ) : (
+                <p className="empty">Closed. The replay is on Debrief.</p>
+              )}
+            </section>
+            {selected.state !== "closed" && selected.state !== "active" ? (
+              <section className="panel">
+                <div className="panel-head">
+                  <h2>Launch checks</h2>
+                  <span className={nogo.length ? "pill pill-warn" : "pill pill-ok"}>{nogo.length ? `No-go · ${nogo.length}` : caution.length ? `Go · ${caution.length} caution` : "Go"}</span>
+                </div>
+                {checks.length === 0 ? (
+                  <p className="empty">No launch check yet.</p>
+                ) : (
+                  <ul className="ms-checks">
+                    {[...checks]
+                      .sort((a, b) => ["no-go", "caution", "go"].indexOf(a.level ?? (a.pass ? "go" : "no-go")) - ["no-go", "caution", "go"].indexOf(b.level ?? (b.pass ? "go" : "no-go")))
+                      .map((check) => {
+                        const level = check.level ?? (check.pass ? "go" : "no-go");
+                        return (
+                          <li key={check.detail}>
+                            <span className={`ms-lv ms-lv-${level}`}>{level}</span>
+                            <span>{check.detail}</span>
+                          </li>
+                        );
+                      })}
+                  </ul>
+                )}
+                {checks.some((c) => /held lot|ESC-2611/.test(c.detail)) ? (
+                  <p className="meta">
+                    Lot status comes from <a href="#attrition">Attrition</a>; airworthiness from <a href="#fleet">Fleet</a>.
+                  </p>
+                ) : null}
+              </section>
+            ) : null}
+            <section className="panel">
+              <div className="panel-head">
+                <h2>Approval chain</h2>
+              </div>
+              {history.length === 0 ? (
+                <p className="empty">No history recorded.</p>
+              ) : (
+                <ol className="ms-chain">
+                  {history.map((h, i) => (
+                    <li key={i}>
+                      <span className={h.note.startsWith("Refused") ? "ms-dot is-deny" : "ms-dot"} />
+                      <span>
+                        <strong>{h.note.startsWith("Refused") ? "Refused" : (ACTION_LABEL[h.action] ?? h.action)}</strong> by {h.by} · <span className="meta">{when(h.at)}</span>
+                        {h.note ? <span className="meta"> · {h.note}</span> : null}
                       </span>
-                      {selected.state === "draft" ? (
-                        <span className="row-actions">
-                          <button type="button" className="btn btn-quiet" onClick={() => setKeepouts((current) => current.filter((_, item) => item !== index))}>Remove</button>
-                        </span>
-                      ) : null}
                     </li>
                   ))}
-                </ul>
+                  {selectedStep ? (
+                    <li>
+                      <span className="ms-dot is-next" />
+                      <span className="meta">Next: {selectedStep.label.toLowerCase()}</span>
+                    </li>
+                  ) : null}
+                </ol>
               )}
-              {selected.state === "draft" ? (
-                <div className="objective-form">
-                  <div className="field">
-                    <label htmlFor="keepout-name">Name</label>
-                    <input id="keepout-name" value={keepoutName} maxLength={80} onChange={(event) => setKeepoutName(event.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="keepout-lat">Latitude</label>
-                    <input id="keepout-lat" value={keepoutLat} inputMode="decimal" onChange={(event) => setKeepoutLat(event.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="keepout-lon">Longitude</label>
-                    <input id="keepout-lon" value={keepoutLon} inputMode="decimal" onChange={(event) => setKeepoutLon(event.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="keepout-radius">Radius km</label>
-                    <input id="keepout-radius" value={keepoutRadius} inputMode="decimal" onChange={(event) => setKeepoutRadius(event.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="keepout-floor">Floor m</label>
-                    <input id="keepout-floor" value={keepoutFloor} inputMode="decimal" onChange={(event) => setKeepoutFloor(event.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="keepout-ceiling">Ceiling m</label>
-                    <input id="keepout-ceiling" value={keepoutCeiling} inputMode="decimal" onChange={(event) => setKeepoutCeiling(event.target.value)} />
-                  </div>
-                  <button type="button" className="btn btn-quiet" onClick={addKeepOut}>Add</button>
-                  <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void saveObjectives(selected)}>Save objectives</button>
+              <p className="meta">
+                Every step and every refusal is in the <a href="#audit">Audit log</a>.
+              </p>
+            </section>
+            {selected.state === "draft" ? (
+              <form
+                className="panel"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void onSave(selected);
+                }}
+              >
+                <div className="panel-head">
+                  <h2>Edit draft</h2>
                 </div>
-              ) : null}
-              {selectedStep && roleCan(viewer.roles, selectedStep.action) ? (
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  disabled={busy}
-                  onClick={() => void onTransition(selected, selectedStep.action)}
-                >
-                  {selectedStep.label}
+                <div className="field">
+                  <label htmlFor="edit-name">Name</label>
+                  <input id="edit-name" value={draftName} maxLength={120} required onChange={(event) => setDraftName(event.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="edit-summary">Summary</label>
+                  <textarea id="edit-summary" rows={3} value={draftSummary} onChange={(event) => setDraftSummary(event.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="h-hour">Launch (H-hour)</label>
+                  <input id="h-hour" type="datetime-local" value={hHour} onChange={(event) => setHHour(event.target.value)} />
+                </div>
+                <button className="btn btn-primary" type="submit" disabled={busy || draftName.trim().length === 0}>
+                  Save draft
                 </button>
-              ) : (
-                <p className="empty">No further step.</p>
-              )}
-            </>
-          ) : (
-            <p className="empty">Select a plan.</p>
-          )}
-        </aside>
-        <div className="map-frame mission-route">
-          <MissionRoute
-            stops={objectives.map((objective) => ({ label: objective.label, kind: objective.kind, tail: objective.tail, lat: objective.lat, lon: objective.lon, offsetMin: objective.offset_min }))}
-            keepouts={keepouts.map((zone) => ({ name: zone.name, lat: zone.lat, lon: zone.lon, radiusKm: zone.radius_km }))}
-          />
+              </form>
+            ) : null}
+          </div>
         </div>
-      </div>
+      ) : (
+        <p className="empty">Select a plan.</p>
+      )}
     </section>
   );
+}
+
+function toLocalInput(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
 }
