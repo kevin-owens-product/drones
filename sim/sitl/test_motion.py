@@ -20,6 +20,11 @@ class TrackMotion(ctypes.Structure):
         ("e", ctypes.c_float),
         ("vn", ctypes.c_float),
         ("ve", ctypes.c_float),
+        ("anchor_n", ctypes.c_float),
+        ("anchor_e", ctypes.c_float),
+        ("anchor_age_s", ctypes.c_float),
+        ("since_adopt_s", ctypes.c_float),
+        ("refused_s", ctypes.c_float),
         ("filled", ctypes.c_int),
     ]
 
@@ -56,20 +61,17 @@ class MotionGate(unittest.TestCase):
     def test_harness_layout_matches(self) -> None:
         self.assertEqual(harness_fields(), [name for name, _typ in TrackMotion._fields_])
 
-    def test_a_stop_does_not_replace_a_moving_track(self) -> None:
+    def test_a_jump_is_refused_then_handed_back(self) -> None:
         so = load()
         motion = TrackMotion()
         so.track_motion_init(motion)
-        kept = 0
-        for i in range(12):
-            kept += so.track_motion_keep(motion, 0.0, 0.8 * i, 0.2)
-        rejected = 0
-        for _ in range(6):
-            rejected += so.track_motion_keep(motion, 0.0, 0.8 * 11, 0.2) == 0
-        speed = (motion.vn * motion.vn + motion.ve * motion.ve) ** 0.5
-        self.assertEqual(kept, 12)
-        self.assertEqual(rejected, 6)
-        self.assertAlmostEqual(speed, 3.92, delta=0.05)
+        dt = 0.06
+        east = [4.0 * dt * i for i in range(67)]
+        self.assertTrue(all(so.track_motion_keep(motion, 0.0, e, dt) == 1 for e in east))
+        self.assertEqual(so.track_motion_keep(motion, 3.0, east[-1] + 0.24, dt), 0)
+        results = [so.track_motion_keep(motion, 3.0, east[-1], dt) for _ in range(120)]
+        self.assertGreater(results.count(0), 10)
+        self.assertIn(-1, results)
 
 
 if __name__ == "__main__":

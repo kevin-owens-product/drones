@@ -192,35 +192,99 @@ static int test_hidden_on_texture(void) {
     return 0;
 }
 
-static int test_motion_rejects_a_stop(void) {
-    track_motion motion;
+#define MOTION_DT 0.06f
+
+/* Four seconds at 4 m/s along east. Returns the position reached. */
+static float motion_drive(track_motion *motion, int *kept) {
     int i;
+    float e = 0.f;
+    track_motion_init(motion);
+    for (i = 0; i < 67; i++) {
+        e = 4.f * MOTION_DT * (float)i;
+        *kept += track_motion_keep(motion, 0.f, e, MOTION_DT) == TRACK_MOTION_ADOPT;
+    }
+    return e;
+}
+
+static int test_motion_refuses_a_jump(void) {
+    track_motion motion;
     int kept = 0;
-    int rejected = 0;
-    float speed;
-    track_motion_init(&motion);
-    for (i = 0; i < 12; i++) {
-        kept += track_motion_keep(&motion, 0.f, 0.8f * (float)i, 0.2f);
-    }
-    for (i = 0; i < 6; i++) {
-        rejected += track_motion_keep(&motion, 0.f, 0.8f * 11.f, 0.2f) == 0;
-    }
-    speed = sqrtf(motion.vn * motion.vn + motion.ve * motion.ve);
-    printf("motion_moving_kept %d motion_stop_rejected %d motion_speed_mps %.2f\n", kept, rejected, speed);
-    if (kept != 12) {
+    float e = motion_drive(&motion, &kept);
+    int jump = track_motion_keep(&motion, 3.f, e + 0.24f, MOTION_DT);
+    int back = track_motion_keep(&motion, 0.f, e + 0.48f, MOTION_DT);
+    printf("motion_moving_kept %d motion_jump %d motion_back %d\n", kept, jump, back);
+    if (kept != 67) {
         return fail("a steady 4 m/s track was dropped");
     }
-    if (rejected < 1) {
-        return fail("a stop was adopted as the moving track");
+    if (jump != TRACK_MOTION_REFUSE) {
+        return fail("a 3 m jump onto another vehicle was adopted");
     }
-    if (speed < 2.f) {
-        return fail("rejecting the stop pulled the track speed down");
+    if (back != TRACK_MOTION_ADOPT) {
+        return fail("the track did not resume after a refused jump");
+    }
+    return 0;
+}
+
+static int test_motion_gives_up_on_a_parked_vehicle(void) {
+    track_motion motion;
+    int kept = 0;
+    int i;
+    int refused = 0;
+    int last = TRACK_MOTION_ADOPT;
+    float e = motion_drive(&motion, &kept);
+    for (i = 0; i < 120 && last != TRACK_MOTION_GIVE_UP; i++) {
+        last = track_motion_keep(&motion, 3.f, e, MOTION_DT);
+        refused += last == TRACK_MOTION_REFUSE;
+    }
+    printf("motion_parked_refused %d motion_gave_up_frame %d\n", refused, i);
+    if (last != TRACK_MOTION_GIVE_UP || refused < 40) {
+        return fail("the gate did not refuse a parked vehicle and then hand back to the operator");
+    }
+    return 0;
+}
+
+static int test_motion_follows_a_real_stop(void) {
+    track_motion motion;
+    int kept = 0;
+    int i;
+    int refused = 0;
+    float speed = 4.f;
+    float e = motion_drive(&motion, &kept);
+    /* Brake at 3 m/s^2, then stay stopped well past the hold time. */
+    for (i = 0; i < 120; i++) {
+        speed = speed > 0.18f ? speed - 0.18f : 0.f;
+        e += speed * MOTION_DT;
+        refused += track_motion_keep(&motion, 0.f, e, MOTION_DT) != TRACK_MOTION_ADOPT;
+    }
+    speed = sqrtf(motion.vn * motion.vn + motion.ve * motion.ve);
+    printf("motion_real_stop_refused %d motion_real_stop_speed %.2f\n", refused, speed);
+    if (refused > 0) {
+        return fail("a target that braked and stopped was refused");
+    }
+    if (speed > 0.5f) {
+        return fail("the track still thinks a stopped target is moving");
+    }
+    return 0;
+}
+
+static int test_motion_keeps_predicting_through_occlusion(void) {
+    track_motion motion;
+    int kept = 0;
+    int i;
+    float e = motion_drive(&motion, &kept);
+    for (i = 0; i < 40; i++) {
+        track_motion_coast(&motion, MOTION_DT);
+    }
+    if (track_motion_keep(&motion, 0.f, e + 4.f * MOTION_DT * 41.f, MOTION_DT) != TRACK_MOTION_ADOPT) {
+        return fail("the target was refused when it came out from cover");
     }
     return 0;
 }
 
 int main(void) {
-    if (test_servo_centers() || test_fifty() || test_hidden_on_texture() || test_motion_rejects_a_stop()) {
+    if (test_servo_centers() || test_fifty() || test_hidden_on_texture() || test_motion_refuses_a_jump() ||
+        test_motion_gives_up_on_a_parked_vehicle() || test_motion_follows_a_real_stop() ||
+        test_motion_keeps_predicting_through_occlusion()) {
         return 1;
     }
     printf("track tests passed\n");

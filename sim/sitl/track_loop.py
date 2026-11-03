@@ -52,6 +52,11 @@ class TrackMotion(ctypes.Structure):
         ("e", ctypes.c_float),
         ("vn", ctypes.c_float),
         ("ve", ctypes.c_float),
+        ("anchor_n", ctypes.c_float),
+        ("anchor_e", ctypes.c_float),
+        ("anchor_age_s", ctypes.c_float),
+        ("since_adopt_s", ctypes.c_float),
+        ("refused_s", ctypes.c_float),
         ("filled", ctypes.c_int),
     ]
 
@@ -112,6 +117,8 @@ def load_tracker(version: str) -> ctypes.CDLL:
         so.track_motion_init.argtypes = [ctypes.POINTER(TrackMotion)]
         so.track_motion_keep.argtypes = [ctypes.POINTER(TrackMotion), ctypes.c_float, ctypes.c_float, ctypes.c_float]
         so.track_motion_keep.restype = ctypes.c_int
+        so.track_motion_coast.argtypes = [ctypes.POINTER(TrackMotion), ctypes.c_float]
+        so.track_motion_coast.restype = None
     return so
 
 
@@ -402,9 +409,13 @@ def run(seed: int, *, tracker: str, speed: float, duration: float, instance: int
                         accepted = False
                         gated_run += 1
                         res.gated_frames += 1
-                    elif not so.track_motion_keep(ctypes.byref(motion), meas_n, meas_e, dt_f):
+                        so.track_motion_coast(ctypes.byref(motion), dt_f)
+                    elif (kept := so.track_motion_keep(ctypes.byref(motion), meas_n, meas_e, dt_f)) != 1:
                         accepted = False
                         res.gated_frames += 1
+                        if kept < 0:
+                            # Better to stop and ask the operator than follow a parked vehicle.
+                            lock.locked = 0
                     else:
                         if gated_run >= REACQUIRE_FRAMES:
                             # The tracker has insisted for a second; trust it.
@@ -421,6 +432,8 @@ def run(seed: int, *, tracker: str, speed: float, duration: float, instance: int
                         if sp > 15:
                             kf_vel[0] *= 15 / sp
                             kf_vel[1] *= 15 / sp
+                else:
+                    so.track_motion_coast(ctypes.byref(motion), dt_f)
                 if not accepted:
                     res.coast_frames += 1
                     rx, ry = pred_x, pred_y

@@ -60,27 +60,41 @@ What the tracker trials show:
 
 - **v1 loses every run within 15 to 23 s**, at the first turn, because a fixed template stops matching once the target rotates.
 - **v2 holds the target in 3 of 5 runs**, through turns and tree occlusion, with the vehicle about 2 m from the target throughout.
-- **In 2 of 5 runs v2 ends up on a parked look-alike.** In both, the target drives within a few metres of an identical parked vehicle while turning. The rotated target scores below the parked one, and the swap happens inside the 4 m gate. `track_motion_keep` now refuses a measurement whose step is under 0.5 m/s while the track was moving faster than 2 m/s, and the harness treats that refusal like a gate miss. The published 2 of 5 figure predates that check. One closed-loop rerun with the check (same five seeds, 90 s) gave a mixed result:
+- **In 2 of 5 runs v2 ends up on a parked look-alike.** In both, the target drives within a few metres of an identical parked vehicle while turning. The rotated target scores below the parked one, and the swap happens inside the 4 m gate. The swap begins with a jump: in seed 1 the match moves 3 m onto the parked vehicle in one frame.
 
-| Seed | On target before | On target with check | Look-alike before | Look-alike with check | Lock dropped with check |
-| --- | --- | --- | --- | --- | --- |
-| 0 | 98% | 100% | 0% | 0% | no |
-| 1 | 26% | 26% | 66% | 72% | no |
-| 2 | 100% | 71% | 0% | 0% | at 76 s |
-| 3 | 18% | 98% | 66% | 0% | no |
-| 4 | 99% | 100% | 0% | 0% | no |
+`track_motion_keep` now refuses a measurement more than 1.5 m from where the track should be, with 1 m more allowed per second since the last adopted match. A target that brakes moves smoothly, so it is still followed. After 3 s of refusals the lock is dropped, and the operator designates again.
 
-The check fixed seed 3, did not fix seed 1, and seed 2 dropped its lock. Whether the check caused that drop is unknown, because this rerun kept up with 85% of real time and the earlier one with 96%. It ran from a Linux container, so the two runs are not a like-for-like comparison. The check also has two known gaps. It refuses a target that really stops for as long as the stop lasts, and it measures the step from the last adopted point, so it does not refuse the jump onto a parked vehicle, only the frames after it.
+The table at the top of this page predates that gate. A rerun of v2 before and after it, same five seeds, 90 s ([raw rows](../eval/motion_gate_ab.jsonl)):
 
-`sim/sitl/scene_motion.py` is a shorter stand-in: the camera is a point at 25 m that chases the filtered track, with no PX4. Three seeds, 30 s, 501 frames each:
+| Seed | On target before | On target with gate | Look-alike before | Look-alike with gate | Lock dropped before | Lock dropped with gate |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0 | 100% | 100% | 0% | 0% | no | no |
+| 1 | 27% | 20% | 39% | 0% | no | at 24 s |
+| 2 | 45% | 45% | 0% | 0% | at 43 s | at 44 s |
+| 3 | 46% | 46% | 0% | 0% | at 47 s | at 47 s |
+| 4 | 99% | 99% | 0% | 0% | no | no |
 
-| Seed | On target | False lock | Motion gate refused | Lock dropped |
-| --- | --- | --- | --- | --- |
-| 1 | 432 | 0 | 2 | 0 |
-| 2 | 501 | 0 | 0 | 0 |
-| 3 | 485 | 0 | 0 | 0 |
+- **The gate turned the one look-alike run into a dropped lock.** Seed 1 stops and asks instead of following a parked vehicle. It does not hold the target any longer.
+- **The other four seeds moved by less than 1%.** Held runs stay at 2 of 5.
+- **These runs are slower than the table at the top.** They kept up with 77 to 85% of real time against about 96%, and seeds 2 and 3 dropped the lock with or without the gate. Compare the two columns with each other, not with that table, until the full trial is rerun at full speed.
+- **Known limit.** A target that drives right over a parked look-alike and hands over with no jump is not refused.
 
-No adopted match was more than 4 px from the true target. That does not replace the PX4 result. The camera here has no attitude lag and no offboard delay.
+On Docker Desktop for Mac, PX4's MAVLink does not reach a harness on the host. Run the harness on Docker's network from `deploy/sitl/runner.Dockerfile`:
+
+```bash
+docker build -t a2e-sitl-runner -f deploy/sitl/runner.Dockerfile deploy/sitl
+docker run --rm --network host -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:$PWD" -w "$PWD/sim/sitl" a2e-sitl-runner python track_loop.py --tracker v2 --seeds 5 --speed 1 --duration 90 --out /tmp/track.jsonl
+```
+
+`sim/sitl/scene_motion.py` is a shorter stand-in: the camera is a point at 25 m that chases the track, with no PX4. Three seeds, 30 s, 501 frames each, on the route and with the target braking to a stop at 12 s:
+
+| Seed | On target | False lock | Lock dropped | On target, target stops | False lock, target stops | Lock dropped, target stops |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 413 | 0 | 0 | 489 | 0 | 0 |
+| 2 | 499 | 0 | 0 | 477 | 0 | 0 |
+| 3 | 466 | 0 | 0 | 501 | 0 | 0 |
+
+This does not replace the PX4 result. The camera here has no attitude lag and no offboard delay.
 
 "On target" means the reported track position (the match, or the filter's prediction while coasting) is within 4 px of the truth. "False lock" means the tracker accepted a match more than 4 px away.
 
