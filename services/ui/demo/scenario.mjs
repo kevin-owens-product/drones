@@ -4,6 +4,7 @@
 // the browser (src/staticDemo.ts). All data is synthetic and labelled so.
 import { plan as planConfig } from "./configure.mjs";
 import { denialPicture } from "./denial.mjs";
+import { propose } from "./intent.mjs";
 import { FLEET_SHARE, fileReport, seedReports, triage } from "./fieldvoice.mjs";
 import { acknowledge, RESPONSES, scorecard, startSession, visible } from "./training.mjs";
 
@@ -439,6 +440,44 @@ export function createDemo(opts = {}) {
     };
   }
 
+  // Intent to plan: proposals wait for a person; approval files a draft for the
+  // mission planner and commands nothing.
+  const proposals = [];
+  function briefFleet() {
+    return FLEET.map((c) => {
+      const x = c.kind === "lawnmower" ? c.x + c.w / 2 : c.x;
+      const y = c.kind === "lawnmower" ? c.y - c.h / 2 : c.y;
+      if (c.grounded) return { tail: c.tail, x, y, available: false, why: `Grounded: ${c.grounded}` };
+      const battery = c.battery ?? 88;
+      if (battery < 50) return { tail: c.tail, x, y, available: false, why: `Battery ${battery}%` };
+      return { tail: c.tail, x, y, available: true };
+    });
+  }
+  function intent(method, url, raw) {
+    if (method !== "POST") return { status: 200, body: { items: proposals.slice().reverse() } };
+    let msg = {};
+    try {
+      msg = JSON.parse(raw);
+    } catch {
+      return { status: 400, body: { error: "json" } };
+    }
+    if (url.pathname === "/v1/intent/propose") {
+      const p = propose(String(msg.brief ?? "").slice(0, 600), briefFleet());
+      proposals.push(p);
+      return { status: 200, body: p };
+    }
+    if (url.pathname === "/v1/intent/approve") {
+      const p = proposals.find((x) => x.id === msg.id);
+      if (!p) return { status: 404, body: { error: "no such proposal" } };
+      if (p.status !== "awaiting approval") return { status: 409, body: { error: `proposal is ${p.status}` } };
+      p.status = msg.decision === "reject" ? "rejected" : "approved";
+      p.decided_by = String(msg.by ?? "operator");
+      p.decided_at = new Date().toISOString();
+      return { status: 200, body: p };
+    }
+    return { status: 404, body: { error: "unknown" } };
+  }
+
   // Training mode: open the console with ?scenario=qual-1. One session at a time.
   let session = null;
   function training(method, url, raw) {
@@ -467,6 +506,7 @@ export function createDemo(opts = {}) {
     handle(method, url, raw = "") {
       if (url.pathname.startsWith("/v1/attrition")) return attrition(method, url, raw);
       if (url.pathname === "/v1/field-reports") return fieldReports(method, raw);
+      if (url.pathname.startsWith("/v1/intent")) return intent(method, url, raw);
       if (url.pathname === "/v1/configure") {
         const q = url.searchParams;
         const num = (k, d) => (Number.isFinite(Number(q.get(k))) && q.get(k) !== null ? Number(q.get(k)) : d);

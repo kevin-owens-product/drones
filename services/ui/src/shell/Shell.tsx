@@ -5,6 +5,7 @@ import type { Section, Viewer } from "./types";
 
 const PRIMARY: readonly { id: Section; label: string }[] = [
   { id: "operate", label: "Operate" },
+  { id: "brief", label: "Brief" },
   { id: "missions", label: "Missions" },
   { id: "debrief", label: "Debrief" },
   { id: "eval", label: "Eval" },

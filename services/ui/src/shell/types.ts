@@ -11,6 +11,7 @@ export type Section =
   | "reports"
   | "denial"
   | "configure"
+  | "brief"
   | "organization"
   | "people"
   | "sharing"
