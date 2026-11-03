@@ -8,8 +8,10 @@ from typing import TypedDict
 
 from pyulog import ULog  # type: ignore[import-untyped]
 
+from a2e.flight.fixtures import fixture_root
+
 _NAME = re.compile(r"[A-Za-z0-9._-]+")
-_FIXTURES = Path(__file__).resolve().parents[3] / "tests" / "fixtures" / "px4"
+_FIXTURES = fixture_root("px4")
 
 
 class Summary(TypedDict):

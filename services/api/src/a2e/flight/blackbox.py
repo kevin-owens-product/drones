@@ -6,8 +6,10 @@ import re
 from pathlib import Path
 from typing import TypedDict
 
+from a2e.flight.fixtures import fixture_root
+
 _NAME = re.compile(r"[A-Za-z0-9._-]+")
-_FIXTURES = Path(__file__).resolve().parents[3] / "tests" / "fixtures" / "betaflight"
+_FIXTURES = fixture_root("betaflight")
 
 _SIGNED_VB = 0
 _UNSIGNED_VB = 1
