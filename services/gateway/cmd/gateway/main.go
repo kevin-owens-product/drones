@@ -47,6 +47,31 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
+	mux.HandleFunc("/flight-metrics", func(w http.ResponseWriter, _ *http.Request) {
+		p50, p99, perSec, received, dropped := mavlink.Snapshot()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"p50_us":%d,"p99_us":%d,"per_sec":%.2f,"received":%d,"unrecognized":%d}`, p50, p99, perSec, received, dropped)
+	})
+	mux.HandleFunc("/command", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method", http.StatusMethodNotAllowed)
+			return
+		}
+		var body struct {
+			SystemID byte    `json:"system_id"`
+			Command  uint16  `json:"command"`
+			Param1   float32 `json:"param1"`
+		}
+		if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&body); err != nil || body.SystemID == 0 || body.Command == 0 {
+			http.Error(w, "json", http.StatusBadRequest)
+			return
+		}
+		if err := mavlink.Send(body.SystemID, body.Command, body.Param1); err != nil {
+			http.Error(w, err.Error(), http.StatusServiceUnavailable)
+			return
+		}
+		w.WriteHeader(http.StatusAccepted)
+	})
 	mux.HandleFunc("/ingest", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method", http.StatusMethodNotAllowed)

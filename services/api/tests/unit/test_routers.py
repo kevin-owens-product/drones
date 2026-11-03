@@ -14,6 +14,7 @@ REQUIRED = (
     "/v1/audit",
     "/v1/session/dev-login",
     "/v1/edge/reconcile",
+    "/v1/flight/command",
 )
 
 

@@ -17,6 +17,7 @@
     "mission.review",
     "mission.approve",
     "mission.execute",
+    "vehicle.command",
     "video.read",
     "video.manage",
     "telemetry.read",
@@ -39,6 +40,7 @@
     "mission.review",
     "mission.approve",
     "mission.execute",
+    "vehicle.command",
     "video.read",
     "video.manage",
     "telemetry.read",
@@ -67,6 +69,7 @@
     "user.read",
     "mission.read",
     "mission.execute",
+    "vehicle.command",
     "video.read",
     "telemetry.read"
   ],
