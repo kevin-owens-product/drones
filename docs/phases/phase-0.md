@@ -11,7 +11,7 @@ docs/architecture/c4-containers.md
 docs/architecture/c4-components.md
 docs/architecture/data-model.md
 docs/architecture/threat-model.md
-docs/architecture/control-mapping.md
+docs/governance/control-mapping.md
 docs/architecture/sequences.md
 docs/architecture/adrs/README.md
 docs/architecture/adrs/0001-python-fastapi.md

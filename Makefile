@@ -1,7 +1,11 @@
-.PHONY: up down test test-unit test-integration lint opa ui sbom ci
+.PHONY: up down demo test test-unit test-integration lint opa ui sbom ci
 
 up:
 	@test -f .env || (echo "Copy .env.example to .env first" && exit 1)
+	docker compose up --build
+
+demo:
+	@test -f .env || cp .env.example .env
 	docker compose up --build
 
 down:

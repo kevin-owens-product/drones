@@ -16,7 +16,7 @@ Roles are admin, mission commander, planner, operator, analyst, maintainer, and 
 
 ## Control inheritance
 
-See `docs/architecture/control-mapping.md`. Controls marked partial or gap are copied into `poam.md`.
+See `control-mapping.md`. Controls marked partial or gap are copied into `poam.md`.
 
 ## Audit
 

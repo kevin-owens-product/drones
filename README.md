@@ -1,100 +1,63 @@
 # A2E Mission Cloud
 
-Plans, monitors, simulates, and debriefs missions for Group 1–3 uncrewed aircraft. Humans approve every plan and every tasking change. The platform does not employ weapons or release effects. Tracking means ISR sensor custody.
+Flight software and an autonomy testbed for small quadcopters. Simulated vehicles fly through PX4 and Betaflight, a MAVLink gateway, and one ground-control screen. The same loop measures GPS-denied navigation, operator-designated visual tracking, and multi-vehicle tasking.
 
-This build's system high is **CUI**. The schema can store higher markings, and the release gate will not show or export them.
+Demo recording, once the six-quad flight is captured: `docs/media/demo.gif`.
 
-## Status
+## Architecture
 
-| Phase | State |
-| --- | --- |
-| 0 Architecture | Done. [docs/architecture](docs/architecture/README.md) |
-| 1 Platform core | Done. Tenancy, RLS, OIDC, ABAC, audit, release gate, fleet registry |
-| 2 Telemetry | Gateway, 10k x 5 Hz test, Timescale table, NATS and MQTT in Compose |
-| 3 Sim and behaviors | SimRuntime, FANTOM stub, five reference behaviors, scorecard |
-| 4 Video | KLV parser, HLS playlist, MediaMTX, bandwidth allocator |
-| 5 Missions and debrief | Approval workflow, timeline, CSV, PDF, xAPI through the release action |
-| 6 Edge | Home-region pin, reconcile, edge Compose, air-gap bundle script |
-| 7 Hardening | Pen-test checklist, SSP starter, POA&M, performance report |
+```mermaid
+flowchart LR
+  operator[Operate console] --> api[Control plane]
+  api --> nats[NATS]
+  px4[PX4 SITL] --> gateway[MAVLink gateway]
+  bf[Betaflight SITL] --> gateway
+  gateway --> nats
+  nats --> api
+  api --> db[(Timescale)]
+  onboard[Onboard C and C++] --> px4
+```
 
-## Run the core
+The control plane is FastAPI. The gateway is Go. Onboard navigation, tracking, and link logic are C or C++. Governance (OPA, the audit chain, Keycloak, markings) stays in the stack and lives under [docs/governance](docs/governance/control-mapping.md). It is not the product.
+
+The domain has no weapon, payload release, or fire-control type ([ADR 0016](docs/architecture/adrs/0016-no-weapons-in-the-domain.md)). Tracking means an operator-designated object in simulation, with confirm, abort, and timeout written to the audit log.
+
+## Run
 
 ```bash
 cp .env.example .env
-make ui    # optional; builds the React console into the API image tree
-make up    # docker compose up --build
+make demo
 ```
 
-Open `http://localhost:18080`. The dev realm is `a2e-dev` at `http://localhost:18081`. Dev users share the password `dev-only-change-me`. The laptop `.env` turns on the dev-login form as well as the IdP link. Banner floor is CUI.
-
-Sign in as `gwen.analyst` (GBR, CUI). She sees tails `N-002` and `N-003`. She does not see `N-001`, which is `CUI//NOFORN`. With `A2E_GATEWAY_DEMO=1`, those two tails move on the map.
-
-Host ports stay off the usual local defaults: API `18080`, Keycloak `18081`, Postgres `15432`, Redis `16379`, Grafana `13000`. Container ports are unchanged.
-
-Postgres for the integration notes below is a separate container on host port **5433**.
-
-## Tests
+Open `http://localhost:18080`. The dev password is `dev-only-change-me`. Sign in as `gwen.analyst`.
 
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install -e "./services/api[dev]"
-make test-unit
-make opa
+make test
 ```
 
-Integration tests need the database image and OPA:
+`make test` is the unit suite. `make ci` is lint, OPA, and that suite.
 
-```bash
-docker build -t a2e-postgres deploy/postgres
-docker run -d --name a2e-pg -p 5433:5432 \
-  -e POSTGRES_USER=a2e -e POSTGRES_PASSWORD=change-me-db -e POSTGRES_DB=a2e \
-  a2e-postgres postgres -c shared_preload_libraries=timescaledb
-docker run -d --name a2e-opa -p 8181:8181 \
-  -v "$PWD/policies:/policies" openpolicyagent/opa:0.70.0 \
-  run --server --addr=0.0.0.0:8181 /policies
-```
+## Results
 
-Then, with the variables from `.env.example` pointed at `localhost:5433` and `A2E_AUTH_MODE=test`, `A2E_DEV_LOGIN=1`, `A2E_SEED=1`:
+Filled from `make eval` once a phase has a measured run. Empty cells are not measured yet.
 
-```bash
-.venv/bin/python -m a2e.bootstrap
-cd services/api && ../.venv/bin/python -m pytest tests/integration
-```
-
-Playwright (after the API is up in test auth mode and `make ui`):
-
-```bash
-cd services/ui && npx playwright install chromium && npm run e2e
-```
-
-## Layout
-
-```text
-docs/architecture/     Phase 0
-policies/              Rego and the role matrix
-services/api/          FastAPI control plane
-services/ui/           React console
-deploy/                Postgres image, OPA image, nginx TLS, Helm
-```
-
-Helm, for a cluster that already has secrets (do not use `values-dev.yaml` outside a laptop):
-
-```bash
-helm template a2e deploy/helm/a2e -f deploy/helm/a2e/values-dev.yaml
-```
-
-Later phases are summarized in `docs/phases/`. The gateway image runs its 10k test during `docker build`. Behavior and mission calls are under `/v1/behaviors`, `/v1/missions`, `/v1/sim`, `/v1/video`, `/v1/debrief`, and `/v1/edge`.
-
-## What's stubbed in Phase 1
-
-- CAC/PIV. OIDC is the seam. Keycloak is the dev IdP only.
-- FIPS-validated module. Algorithms are AES-256-GCM, SHA-256, and TLS 1.2+ ciphers in `deploy/nginx/nginx.conf`. The laptop image is not a CMVP module.
-- Laptop Compose speaks HTTP.
-- Refresh tokens.
-- Export formats other than JSON (PDF, CSV, xAPI return `format_unavailable` after the gate runs).
-- Cross-tenant write, even if a sharing row says `read_write`.
-- pgaudit on this image.
-- MinIO external KMS. The bucket uses SSE-S3.
-- Image digest pins. CI builds a CycloneDX SBOM and signs with cosign only when `COSIGN_KEY` is set.
-- Grafana dashboards beyond the Prometheus datasource.
-- FANTOM, telemetry gateway, sim, video, missions, and edge sync. Those are later phases. The domain has no weapons type for them to grow into.
+| Metric | Value | Where |
+| --- | --- | --- |
+| Telemetry latency p50 / p99 | | Phase 1 |
+| Telemetry messages per second | | Phase 1 |
+| Dropped telemetry messages | | Phase 1 |
+| Position drift, GNSS denied | | Phase 2 |
+| Spoof time to detect | | Phase 2 |
+| Spoof false alarms per flight hour | | Phase 2 |
+| Position RMSE vs ground truth | | Phase 2 |
+| Lock retention | | Phase 3 |
+| Reacquisition time | | Phase 3 |
+| Mean pixel error | | Phase 3 |
+| Frame to setpoint latency | | Phase 3 |
+| Tracker frames per second | | Phase 3 |
+| Area coverage vs vehicles | | Phase 4 |
+| Re-plan time after vehicle loss | | Phase 4 |
+| Minimum separation | | Phase 4 |
+| Operator actions per vehicle per minute | | Phase 4 |
+| Mission success vs packet loss | | Phase 5 |
+| Mission success vs jammer placement | | Phase 5 |
