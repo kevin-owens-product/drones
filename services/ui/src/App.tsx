@@ -3,6 +3,7 @@ import { api, sessionLost, type SessionConfig } from "./api";
 import { AttritionPage } from "./pages/Attrition";
 import { AuditPage } from "./pages/Audit";
 import { DebriefPage } from "./pages/Debrief";
+import { DenialMapPage } from "./pages/DenialMap";
 import { EvalPage } from "./pages/Eval";
 import { FieldReportsPage } from "./pages/FieldReports";
 import { FleetPage } from "./pages/Fleet";
@@ -29,6 +30,7 @@ const SECTIONS: readonly Section[] = [
   "eval",
   "attrition",
   "reports",
+  "denial",
   "organization",
   "people",
   "sharing",
@@ -136,6 +138,7 @@ export function App() {
       {section === "eval" ? <EvalPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "attrition" ? <AttritionPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "reports" ? <FieldReportsPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "denial" ? <DenialMapPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "organization" ? <OrganizationPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "people" ? <PeoplePage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "sharing" ? <SharingPage viewer={viewer} onBanner={setBanner} /> : null}

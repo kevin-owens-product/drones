@@ -226,3 +226,99 @@
   stroke: var(--accent);
   stroke-width: 1.5;
 }
+
+/* GNSS denial map */
+.dm-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+}
+
+.dm-controls input[type="range"] {
+  width: min(320px, 100%);
+}
+
+.dm-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.dm-map {
+  width: 100%;
+  height: auto;
+  max-height: 70vh;
+}
+
+.dm-bg {
+  fill: var(--surface-2);
+}
+
+.dm-brief {
+  fill: none;
+  stroke: var(--warn);
+  stroke-width: 18;
+  stroke-dasharray: 60 40;
+}
+
+.dm-truth {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 12;
+  stroke-dasharray: 20 30;
+}
+
+.dm-label {
+  fill: var(--text);
+  font-family: var(--font-mono);
+  font-size: 110px;
+}
+
+.dm-pass {
+  fill: none;
+  stroke: #7f8ea0;
+  stroke-width: 14;
+  stroke-dasharray: 40 40;
+}
+
+.dm-route-brief {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 20;
+  stroke-dasharray: 90 60;
+}
+
+.dm-route {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 34;
+  stroke-linejoin: round;
+}
+
+.dm-station,
+.dm-target {
+  fill: var(--text);
+}
+
+.dm-key-route {
+  background: var(--accent);
+}
+
+.dm-key-brief {
+  background: var(--muted);
+}
+
+.dm-key-pass {
+  background: #7f8ea0;
+}
+
+.dm-key-denied {
+  background: var(--danger);
+}
+
+.dm-key-clear {
+  background: var(--ok);
+}
