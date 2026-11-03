@@ -60,7 +60,17 @@ What the tracker trials show:
 
 - **v1 loses every run within 15 to 23 s**, at the first turn, because a fixed template stops matching once the target rotates.
 - **v2 holds the target in 3 of 5 runs**, through turns and tree occlusion, with the vehicle about 2 m from the target throughout.
-- **In 2 of 5 runs v2 ends up on a parked look-alike.** In both, the target drives within a few metres of an identical parked vehicle while turning. The rotated target scores below the parked one, and the swap happens inside the 4 m gate. `track_motion_keep` now refuses a measurement whose step is under 0.5 m/s while the track was moving faster than 2 m/s, and the harness treats that refusal like a gate miss. The closed-loop trial has not been rerun since that check was added, so the 2 of 5 figure is still the last measured result.
+- **In 2 of 5 runs v2 ends up on a parked look-alike.** In both, the target drives within a few metres of an identical parked vehicle while turning. The rotated target scores below the parked one, and the swap happens inside the 4 m gate. `track_motion_keep` now refuses a measurement whose step is under 0.5 m/s while the track was moving faster than 2 m/s, and the harness treats that refusal like a gate miss. The closed-loop PX4 trial has not been rerun since that check was added, so the 2 of 5 figure is still the last measured result.
+
+`sim/sitl/scene_motion.py` is a shorter stand-in: the camera is a point at 25 m that chases the filtered track, with no PX4. Three seeds, 30 s, 501 frames each:
+
+| Seed | On target | False lock | Motion gate refused | Lock dropped |
+| --- | --- | --- | --- | --- |
+| 1 | 432 | 0 | 2 | 0 |
+| 2 | 501 | 0 | 0 | 0 |
+| 3 | 485 | 0 | 0 | 0 |
+
+No adopted match was more than 4 px from the true target. That does not replace the PX4 result. The camera here has no attitude lag and no offboard delay.
 
 "On target" means the reported track position (the match, or the filter's prediction while coasting) is within 4 px of the truth. "False lock" means the tracker accepted a match more than 4 px away.
 
