@@ -21,6 +21,9 @@ services:
         destination: /index.html
     headers:
       - path: /*
+        name: X-Robots-Tag
+        value: noindex, nofollow
+      - path: /*
         name: X-Content-Type-Options
         value: nosniff
       - path: /*

@@ -4,7 +4,7 @@ import { FloorField } from "./FloorField";
 export function Login(props: {
   bannerClass: (text: string) => string;
   banner: string;
-  config: { login_url: string; dev_login: boolean } | null;
+  config: { login_url: string; dev_login: boolean; auth_mode?: string } | null;
   fault: string;
   username: string;
   password: string;
@@ -37,7 +37,9 @@ export function Login(props: {
                 {props.fault}
               </p>
             ) : null}
-            {props.config ? (
+            {props.config?.auth_mode === "demo" ? (
+              <p className="meta">Demo access is by invitation. Sign in with the account you were given.</p>
+            ) : props.config ? (
               <a id="idp-login" className="btn btn-primary" href={props.config.login_url}>
                 Sign in with organization IdP
               </a>
@@ -46,7 +48,7 @@ export function Login(props: {
             )}
             {props.config?.dev_login ? (
               <form id="login-form" onSubmit={props.onSubmit}>
-                <div className="kicker">Development</div>
+                {props.config.auth_mode === "demo" ? null : <div className="kicker">Development</div>}
                 <div className="field">
                   <label htmlFor="username">Username</label>
                   <input
