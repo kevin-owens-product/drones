@@ -19,8 +19,7 @@ from a2e.authz import OpaClient
 from a2e.db import make_engine, make_sessionmaker, set_subject
 from a2e.http import SECURITY_HEADERS, db_error, fail
 from a2e.logging_config import setup_logging
-from a2e.phase_routes import router as phase_router
-from a2e.routes import router
+from a2e.routers import routers
 from a2e.settings import Settings, get_settings
 
 log = structlog.get_logger()
@@ -84,8 +83,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.redis = Redis.from_url(current.redis_url, decode_responses=True)
 
     app.add_middleware(SessionMiddleware)
-    app.include_router(router)
-    app.include_router(phase_router)
+    for domain_router in routers:
+        app.include_router(domain_router)
     Instrumentator().instrument(app).expose(app, include_in_schema=False)
 
     @app.get("/health")

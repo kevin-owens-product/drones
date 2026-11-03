@@ -1,4 +1,4 @@
-"""Control-plane routes. Weapons employment is not a route on this API."""
+"""Session, organization, sharing, audit, release, and edge reconcile."""
 
 from __future__ import annotations
 
@@ -7,9 +7,8 @@ import hashlib
 import hmac
 import json
 import secrets
-import time
-from datetime import datetime, timezone
-from typing import Any, Literal, NoReturn
+from datetime import datetime
+from typing import Any, Literal
 from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
@@ -23,68 +22,31 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from a2e.auditlog import append_audit, append_login_failure
 from a2e.authn import AuthError
-from a2e.authz import Principal, authorize
-from a2e.chain import canonical_json, chain_hash, format_utc
-from a2e.classification import Marking, normalize_caveats
+from a2e.authz import Principal
 from a2e.crypto import open_sealed, seal
 from a2e.db import fetch_all, fetch_one, scalar, set_subject
+from a2e.edge.sync import Operation, reconcile
 from a2e.http import db_error, fail, get_session, set_banner, transactional
+from a2e.routers.deps import (
+    ClassificationIn,
+    _authz,
+    _cookie,
+    _deny_or_none,
+    _jsonify,
+    _limit,
+    _row_mark,
+    _sign,
+    _unsign,
+    require_principal,
+)
 
 log = structlog.get_logger()
 router = APIRouter()
-
-ClassificationIn = Literal["UNCLASSIFIED", "CUI"]
-GroupIn = Literal["group_1", "group_2", "group_3"]
-PayloadIn = Literal["eo", "ir", "eo_ir", "sar", "lidar", "comms_relay", "acoustic"]
-
 
 class LoginIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     username: str = Field(min_length=1, max_length=64)
     password: str = Field(min_length=1, max_length=200)
-
-
-class PlatformIn(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    tenant_id: UUID
-    tail_number: str = Field(pattern=r"^[A-Z0-9-]{2,16}$")
-    designation: str = Field(min_length=1, max_length=64)
-    group_size: GroupIn
-    serial_number: str = Field(min_length=1, max_length=64)
-    airworthiness: Literal["airworthy", "restricted", "grounded", "unknown"] = "unknown"
-    home_station: str | None = Field(default=None, max_length=120)
-    classification: ClassificationIn = "UNCLASSIFIED"
-    caveats: list[str] = Field(default_factory=list)
-    ntk_programs: list[str] = Field(default_factory=list)
-
-
-class PlatformPatch(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    airworthiness: Literal["airworthy", "restricted", "grounded", "unknown"] | None = None
-    software_version: str | None = Field(default=None, max_length=64)
-
-
-class PayloadBody(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    kind: PayloadIn
-    name: str = Field(min_length=1, max_length=80)
-    firmware: str | None = Field(default=None, max_length=64)
-    classification: ClassificationIn = "UNCLASSIFIED"
-    caveats: list[str] = Field(default_factory=list)
-    ntk_programs: list[str] = Field(default_factory=list)
-
-
-class StationIn(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    tenant_id: UUID
-    name: str = Field(min_length=1, max_length=80)
-    lat: float = Field(ge=-90, le=90)
-    lon: float = Field(ge=-180, le=180)
-    alt_m: float = 0
-    classification: ClassificationIn = "UNCLASSIFIED"
-    caveats: list[str] = Field(default_factory=list)
-
-
 class SharingIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     provider_tenant_id: UUID
@@ -95,8 +57,6 @@ class SharingIn(BaseModel):
     allow_noforn: bool = False
     include_descendants: bool = False
     max_classification: ClassificationIn = "CUI"
-
-
 class ExportIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     resource_type: Literal["platform"]
@@ -104,8 +64,6 @@ class ExportIn(BaseModel):
     recipient_user_id: UUID
     purpose: str = Field(min_length=1, max_length=400)
     format: Literal["json", "csv", "pdf", "xapi"]
-
-
 class UserIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     username: str = Field(min_length=1, max_length=64)
@@ -125,8 +83,6 @@ class UserIn(BaseModel):
         "maintainer",
         "auditor",
     ]
-
-
 class TenantIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     parent_id: UUID
@@ -134,176 +90,6 @@ class TenantIn(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     code: str = Field(pattern=r"^[A-Z0-9-]{2,64}$")
     branch_code: str = Field(pattern=r"^[A-Z0-9-]{2,16}$")
-
-
-class CustodyIn(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    event_type: Literal["accept", "transfer", "release", "inventory"]
-    to_user_id: UUID | None = None
-    location: str = Field(min_length=1, max_length=160)
-
-
-def _jsonify(value: Any) -> Any:
-    if isinstance(value, UUID):
-        return str(value)
-    if isinstance(value, datetime):
-        return format_utc(value)
-    if isinstance(value, list):
-        return [_jsonify(item) for item in value]
-    if isinstance(value, dict):
-        return {str(key): _jsonify(item) for key, item in value.items()}
-    return value
-
-
-def _row_mark(row: dict[str, Any]) -> Marking:
-    return Marking(
-        str(row["classification"]),
-        tuple(row.get("caveats") or []),
-        tuple(row.get("ntk_programs") or []),
-    )
-
-
-def _sign(secret: str, payload: dict[str, str]) -> str:
-    raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
-    body = base64.urlsafe_b64encode(raw).decode().rstrip("=")
-    mac = hmac.new(secret.encode(), body.encode(), hashlib.sha256).hexdigest()
-    return f"{body}.{mac}"
-
-
-def _unsign(secret: str, value: str) -> dict[str, str] | None:
-    if value.count(".") != 1:
-        return None
-    body, mac = value.split(".", 1)
-    expected = hmac.new(secret.encode(), body.encode(), hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(mac, expected):
-        return None
-    padded = body + "=" * (-len(body) % 4)
-    try:
-        data = json.loads(base64.urlsafe_b64decode(padded))
-    except Exception:
-        return None
-    if not isinstance(data, dict):
-        return None
-    return {str(key): str(item) for key, item in data.items()}
-
-
-async def _limit(request: Request, bucket: str, limit: int) -> JSONResponse | None:
-    settings = request.app.state.settings
-    if not settings.rate_limit_enabled:
-        return None
-    redis = request.app.state.redis
-    identity = getattr(request.state, "user_id", None)
-    if not identity:
-        identity = request.client.host if request.client else "unknown"
-    key = f"rl:{bucket}:{identity}:{int(time.time()) // 60}"
-    try:
-        count = int(await redis.incr(key))
-        if count == 1:
-            await redis.expire(key, 120)
-    except Exception:
-        log.warning("rate_limit_unavailable")
-        return fail(503, "rate_limit_unavailable")
-    if count > limit:
-        return fail(429, "rate_limited")
-    return None
-
-
-def _cookie(response: JSONResponse | RedirectResponse, token: str, request: Request, max_age: int) -> None:
-    settings = request.app.state.settings
-    response.set_cookie(
-        "a2e_session",
-        token,
-        httponly=True,
-        samesite="lax",
-        secure=settings.cookie_secure,
-        max_age=max_age,
-        path="/",
-    )
-
-
-async def require_principal(
-    request: Request,
-    session: AsyncSession = Depends(get_session),
-) -> Principal:
-    token = None
-    header = request.headers.get("authorization")
-    if header and header.lower().startswith("bearer "):
-        token = header[7:].strip()
-    if not token:
-        token = request.cookies.get("a2e_session")
-    if not token:
-        _unauthorized()
-    try:
-        subject = request.app.state.authenticator.validate(token)
-    except AuthError:
-        _unauthorized()
-    await set_subject(session, subject)
-    from a2e.authz import load_principal
-
-    principal = await load_principal(session, subject)
-    if principal is None:
-        _unauthorized()
-    request.state.user_id = str(principal.user_id)
-    request.state.principal = principal
-    return principal
-
-
-def _unauthorized() -> NoReturn:
-    from fastapi import HTTPException
-
-    raise HTTPException(status_code=401, detail="unauthenticated")
-
-
-async def _authz(
-    request: Request,
-    session: AsyncSession,
-    principal: Principal,
-    action: str,
-    resource: dict[str, Any] | None = None,
-    recipient: dict[str, Any] | None = None,
-) -> JSONResponse | None:
-    decision = await authorize(
-        session,
-        request.app.state.opa,
-        principal,
-        action,
-        resource,
-        system_high=request.app.state.settings.system_high,
-        recipient=recipient,
-    )
-    if decision.allow:
-        return None
-    classification = "UNCLASSIFIED"
-    caveats: list[str] = []
-    tenant_id = principal.user_id and None
-    resource_id = None
-    if resource is not None:
-        classification = str(resource.get("classification") or "UNCLASSIFIED")
-        caveats = [str(item) for item in resource.get("caveats") or []]
-        raw_tenant = resource.get("tenant_id")
-        tenant_id = UUID(str(raw_tenant)) if raw_tenant else None
-        raw_id = resource.get("id")
-        resource_id = UUID(str(raw_id)) if raw_id else None
-    await append_audit(
-        session,
-        actor_id=principal.user_id,
-        tenant_id=tenant_id if isinstance(tenant_id, UUID) else None,
-        action=action,
-        resource_type=str(resource.get("resource_type") if resource else action),
-        resource_id=resource_id,
-        decision="deny",
-        reason_codes=list(decision.reasons),
-        classification=classification,
-        caveats=caveats,
-        ntk_programs=[str(item) for item in (resource or {}).get("ntk_programs") or []],
-    )
-    if decision.unavailable:
-        return fail(503, "opa_unavailable")
-    reason = decision.reasons[0] if decision.reasons else "denied"
-    status = 403 if reason != "opa_unavailable" else 503
-    return fail(status, reason)
-
-
 @router.get("/v1/session/config")
 async def session_config(request: Request) -> JSONResponse:
     settings = request.app.state.settings
@@ -316,8 +102,6 @@ async def session_config(request: Request) -> JSONResponse:
             "login_url": "/v1/session/login",
         }
     )
-
-
 @router.get("/v1/session/login")
 async def oidc_login(request: Request) -> RedirectResponse:
     settings = request.app.state.settings
@@ -350,8 +134,6 @@ async def oidc_login(request: Request) -> RedirectResponse:
     )
     request.state.banner = settings.system_high
     return response
-
-
 @router.get("/v1/session/callback", response_model=None)
 @transactional
 async def oidc_callback(
@@ -412,8 +194,6 @@ async def oidc_callback(
     _cookie(response, access, request, 3600)
     response.delete_cookie("a2e_oauth", path="/v1/session")
     return response
-
-
 @router.post("/v1/session/dev-login")
 @transactional
 async def dev_login(
@@ -453,8 +233,6 @@ async def dev_login(
     _cookie(response, token, request, 3600)
     request.state.banner = settings.system_high
     return response
-
-
 @router.post("/v1/session/logout")
 @transactional
 async def logout(
@@ -475,8 +253,6 @@ async def logout(
     response = JSONResponse({"status": "ok"})
     response.delete_cookie("a2e_session", path="/")
     return response
-
-
 @router.get("/v1/me")
 async def me(
     request: Request,
@@ -494,234 +270,6 @@ async def me(
             "roles": list(principal.roles),
         }
     )
-
-
-@router.get("/v1/platforms")
-@transactional
-async def list_platforms(
-    request: Request,
-    principal: Principal = Depends(require_principal),
-    session: AsyncSession = Depends(get_session),
-) -> JSONResponse:
-    denied = await _authz(request, session, principal, "fleet.read")
-    if denied:
-        return denied
-    rows = await fetch_all(
-        session,
-        """
-        SELECT p.id, p.tenant_id, p.tail_number, p.designation, p.group_size::text AS group_size,
-               p.serial_number, p.airworthiness::text AS airworthiness, p.home_station,
-               p.software_version, p.classification::text AS classification, p.caveats,
-               p.ntk_programs, p.portion_mark, t.name AS owner_name
-        FROM platforms p
-        LEFT JOIN tenants t ON t.id = p.tenant_id
-        ORDER BY p.tail_number
-        """,
-    )
-    banner = set_banner(request, request.app.state.settings.system_high, [_row_mark(row) for row in rows])
-    return JSONResponse({"banner": banner, "items": _jsonify(rows)})
-
-
-@router.get("/v1/maintenance")
-@transactional
-async def list_maintenance(
-    request: Request,
-    principal: Principal = Depends(require_principal),
-    session: AsyncSession = Depends(get_session),
-) -> JSONResponse:
-    denied = await _authz(request, session, principal, "fleet.read")
-    if denied:
-        return denied
-    rows = await fetch_all(
-        session,
-        """
-        SELECT m.id, m.platform_id, p.tail_number, m.summary, m.status, m.opened_at, m.closed_at,
-               m.classification::text AS classification, m.caveats, m.portion_mark
-        FROM maintenance_events m
-        JOIN platforms p ON p.id = m.platform_id
-        ORDER BY m.opened_at DESC
-        LIMIT 100
-        """,
-    )
-    banner = set_banner(request, request.app.state.settings.system_high, [_row_mark(row) for row in rows])
-    return JSONResponse({"banner": banner, "items": _jsonify(rows)})
-
-
-@router.get("/v1/payloads")
-@transactional
-async def list_payloads(
-    request: Request,
-    principal: Principal = Depends(require_principal),
-    session: AsyncSession = Depends(get_session),
-) -> JSONResponse:
-    denied = await _authz(request, session, principal, "fleet.read")
-    if denied:
-        return denied
-    rows = await fetch_all(
-        session,
-        """
-        SELECT id, platform_id, kind, name, firmware,
-               classification::text AS classification, caveats, portion_mark
-        FROM payloads
-        ORDER BY name
-        """,
-    )
-    banner = set_banner(request, request.app.state.settings.system_high, [_row_mark(row) for row in rows])
-    return JSONResponse({"banner": banner, "items": _jsonify(rows)})
-
-
-@router.post("/v1/platforms")
-@transactional
-async def create_platform(
-    request: Request,
-    body: PlatformIn,
-    principal: Principal = Depends(require_principal),
-    session: AsyncSession = Depends(get_session),
-) -> JSONResponse:
-    caveats = normalize_caveats(body.caveats)
-    resource = {
-        "id": None,
-        "tenant_id": body.tenant_id,
-        "classification": body.classification,
-        "caveats": caveats,
-        "ntk_programs": body.ntk_programs,
-        "resource_type": "platform",
-    }
-    denied = await _authz(request, session, principal, "fleet.write", resource)
-    if denied:
-        return denied
-    new_id = uuid4()
-    try:
-        await scalar(
-            session,
-            """
-            INSERT INTO platforms (
-              id, tenant_id, tail_number, designation, group_size, serial_number,
-              airworthiness, home_station, classification, caveats, ntk_programs
-            ) VALUES (
-              :id, :tenant_id, :tail, :designation, CAST(:group_size AS platform_group),
-              :serial, CAST(:airworthiness AS airworthiness_status), :home,
-              CAST(:classification AS clearance_level), :caveats, :ntk
-            )
-            RETURNING id
-            """,
-            {
-                "id": new_id,
-                "tenant_id": body.tenant_id,
-                "tail": body.tail_number,
-                "designation": body.designation,
-                "group_size": body.group_size,
-                "serial": body.serial_number,
-                "airworthiness": body.airworthiness,
-                "home": body.home_station,
-                "classification": body.classification,
-                "caveats": caveats,
-                "ntk": body.ntk_programs,
-            },
-        )
-    except DBAPIError as exc:
-        mapped = db_error(exc)
-        if mapped:
-            return mapped
-        raise
-    await append_audit(
-        session,
-        actor_id=principal.user_id,
-        tenant_id=body.tenant_id,
-        action="fleet.write",
-        resource_type="platform",
-        resource_id=new_id,
-        decision="allow",
-        reason_codes=[],
-        classification=body.classification,
-        caveats=caveats,
-        ntk_programs=body.ntk_programs,
-    )
-    request.state.banner = request.app.state.settings.system_high
-    return JSONResponse({"id": str(new_id)}, status_code=201)
-
-
-@router.get("/v1/platforms/{platform_id}")
-@transactional
-async def get_platform(
-    platform_id: UUID,
-    request: Request,
-    principal: Principal = Depends(require_principal),
-    session: AsyncSession = Depends(get_session),
-) -> JSONResponse:
-    row = await fetch_one(
-        session,
-        """
-        SELECT id, tenant_id, tail_number, designation, group_size::text AS group_size,
-               serial_number, airworthiness::text AS airworthiness, home_station,
-               software_version, classification::text AS classification, caveats,
-               ntk_programs, portion_mark
-        FROM platforms WHERE id = :id
-        """,
-        {"id": platform_id},
-    )
-    if row is None:
-        return fail(404, "not_found")
-    row["resource_type"] = "platform"
-    denied = await _authz(request, session, principal, "fleet.read", row)
-    if denied:
-        return denied
-    banner = set_banner(request, request.app.state.settings.system_high, [_row_mark(row)])
-    return JSONResponse({"banner": banner, "item": _jsonify(row)})
-
-
-@router.patch("/v1/platforms/{platform_id}")
-@transactional
-async def patch_platform(
-    platform_id: UUID,
-    request: Request,
-    body: PlatformPatch,
-    principal: Principal = Depends(require_principal),
-    session: AsyncSession = Depends(get_session),
-) -> JSONResponse:
-    row = await fetch_one(
-        session,
-        """
-        SELECT id, tenant_id, tail_number, airworthiness::text AS airworthiness,
-               classification::text AS classification, caveats, ntk_programs
-        FROM platforms WHERE id = :id
-        """,
-        {"id": platform_id},
-    )
-    if row is None:
-        return fail(404, "not_found")
-    row["resource_type"] = "platform"
-    denied = await _authz(request, session, principal, "fleet.write", row)
-    if denied:
-        return denied
-    status = body.airworthiness or row["airworthiness"]
-    await scalar(
-        session,
-        """
-        UPDATE platforms
-        SET airworthiness = CAST(:status AS airworthiness_status)
-        WHERE id = :id
-        RETURNING id
-        """,
-        {"status": status, "id": platform_id},
-    )
-    await append_audit(
-        session,
-        actor_id=principal.user_id,
-        tenant_id=row["tenant_id"],
-        action="fleet.write",
-        resource_type="platform",
-        resource_id=platform_id,
-        decision="allow",
-        reason_codes=[str(status)],
-        classification=str(row["classification"]),
-        caveats=list(row["caveats"] or []),
-        ntk_programs=list(row["ntk_programs"] or []),
-    )
-    banner = set_banner(request, request.app.state.settings.system_high, [_row_mark(row)])
-    return JSONResponse({"banner": banner, "id": str(platform_id), "airworthiness": status})
-
-
 @router.post("/v1/exports")
 @transactional
 async def export_resource(
@@ -872,8 +420,6 @@ async def export_resource(
             "record": _jsonify(row),
         }
     )
-
-
 @router.get("/v1/exports/{receipt_id}")
 @transactional
 async def read_receipt(
@@ -915,8 +461,6 @@ async def read_receipt(
         return fail(409, "seal_failed")
     set_banner(request, request.app.state.settings.system_high, [_row_mark(row)])
     return JSONResponse({"banner": request.state.banner, "record": json.loads(raw)})
-
-
 @router.get("/v1/audit")
 @transactional
 async def list_audit(
@@ -940,8 +484,6 @@ async def list_audit(
     )
     banner = set_banner(request, request.app.state.settings.system_high, [_row_mark(row) for row in rows])
     return JSONResponse({"banner": banner, "items": _jsonify(rows)})
-
-
 @router.get("/v1/org")
 @transactional
 async def org(
@@ -963,8 +505,6 @@ async def org(
     )
     banner = set_banner(request, request.app.state.settings.system_high, [_row_mark(row) for row in rows])
     return JSONResponse({"banner": banner, "items": _jsonify(rows)})
-
-
 @router.post("/v1/org/tenants")
 @transactional
 async def create_tenant(
@@ -1016,8 +556,6 @@ async def create_tenant(
         classification="CUI",
     )
     return JSONResponse({"id": str(new_id)}, status_code=201)
-
-
 @router.get("/v1/users")
 @transactional
 async def list_users(
@@ -1051,8 +589,6 @@ async def list_users(
     )
     banner = set_banner(request, request.app.state.settings.system_high, [_row_mark(row) for row in rows])
     return JSONResponse({"banner": banner, "items": _jsonify(rows)})
-
-
 @router.post("/v1/users")
 @transactional
 async def provision(
@@ -1109,8 +645,6 @@ async def provision(
         classification="CUI",
     )
     return JSONResponse({"id": str(new_id)}, status_code=201)
-
-
 @router.get("/v1/sharing-agreements")
 @transactional
 async def list_sharing(
@@ -1134,8 +668,6 @@ async def list_sharing(
     )
     banner = set_banner(request, request.app.state.settings.system_high, [_row_mark(row) for row in rows])
     return JSONResponse({"banner": banner, "items": _jsonify(rows)})
-
-
 @router.post("/v1/sharing-agreements")
 @transactional
 async def create_sharing(
@@ -1209,8 +741,6 @@ async def create_sharing(
         classification="CUI",
     )
     return JSONResponse({"id": str(new_id)}, status_code=201)
-
-
 @router.post("/v1/sharing-agreements/{agreement_id}/approve")
 @transactional
 async def approve(
@@ -1253,8 +783,6 @@ async def approve(
         classification="CUI",
     )
     return JSONResponse({"status": "active"})
-
-
 @router.post("/v1/sharing-agreements/{agreement_id}/revoke")
 @transactional
 async def revoke(
@@ -1300,220 +828,29 @@ async def revoke(
         classification="CUI",
     )
     return JSONResponse({"status": "revoked"})
-
-
-@router.post("/v1/platforms/{platform_id}/custody")
+@router.post("/v1/edge/reconcile")
 @transactional
-async def custody(
-    platform_id: UUID,
-    request: Request,
-    body: CustodyIn,
-    principal: Principal = Depends(require_principal),
-    session: AsyncSession = Depends(get_session),
-) -> JSONResponse:
-    platform = await fetch_one(
-        session,
-        """
-        SELECT id, tenant_id, classification::text AS classification, caveats, ntk_programs
-        FROM platforms WHERE id = :id
-        """,
-        {"id": platform_id},
-    )
-    if platform is None:
-        return fail(404, "not_found")
-    platform["resource_type"] = "custody"
-    denied = await _authz(request, session, principal, "custody.append", platform)
-    if denied:
-        return denied
-    event_id = uuid4()
-    occurred_at = datetime.now(timezone.utc)
-    prev = await scalar(
-        session,
-        "SELECT last_hash FROM custody_chain_head WHERE platform_id = :id",
-        {"id": platform_id},
-    )
-    prev_hash = prev if isinstance(prev, str) else "0" * 64
-    payload = {
-        "event_type": body.event_type,
-        "from_user_id": None,
-        "id": str(event_id),
-        "location": body.location,
-        "occurred_at": format_utc(occurred_at),
-        "platform_id": str(platform_id),
-        "to_user_id": None if body.to_user_id is None else str(body.to_user_id),
-    }
-    canonical = canonical_json(payload)
-    row_hash = chain_hash(prev_hash, canonical)
-    try:
-        await scalar(
-            session,
-            """
-            SELECT append_custody(
-              :id, :platform, CAST(:event_type AS custody_event_type), NULL, :to_user,
-              :location, :occurred_at, :canonical, :row_hash
-            )
-            """,
-            {
-                "id": event_id,
-                "platform": platform_id,
-                "event_type": body.event_type,
-                "to_user": body.to_user_id,
-                "location": body.location,
-                "occurred_at": occurred_at,
-                "canonical": canonical,
-                "row_hash": row_hash,
-            },
-        )
-    except DBAPIError as exc:
-        mapped = db_error(exc)
-        if mapped:
-            return mapped
-        raise
-    await append_audit(
-        session,
-        actor_id=principal.user_id,
-        tenant_id=platform["tenant_id"],
-        action="custody.append",
-        resource_type="custody",
-        resource_id=event_id,
-        decision="allow",
-        reason_codes=[],
-        classification=str(platform["classification"]),
-        caveats=list(platform["caveats"] or []),
-        ntk_programs=list(platform["ntk_programs"] or []),
-    )
-    return JSONResponse({"id": str(event_id)}, status_code=201)
-
-
-@router.post("/v1/platforms/{platform_id}/payloads")
-@transactional
-async def add_payload(
-    platform_id: UUID,
-    request: Request,
-    body: PayloadBody,
-    principal: Principal = Depends(require_principal),
-    session: AsyncSession = Depends(get_session),
-) -> JSONResponse:
-    platform = await fetch_one(
-        session,
-        "SELECT id, tenant_id FROM platforms WHERE id = :id",
-        {"id": platform_id},
-    )
-    if platform is None:
-        return fail(404, "not_found")
-    caveats = normalize_caveats(body.caveats)
-    resource = {
-        "tenant_id": platform["tenant_id"],
-        "classification": body.classification,
-        "caveats": caveats,
-        "ntk_programs": body.ntk_programs,
-        "resource_type": "payload",
-    }
-    denied = await _authz(request, session, principal, "fleet.write", resource)
-    if denied:
-        return denied
-    new_id = uuid4()
-    try:
-        await scalar(
-            session,
-            """
-            INSERT INTO payloads (
-              id, platform_id, tenant_id, kind, name, firmware, classification, caveats, ntk_programs
-            ) VALUES (
-              :id, :platform, :tenant, CAST(:kind AS payload_kind), :name, :firmware,
-              CAST(:classification AS clearance_level), :caveats, :ntk
-            )
-            RETURNING id
-            """,
-            {
-                "id": new_id,
-                "platform": platform_id,
-                "tenant": platform["tenant_id"],
-                "kind": body.kind,
-                "name": body.name,
-                "firmware": body.firmware,
-                "classification": body.classification,
-                "caveats": caveats,
-                "ntk": body.ntk_programs,
-            },
-        )
-    except DBAPIError as exc:
-        mapped = db_error(exc)
-        if mapped:
-            return mapped
-        raise
-    return JSONResponse({"id": str(new_id)}, status_code=201)
-
-
-@router.get("/v1/ground-stations")
-@transactional
-async def list_stations(
+async def edge_reconcile(
     request: Request,
     principal: Principal = Depends(require_principal),
     session: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
-    denied = await _authz(request, session, principal, "fleet.read")
+    denied = await _deny_or_none(request, session, principal, "mission.read")
     if denied:
         return denied
-    rows = await fetch_all(
-        session,
-        """
-        SELECT id, tenant_id, name, lat, lon, alt_m,
-               classification::text AS classification, caveats, portion_mark
-        FROM ground_stations
-        ORDER BY name
-        """,
+    payload = await request.json()
+
+    def ops(items: list[dict[str, Any]]) -> list[Operation]:
+        return [
+            Operation(str(item["event_id"]), str(item["kind"]), str(item["record_id"]), str(item.get("node_id", "")), str(item["body_hash"]))
+            for item in items
+        ]
+
+    result = reconcile(ops(payload.get("local") or []), ops(payload.get("remote") or []))
+    return JSONResponse(
+        {
+            "appended": result.appended,
+            "frozen_plans": result.frozen_plans,
+            "rejected_custody": result.rejected_custody,
+        }
     )
-    banner = set_banner(request, request.app.state.settings.system_high, [_row_mark(row) for row in rows])
-    return JSONResponse({"banner": banner, "items": _jsonify(rows)})
-
-
-@router.post("/v1/ground-stations")
-@transactional
-async def create_station(
-    request: Request,
-    body: StationIn,
-    principal: Principal = Depends(require_principal),
-    session: AsyncSession = Depends(get_session),
-) -> JSONResponse:
-    caveats = normalize_caveats(body.caveats)
-    resource = {
-        "tenant_id": body.tenant_id,
-        "classification": body.classification,
-        "caveats": caveats,
-        "ntk_programs": [],
-        "resource_type": "ground_station",
-    }
-    denied = await _authz(request, session, principal, "fleet.write", resource)
-    if denied:
-        return denied
-    new_id = uuid4()
-    try:
-        await scalar(
-            session,
-            """
-            INSERT INTO ground_stations (
-              id, tenant_id, name, lat, lon, alt_m, classification, caveats
-            ) VALUES (
-              :id, :tenant, :name, :lat, :lon, :alt,
-              CAST(:classification AS clearance_level), :caveats
-            )
-            RETURNING id
-            """,
-            {
-                "id": new_id,
-                "tenant": body.tenant_id,
-                "name": body.name,
-                "lat": body.lat,
-                "lon": body.lon,
-                "alt": body.alt_m,
-                "classification": body.classification,
-                "caveats": caveats,
-            },
-        )
-    except DBAPIError as exc:
-        mapped = db_error(exc)
-        if mapped:
-            return mapped
-        raise
-    return JSONResponse({"id": str(new_id)}, status_code=201)
