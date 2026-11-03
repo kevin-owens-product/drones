@@ -115,7 +115,7 @@ export function ConfigurePage({ onBanner }: { viewer: Viewer; onBanner: (banner:
                       <td>{o.battery}</td>
                       <td>{BANDS[o.band] ?? o.band}</td>
                       <td className="mono">{o.flight_min ?? "–"} min</td>
-                      <td className="mono">{o.energy_margin === undefined ? "–" : `${Math.round(o.energy_margin * 100)}%`}</td>
+                      <td className="mono">{o.energy_margin === undefined ? "–" : o.energy_margin < 0 ? "Runs out" : `${Math.round(o.energy_margin * 100)}%`}</td>
                       <td className="mono">
                         {o.hop_km} km / {o.relays}
                       </td>

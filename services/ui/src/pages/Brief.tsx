@@ -25,6 +25,8 @@ interface Proposal {
   idle: string[];
   unavailable: { tail: string; why: string }[];
   short: string[];
+  /** Vehicles taken that are already flying another plan. */
+  conflicts?: { tail: string; why: string }[];
   status: string;
   by?: string;
   at?: string;
@@ -216,6 +218,11 @@ export function BriefPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
                       Not used: {u.tail}, {u.why}
                     </li>
                   ))}
+                  {(p.conflicts ?? []).map((c) => (
+                    <li key={`c-${c.tail}`} className="br-warn">
+                      Busy: {c.tail} is {c.why}; approving retasks it, so the commander should check that plan first
+                    </li>
+                  ))}
                   {p.short.map((s) => (
                     <li key={s} className="br-warn">
                       Short: {s}
@@ -231,14 +238,14 @@ export function BriefPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
               {p.status === "awaiting approval" ? (
                 <div className="br-decide">
                     <input aria-label="Decision note" placeholder="Note for the planner (optional)" value={note} maxLength={300} onChange={(e) => setNote(e.target.value)} />
-                    {!canApprove ? <p className="meta">Your role can brief but not approve; the console will refuse and log it. A mission commander decides.</p> : null}
+                    {!canApprove ? <p className="meta">Your role can brief but not approve. A mission commander or admin decides.</p> : null}
                     <div className="br-row">
                       <span className="meta">{p.parser} Approving files this as a draft plan on Missions.</span>
                       <div className="br-actions">
-                        <button type="button" className="btn" onClick={() => void decide("reject")}>
+                        <button type="button" className="btn" disabled={!canApprove} onClick={() => void decide("reject")}>
                           Reject
                         </button>
-                        <button type="button" className="btn btn-primary" onClick={() => void decide("approve")}>
+                        <button type="button" className="btn btn-primary" disabled={!canApprove} onClick={() => void decide("approve")}>
                           Approve
                         </button>
                       </div>

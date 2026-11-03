@@ -563,6 +563,8 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
   const nogo = checks.filter((c) => (c.level ? c.level === "no-go" : !c.pass));
   const caution = checks.filter((c) => c.level === "caution");
   const stepAllowed = selectedStep ? roleCan(viewer.roles, selectedStep.action) : false;
+  // Editing a draft is the planner's job; everyone else reads it.
+  const canEdit = ["planner", "mission_commander", "admin"].some((role) => viewer.roles.includes(role));
   const blockedByChecks = selected?.state === "approved" && nogo.length > 0;
 
   return (
@@ -641,7 +643,7 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
                     ) : mission.go === true ? (
                       <span className={mission.cautions ? "ms-ready is-caution" : "ms-ready is-go"}>Go{mission.cautions ? ` with ${mission.cautions} caution${mission.cautions > 1 ? "s" : ""}` : ""}</span>
                     ) : null}
-                    {mission.source ? <span className="meta">From Brief {mission.source}</span> : null}
+                    {mission.source && !(mission.summary ?? "").includes(mission.source) ? <span className="meta">From Brief {mission.source}</span> : null}
                   </button>
                 ))
               )}
@@ -711,7 +713,7 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
                       <span className="meta">
                         T+{String(Math.floor(objective.offset_min / 60)).padStart(2, "0")}:{String(objective.offset_min % 60).padStart(2, "0")} for {objective.duration_min} min · {objective.lat.toFixed(4)}, {objective.lon.toFixed(4)} · {Math.round(objective.alt_m)} m
                       </span>
-                      {selected.state === "draft" ? (
+                      {selected.state === "draft" && canEdit ? (
                         <span className="row-actions">
                           <button type="button" className="btn btn-quiet" disabled={index === 0} onClick={() => setObjectives((current) => moveObjective(current, index, -1))}>
                             Up
@@ -728,7 +730,8 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
                   ))}
                 </ol>
               )}
-              {selected.state === "draft" ? (
+              {selected.state === "draft" && !canEdit ? <p className="meta">Editing a draft needs the planner, mission commander or admin role.</p> : null}
+              {selected.state === "draft" && canEdit ? (
                 <>
                   <p className="meta">Add an objective. The default point is the road junction; places on the range are in the map labels.</p>
                   <div className="ms-editor">
@@ -926,7 +929,7 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
                 Every step and every refusal is in the <a href="#audit">Audit log</a>.
               </p>
             </section>
-            {selected.state === "draft" ? (
+            {selected.state === "draft" && canEdit ? (
               <form
                 className="panel"
                 onSubmit={(event) => {

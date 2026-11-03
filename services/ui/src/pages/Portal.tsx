@@ -9,6 +9,7 @@ interface Spare { pn: string; name?: string; qty: number }
 interface Unit {
   unit: string; sku: string; name: string; airframes: number; gcs: number; operators: number; instructors: number;
   losses: number; days_of_supply: number | null; short: number;
+  open_request?: { id: string; qty: number; status: string } | null;
   spares_on_hand: Spare[]; suggested_spares: Spare[]; training_gaps: string[]; suggested_course: string;
 }
 interface Order { id: string; name: string; qty: number; delivered: number; shipped: number; left: number; due: string; projected: string | null; at_risk: boolean; why: string }
@@ -209,6 +210,7 @@ export function PortalPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ba
                       <td>
                         {u.days_of_supply == null ? "—" : <span className={u.days_of_supply < 10 ? "pill pill-warn" : "pill pill-ok"}>{u.days_of_supply} days</span>}
                         {u.short ? <span className="meta"> {u.short} short</span> : null}
+                        {u.open_request ? <span className="meta"> · {u.open_request.qty} on {u.open_request.id} ({u.open_request.status.replaceAll("_", " ")})</span> : null}
                       </td>
                       <td>
                         {u.operators}
@@ -217,8 +219,14 @@ export function PortalPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ba
                       <td>
                         <div className="ops-ask">
                           <input type="number" min={1} max={500} aria-label={`Airframes for ${u.unit}`} value={n} onChange={(e) => setQty((q) => ({ ...q, [u.unit]: Number(e.target.value) }))} />
-                          <button type="button" className={u.short ? "btn btn-primary" : "btn btn-quiet"} disabled={disabled} onClick={() => void act("request.replacement", { unit: u.unit, qty: n })}>
-                            Request airframes
+                          <button
+                            type="button"
+                            className={u.short && !u.open_request ? "btn btn-primary" : "btn btn-quiet"}
+                            disabled={disabled || Boolean(u.open_request)}
+                            title={u.open_request ? `${u.open_request.id} is already open for ${u.unit}` : undefined}
+                            onClick={() => void act("request.replacement", { unit: u.unit, qty: n })}
+                          >
+                            {u.open_request ? `${u.open_request.id} open` : "Request airframes"}
                           </button>
                           <button
                             type="button"

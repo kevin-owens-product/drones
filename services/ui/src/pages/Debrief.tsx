@@ -479,6 +479,8 @@ export function DebriefPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
                   Open the plan
                 </button>
                 <span className="db-spacer" />
+                {selected.state === "active" || selected.state === "closed" ? (
+                <>
                 <label className="meta" htmlFor="export-format">
                   Release as
                 </label>
@@ -490,6 +492,10 @@ export function DebriefPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
                 <button className="btn btn-primary" type="button" disabled={busy || !data?.tracks?.length} onClick={() => void onExport()}>
                   Release debrief
                 </button>
+                </>
+                ) : (
+                  <span className="meta">Release opens once the plan has flown.</span>
+                )}
               </div>
               {outcome ? (
                 <p className="ins-held" role="status">

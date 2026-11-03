@@ -185,7 +185,8 @@ export function createDemo(opts = {}) {
       ground_mps: c.v ?? 0,
       climb_mps: pad ? 0 : 0.1 * Math.sin(t / 5),
       battery_pct: battery,
-      mode: pad ? "PREFLIGHT" : c.mode ?? (c.kind === "transit" ? "RTL" : "MISSION"),
+      // A parked airframe shows HOLD while a work order stands against it, STANDBY once it is cleared.
+      mode: pad ? "PREFLIGHT" : c.kind === "hold" ? (PLATFORMS.find((p) => p.tail_number === c.tail)?.airworthiness === "airworthy" ? "STANDBY" : "HOLD") : c.mode ?? (c.kind === "transit" ? "RTL" : "MISSION"),
       armed: pad ? false : c.armed ?? true,
       nav_source: acquiring ? "none" : denied ? "vio" : "gnss",
       gnss_trusted: acquiring ? undefined : !denied,
@@ -226,7 +227,7 @@ export function createDemo(opts = {}) {
   audit.append({ actor: "EOL bench 2", action: "platform.ground", resource_type: "platform", resource_id: "NX-12", reason_codes: ["birth_record"], detail: "EOL hover test failed: IMU cal out of range", at: opened });
   audit.append({ actor: "Demo Maintainer", action: "platform.restrict", resource_type: "platform", resource_id: "NX-08", reason_codes: ["maintenance"], detail: "Prop strike on recovery; hover check before next sortie", at: opened + 9 * 60_000 });
   audit.append({ actor: "Demo Operator", action: "mission.approve", resource_type: "mission", resource_id: "Survey grid north", decision: "deny", reason_codes: ["role_denied"], at: opened + 18 * 60_000 });
-  audit.append({ actor: "Demo Mission Commander", action: "mission.approve", resource_type: "mission", resource_id: "Survey grid north", detail: "Nine vehicles, survey and overwatch", at: opened + 22 * 60_000 });
+  audit.append({ actor: "Demo Mission Commander", action: "mission.approve", resource_type: "mission", resource_id: "Survey grid north", detail: "Eight vehicles, survey and overwatch", at: opened + 22 * 60_000 });
 
   function loopTime() {
     // The sortie loops every ten minutes of demo time so it never runs dry.
@@ -436,7 +437,8 @@ export function createDemo(opts = {}) {
     const ROUTES = {
     "/v1/session/config": () => ({ auth_mode: "dev", dev_login: true, system_high: "UNCLASSIFIED", login_url: "" }),
     // The local demo server has no sign-in and no org, so every page shows (both workspaces at once).
-    "/v1/me": () => ({ id: "u1", username: "demo.operator", display_name: "Demo Operator", citizenship: "USA", clearance: "UNCLASSIFIED", ntk_programs: [], roles: ["operator"] }),
+    // It signs you in as a commander who also maintains, so every action on every page is live.
+    "/v1/me": () => ({ id: "u1", username: "demo.commander", display_name: "Demo Commander (local)", citizenship: "USA", clearance: "UNCLASSIFIED", ntk_programs: [], roles: ["mission_commander", "planner", "maintainer"] }),
     "/v1/platforms": () => ({ items: PLATFORMS }),
     "/v1/telemetry/live": () => {
       const t = loopTime();
@@ -446,7 +448,8 @@ export function createDemo(opts = {}) {
     },
     "/v1/operations/picture": picture,
     "/v1/operations/board": () => ({ items: [] }),
-    "/v1/users": () => ({ items: ACCOUNTS }),
+    // A customer sees its own accounts, never Neros staff or another customer's people.
+    "/v1/users": () => ({ items: caller?.org && caller.org !== NEROS.id ? ACCOUNTS.filter((a) => a.org === caller.org) : ACCOUNTS }),
     "/v1/birth-records": () => ({ items: BIRTH }),
     "/v1/audit": () => ({ items: audit.items() }),
     "/v1/eval/runs": () => ({ source: "README results table, written by make eval", items: EVAL }),
@@ -516,14 +519,16 @@ export function createDemo(opts = {}) {
   const proposals = [];
   function seedBriefs() {
     const SEED = [
-      { brief: "Survey the west pasture with two vehicles, keep one in reserve", by: "Demo Operator", ago: 95, decide: ["approved", "Demo Mission Commander", 80] },
       { brief: "Inspect the culvert and the road junction before 16:00", by: "Demo Planner", ago: 64, decide: ["rejected", "Demo Mission Commander", 58, "NX-07 drops off the link near the culvert. Re-brief once the ridge relay is up."] },
       { brief: "strike the road junction", by: "Demo Operator", ago: 41 },
+      { brief: "Survey the west pasture with two vehicles, keep one in reserve", by: "Demo Operator", ago: 16, decide: ["approved", "Demo Mission Commander", 15] },
       { brief: "Observe gate 3 with 2 drones for 20 minutes, relay on the ridge, avoid the jamming zone", by: "Demo Operator", ago: 12 },
     ];
-    for (const s of SEED) {
+    for (const [i, s] of SEED.entries()) {
       const at = T0 - s.ago * 60_000;
       const p = propose(s.brief, briefFleet(), at);
+      // Seeded briefs keep the same ids on every load, so a demo script can name them.
+      p.id = `P-${1001 + i}`;
       p.by = s.by;
       p.at = new Date(at).toISOString();
       if (s.decide) {
@@ -532,19 +537,24 @@ export function createDemo(opts = {}) {
         p.decided_by = by;
         p.decided_at = new Date(T0 - ago * 60_000).toISOString();
         if (note) p.decision_note = note;
-        if (status === "approved") p.mission_id = missions.fromProposal(p, { display_name: by, roles: ["mission_commander", "planner"] });
+        if (status === "approved") p.mission_id = missions.fromProposal(p, { display_name: by, roles: ["mission_commander", "planner"] }, T0 - ago * 60_000);
       }
       proposals.push(p);
     }
   }
   function briefFleet() {
+    syncFleet();
+    const busy = missions.busyTails();
     return FLEET.map((c) => {
       const x = c.kind === "lawnmower" ? c.x + c.w / 2 : c.x;
       const y = c.kind === "lawnmower" ? c.y - c.h / 2 : c.y;
-      if (c.grounded) return { tail: c.tail, x, y, available: false, why: `Grounded: ${c.grounded}` };
+      // The same airworthiness record Fleet and Missions read.
+      const p = PLATFORMS.find((row) => row.tail_number === c.tail);
+      if (p && p.airworthiness !== "airworthy") return { tail: c.tail, x, y, available: false, why: `${p.airworthiness === "grounded" ? "Grounded" : "Restricted"}: ${p.airworthiness_reason ?? "see Fleet"}` };
       const battery = c.battery ?? 88;
-      if (battery < 50) return { tail: c.tail, x, y, available: false, why: `Battery ${battery}%` };
-      return { tail: c.tail, x, y, available: true };
+      if (battery < 50) return { tail: c.tail, x, y, available: false, why: `Battery ${battery}% at last report` };
+      const b = busy.get(c.tail);
+      return b ? { tail: c.tail, x, y, available: true, busy: `flying ${b.id} (${b.name})` } : { tail: c.tail, x, y, available: true };
     });
   }
   function intent(method, url, raw) {
@@ -637,17 +647,92 @@ export function createDemo(opts = {}) {
       audit.append({ actor, action, resource_type: "kit", resource_id: s.id, detail: `${s.qty} ${nameOf(s.sku)} to ${s.unit} now, ${s.build_order} released to the line${s.dg ? "; lithium packs ship as dangerous goods" : ""}` });
       return { status: 200, body: out };
     }
-    const out = company.closeWorkOrder(resource, holds, actor);
+    return closeWorkOrder(resource, actor);
+  }
+
+  // ---- One airworthiness record per tail. ----
+  // Fleet, Operate, Missions and Company all read PLATFORMS, so a work order,
+  // a lot hold or a person's ground / return-to-service call shows on every
+  // page at once. A tail flies again only when nothing open stands against it.
+  const BASE = new Map(PLATFORMS.map((p) => [p.tail_number, { airworthiness: p.airworthiness, reason: p.airworthiness_reason }]));
+  const grounded = new Map(); // tail -> reason, set by a person with fleet.write
+  function openFor(tail) {
+    return company.openWorkOrders(holds).filter((w) => w.status === "open" && w.tail === tail);
+  }
+  function syncFleet() {
+    const all = company.openWorkOrders(holds);
+    for (const p of PLATFORMS) {
+      // Synthetic tails and airframes received this session keep their own records.
+      if (p.owner === null || !BASE.has(p.tail_number)) continue;
+      const open = all.filter((w) => w.status === "open" && w.tail === p.tail_number);
+      const done = all.filter((w) => w.status === "closed" && w.tail === p.tail_number && w.closed_by).pop();
+      const base = BASE.get(p.tail_number);
+      const own = open.find((w) => !w.lot);
+      const hold = open.find((w) => w.lot);
+      let air = "airworthy";
+      let reason = null;
+      if (grounded.has(p.tail_number)) [air, reason] = ["grounded", grounded.get(p.tail_number)];
+      else if (own && base && base.airworthiness !== "airworthy") [air, reason] = [base.airworthiness, `${base.reason} (${own.id} open)`];
+      else if (own) [air, reason] = ["restricted", `${own.summary} (${own.id} open)`];
+      else if (hold) [air, reason] = ["restricted", `Lot ${hold.lot} on quality hold: inspect and replace the part (${hold.id} open)`];
+      p.airworthiness = air;
+      p.airworthiness_reason = reason;
+      p.service_note = air === "airworthy" && done ? `${done.id} closed by ${done.closed_by}; checks rerun and passed (SIM)` : null;
+    }
+  }
+
+  function closeWorkOrder(id, actor) {
+    const out = company.closeWorkOrder(id, holds, actor);
     if (out.error) return { status: out.status, body: { detail: out.error } };
     const wo = out.work_order;
-    audit.append({ actor, action, resource_type: "work_order", resource_id: wo.id, detail: `${wo.tail}: ${wo.issued.map((x) => `${x.qty} ${x.pn} from ${x.lot}`).join(", ") || "no parts"}` });
-    const platform = PLATFORMS.find((p) => p.tail_number === wo.tail);
-    if (wo.returns_to_service && platform && platform.airworthiness !== "grounded") {
-      platform.airworthiness = "airworthy";
-      platform.airworthiness_reason = null;
+    audit.append({ actor, action: "work_order.close", resource_type: "work_order", resource_id: wo.id, detail: `${wo.tail}: ${wo.issued.map((x) => `${x.qty} ${x.pn} from ${x.lot}`).join(", ") || "no parts"}` });
+    const before = PLATFORMS.find((p) => p.tail_number === wo.tail)?.airworthiness;
+    syncFleet();
+    const after = PLATFORMS.find((p) => p.tail_number === wo.tail)?.airworthiness;
+    if (before !== "airworthy" && after === "airworthy") {
       audit.append({ actor, action: "platform.return_to_service", resource_type: "platform", resource_id: wo.tail, reason_codes: ["maintenance"], detail: `${wo.id} closed` });
     }
     return { status: 200, body: out };
+  }
+
+  function platformRoute(method, url, raw) {
+    const id = decodeURIComponent(url.pathname.slice("/v1/platforms/".length));
+    const p = PLATFORMS.find((x) => x.id === id || x.tail_number === id);
+    if (!p) return { status: 404, body: { detail: "no such platform" } };
+    if (method === "GET") return { status: 200, body: p };
+    if (method !== "PATCH") return { status: 405, body: { detail: "method" } };
+    let msg = {};
+    try {
+      msg = JSON.parse(raw);
+    } catch {
+      return { status: 400, body: { detail: "json" } };
+    }
+    const actor = caller?.display_name ?? "operator";
+    const want = String(msg.airworthiness ?? "");
+    const action = want === "airworthy" ? "platform.return_to_service" : "platform.ground";
+    if (caller && !can(caller.roles, "fleet.write")) {
+      audit.append({ actor, action, resource_type: "platform", resource_id: p.tail_number, decision: "deny", reason_codes: ["role_denied"] });
+      return { status: 403, body: { detail: "Grounding or returning an airframe needs the maintainer, mission commander or admin role." } };
+    }
+    if (want === "airworthy") {
+      const open = openFor(p.tail_number);
+      if (open.length) {
+        audit.append({ actor, action, resource_type: "platform", resource_id: p.tail_number, decision: "deny", reason_codes: ["open_work_order"], detail: open.map((w) => w.id).join(", ") });
+        return { status: 409, body: { detail: `${p.tail_number} can't return to service while ${open.map((w) => `${w.id} (${w.summary})`).join("; ")} is open. Close the work order first.` } };
+      }
+      grounded.delete(p.tail_number);
+      syncFleet();
+      audit.append({ actor, action, resource_type: "platform", resource_id: p.tail_number, reason_codes: ["maintenance"], detail: "No open work orders" });
+      return { status: 200, body: p };
+    }
+    if (want === "grounded") {
+      const why = String(msg.reason ?? "").trim() || `Grounded by ${actor}`;
+      grounded.set(p.tail_number, why);
+      syncFleet();
+      audit.append({ actor, action, resource_type: "platform", resource_id: p.tail_number, reason_codes: ["maintenance"], detail: why });
+      return { status: 200, body: p };
+    }
+    return { status: 400, body: { detail: "airworthiness must be airworthy or grounded" } };
   }
 
   // Two workspaces: the Neros operations queue and each customer's portal (demo/ops.mjs).
@@ -684,6 +769,7 @@ export function createDemo(opts = {}) {
     extra: EXTRA,
     handle(method, url, raw = "", who = null) {
       caller = who;
+      syncFleet();
       if (url.pathname === "/v1/audit" && caller && !can(caller.roles, "audit.read")) return { status: 403, body: { detail: "role_denied" } };
       const customer = caller?.org && caller.org !== NEROS.id;
       // Neros internals stay out of customer workspaces.
@@ -694,6 +780,22 @@ export function createDemo(opts = {}) {
       if (url.pathname === "/v1/field-reports") return fieldReports(method, raw);
       if (url.pathname.startsWith("/v1/company")) return companyRoute(method, url, raw);
       if (url.pathname.startsWith("/v1/ops/")) return opsRoute(method, url, raw);
+      if (url.pathname.startsWith("/v1/platforms/")) return platformRoute(method, url, raw);
+      if (url.pathname === "/v1/maintenance/close" && method === "POST") {
+        // A customer's maintainer closes work orders on their own fleet; parts come from Neros depot stock.
+        let msg = {};
+        try {
+          msg = JSON.parse(raw);
+        } catch {
+          return { status: 400, body: { detail: "json" } };
+        }
+        const actor = caller?.display_name ?? "operator";
+        if (caller && !can(caller.roles, "fleet.write") && !caller.roles.includes("ops_lead")) {
+          audit.append({ actor, action: "work_order.close", resource_type: "work_order", resource_id: String(msg.id ?? ""), decision: "deny", reason_codes: ["role_denied"] });
+          return { status: 403, body: { detail: "Closing a work order needs the maintainer, mission commander or admin role." } };
+        }
+        return closeWorkOrder(String(msg.id ?? ""), actor);
+      }
       if (url.pathname === "/v1/maintenance") {
         const items = company.openWorkOrders(holds).filter((w) => w.status === "open").map((w) => ({ id: w.id, tail_number: w.tail, summary: w.summary, status: "open" }));
         return { status: 200, body: { items } };

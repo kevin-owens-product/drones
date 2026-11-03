@@ -56,7 +56,7 @@ export function createMissions(o) {
     {
       id: "M-1031",
       name: "Survey grid north",
-      summary: "Four-vehicle survey of Areas A to D with overwatch on the road junction, a ridge relay and a look at Gate 3. NX-04 works inside the jamming zone on VIO.",
+      summary: "Eight-vehicle survey of Areas A to D with overwatch on the road junction, a ridge relay and a look at Gate 3. NX-04 works inside the jamming zone on VIO.",
       state: "active",
       created_by: "Demo Planner",
       planned_start: NOW - 15 * MIN,
@@ -65,7 +65,7 @@ export function createMissions(o) {
         step("mission.draft", "Demo Planner", 55),
         step("mission.review", "Demo Planner", 45, "Sent for review with launch checks green"),
         step("mission.approve", "Demo Operator", 22, "Refused: operators cannot approve (role)"),
-        step("mission.approve", "Demo Mission Commander", 18, "Nine vehicles, survey and overwatch"),
+        step("mission.approve", "Demo Mission Commander", 18, "Eight vehicles, survey and overwatch"),
         step("mission.execute", "Demo Operator", 15, "Launched from the GCS pad"),
       ],
       objectives: [
@@ -317,7 +317,7 @@ export function createMissions(o) {
       else if (o.watchTails[tail]) add("caution", `${tail} carries lot ${o.watchTails[tail].lot}, flagged by the attrition autopsy at ${o.watchTails[tail].ratio}x the loss baseline and not held.`);
       else add("go", `${tail} airworthy (${p.designation}).`);
       const pad = o.padBattery[tail];
-      if (pad !== undefined && pad < 50) add("no-go", `${tail} battery ${pad}% on the pad; needs 50% to launch.`);
+      if (pad !== undefined && pad < 50) add("no-go", `${tail} battery ${pad}% at last report on the pad; needs 50% to launch.`);
     }
     for (const tail of tails) {
       const legs = m.objectives.filter((x) => x.tail === tail);
@@ -596,20 +596,20 @@ export function createMissions(o) {
     return { status: 200, body: { id: m.id, state: m.state } };
   }
 
-  function create({ name, summary = "", objectives = [], source = null }, who) {
+  function create({ name, summary = "", objectives = [], source = null, at = Date.now() }, who) {
     const actor = who?.display_name ?? "Demo Planner";
     if (who && !o.can(who.roles, "mission.draft")) {
       o.audit.append({ actor, action: "mission.draft", resource_type: "mission", resource_id: String(name), decision: "deny", reason_codes: ["role_denied"] });
       return { status: 403, body: { detail: "role_denied" } };
     }
-    const m = { id: `M-${nextId++}`, name: String(name).slice(0, 120), summary: String(summary).slice(0, 600), state: "draft", created_by: actor, planned_start: null, operators: 1, history: [{ action: "mission.draft", by: actor, at: new Date().toISOString(), note: source ? `Filed from Brief ${source}` : "" }], objectives, keepouts: [], source };
+    const m = { id: `M-${nextId++}`, name: String(name).slice(0, 120), summary: String(summary).slice(0, 600), state: "draft", created_by: actor, planned_start: null, operators: 1, history: [{ action: "mission.draft", by: actor, at: new Date(at).toISOString(), note: source ? `Filed from Brief ${source}` : "" }], objectives, keepouts: [], source };
     missions.unshift(m);
-    o.audit.append({ actor, action: "mission.draft", resource_type: "mission", resource_id: m.name, detail: source ? `${m.id} filed from Brief ${source}` : m.id });
+    o.audit.append({ actor, action: "mission.draft", resource_type: "mission", resource_id: m.name, detail: source ? `${m.id} filed from Brief ${source}` : m.id, at });
     return { status: 200, body: { id: m.id, state: m.state } };
   }
 
   /** Turn an approved Brief proposal into a draft plan, one leg per assigned tail. */
-  function fromProposal(p, who) {
+  function fromProposal(p, who, at = Date.now()) {
     const objectives = [];
     let offset = 0;
     const KIND = { search: "search", survey: "search", observe: "loiter", relay: "loiter", inspect: "transit" };
@@ -629,7 +629,7 @@ export function createMissions(o) {
       objectives.push(obj("rtb", null, tail, end + 1, 4));
     }
     const name = p.brief.length > 60 ? `${p.brief.slice(0, 57)}…` : p.brief;
-    const out = create({ name: name.charAt(0).toUpperCase() + name.slice(1), summary: `From Brief ${p.id}: "${p.brief}"`, objectives, source: p.id }, who ? { ...who, roles: [...who.roles, "planner"] } : null);
+    const out = create({ name: name.charAt(0).toUpperCase() + name.slice(1), summary: `From Brief ${p.id}: "${p.brief}"`, objectives, source: p.id, at }, who ? { ...who, roles: [...who.roles, "planner"] } : null);
     return out.body.id;
   }
 
@@ -663,8 +663,16 @@ export function createMissions(o) {
     }
   }
 
+  /** Tails flying an active plan right now, so a new brief does not take them by surprise. */
+  function busyTails() {
+    const out = new Map();
+    for (const m of missions.filter((x) => x.state === "active")) for (const o of m.objectives) if (o.tail && !out.has(o.tail)) out.set(o.tail, { id: m.id, name: m.name });
+    return out;
+  }
+
   return {
     fromProposal,
+    busyTails,
     list: () => missions.map(row),
     handle(method, url, raw, who) {
       const path = url.pathname;

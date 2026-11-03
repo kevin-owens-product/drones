@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import type { Viewer } from "../shell/types";
+import { inCustomerView } from "../shell/workspace";
 import "./insights.css";
 
 interface Sample {
@@ -73,7 +74,7 @@ function Spark({ samples, field, label }: { samples: Sample[]; field: "alt_m" | 
   );
 }
 
-export function FieldReportsPage({ onBanner }: { viewer: Viewer; onBanner: (banner: string) => void }) {
+export function FieldReportsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (banner: string) => void }) {
   const onBannerRef = useRef(onBanner);
   onBannerRef.current = onBanner;
   const [body, setBody] = useState<Body | null>(null);
@@ -104,6 +105,7 @@ export function FieldReportsPage({ onBanner }: { viewer: Viewer; onBanner: (bann
           <p className="lede">
             What operators flagged, grouped by theme. Each report carries the vehicle's firmware build and, when filed from Operate with <kbd>R</kbd>, its last 30 seconds of telemetry.
           </p>
+          {inCustomerView(viewer) ? null : <p className="meta">Reports Customer A shares with Neros. Customers B and C don't share field reports yet.</p>}
         </div>
         <span className="pill pill-warn" title={body.source}>
           SIM

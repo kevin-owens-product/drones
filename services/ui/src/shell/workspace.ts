@@ -1,3 +1,4 @@
+import { ROLE_MATRIX } from "../../demo/ledger.mjs";
 import type { Section, Viewer } from "./types";
 
 /**
@@ -54,4 +55,15 @@ export function sectionsFor(w: Workspace): Section[] {
 
 export function homeOf(w: Workspace): Section {
   return w === "neros" ? "ops" : "operate";
+}
+
+/** The demo role matrix (demo/ledger.mjs, mirrored from policies/role_matrix): drives which buttons are live. */
+export function can(viewer: Pick<Viewer, "roles">, permission: string): boolean {
+  const matrix = ROLE_MATRIX as Record<string, readonly string[]>;
+  return viewer.roles.some((role) => (matrix[role] ?? []).includes(permission));
+}
+
+/** True when the page is showing a customer's workspace (a customer, or Neros staff on the Customer switch). */
+export function inCustomerView(viewer: Viewer): boolean {
+  return workspaceOf(viewer) === "customer";
 }

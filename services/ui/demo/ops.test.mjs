@@ -136,3 +136,10 @@ test("Strike SKUs never enter a build or a request (ADR-0016)", () => {
   const items = queue(demo);
   assert.ok(!items.some((i) => /-S\b|Strike/.test(i.title)));
 });
+
+test("a unit can't have two replacement requests open at once", () => {
+  const demo = createDemo({ attrition });
+  assert.equal(act(demo, "request.replacement", { unit: "Charlie", qty: 4 }, CMD).status ?? 200, 200);
+  const again = act(demo, "request.replacement", { unit: "Charlie", qty: 4 }, CMD);
+  assert.equal(again.status, 409);
+});

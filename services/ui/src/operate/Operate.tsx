@@ -634,7 +634,7 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
         ) : (
           <div className="op-empty">
             <Hud vehicle={null} />
-            <p className="meta">Pick a vehicle from the list or the map. <kbd>J</kbd> <kbd>K</kbd> step through the list, <kbd>L</kbd> shows launch readiness, <kbd>⌘K</kbd> searches everything.</p>
+            <p className="meta">Pick a vehicle from the list or the map. <kbd>J</kbd> <kbd>K</kbd> step through the list, <kbd>L</kbd> shows launch readiness, <kbd>⌘K</kbd> jumps to any page, vehicle or command.</p>
           </div>
         )}
       </aside>
