@@ -16,8 +16,10 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
 	"a2e.local/gateway/internal/forward"
+	"a2e.local/gateway/internal/mavlink"
 	"a2e.local/gateway/internal/pipeline"
 	"a2e.local/gateway/internal/sample"
+	"a2e.local/gateway/internal/wire"
 )
 
 func main() {
@@ -29,6 +31,16 @@ func main() {
 	go subscribeMQTT(pipe, publish)
 	if os.Getenv("A2E_GATEWAY_DEMO") == "1" {
 		go demo(pipe, publish)
+	}
+	if raw := os.Getenv("A2E_MAVLINK_ENDPOINTS"); raw != "" {
+		tenant := env("A2E_MAVLINK_TENANT", "11111111-1111-4111-8111-111111111104")
+		for _, addr := range strings.Split(raw, ",") {
+			addr = strings.TrimSpace(addr)
+			if addr == "" {
+				continue
+			}
+			go serveMAVLink(addr, tenant, pipe, publish, fan)
+		}
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
@@ -228,6 +240,31 @@ func demo(pipe *pipeline.Latest, publish func(sample.Sample)) {
 			}
 		}
 		tick++
+	}
+}
+
+func serveMAVLink(addr, tenant string, pipe *pipeline.Latest, publish func(sample.Sample), fan *forward.Fanout) {
+	_, err := mavlink.Listen(addr, func(item wire.Sample) {
+		fan.Publish(fmt.Sprintf("telemetry.v1.%d.%s", item.SystemID, item.Name), wire.Marshal(item))
+		if item.Name != "GLOBAL_POSITION_INT" {
+			return
+		}
+		row := sample.Sample{
+			Tail:           fmt.Sprintf("PX4-%d", item.SystemID),
+			TenantID:       tenant,
+			Time:           time.Unix(0, item.ReceivedUnixNs).UTC().Format(time.RFC3339Nano),
+			Lat:            float64(item.LatE7) / 1e7,
+			Lon:            float64(item.LonE7) / 1e7,
+			AltM:           float64(item.AltMM) / 1000,
+			Classification: "UNCLASSIFIED",
+		}
+		ok, err := pipe.Ingest(row, row.TenantID, row.Tail)
+		if err == nil && ok {
+			publish(row)
+		}
+	})
+	if err != nil {
+		log.Printf("mavlink %s: %v", addr, err)
 	}
 }
 

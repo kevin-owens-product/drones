@@ -53,6 +53,15 @@ func Connect(redisURL, natsURL, databaseURL string) *Fanout {
 	return fan
 }
 
+func (f *Fanout) Publish(subject string, body []byte) {
+	if f.nats == nil || subject == "" || len(body) == 0 {
+		return
+	}
+	if err := f.nats.Publish(subject, body); err != nil {
+		log.Printf("nats publish: %v", err)
+	}
+}
+
 func (f *Fanout) Accept(item sample.Sample) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
