@@ -178,6 +178,10 @@ services:
       - ./deploy/sitl/models:/models:ro
       - ./deploy/sitl/models/x500_a2e:/opt/px4-gazebo/share/gz/models/x500_a2e:ro
     entrypoint: ["sh", "/fleet.sh"]
+    # Ulogs live in memory and end with the container. Copy one out with docker cp while it runs.
+    tmpfs:
+      - /root/.local/share/px4:size=1g
+      - /root/.gz/sim/log:size=64m
     ports:
       - "18570-18575:18570-18575/udp"
 

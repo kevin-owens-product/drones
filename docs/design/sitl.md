@@ -72,6 +72,6 @@ What the tracker trials show:
 
 ## Disk use
 
-Every service in `docker-compose.yml` caps its container log at three 10 MB files, and the SIH harness passes the same limit to `docker run`. PX4 keeps its three newest ulog directories per instance (`SDLOG_DIRS_MAX`). `make sitl-clean` removes the PX4 containers with their logs and ulogs, and leaves other containers and volumes alone.
+Every service in `docker-compose.yml` caps its container log at three 10 MB files, and the SIH harness passes the same limit to `docker run`. PX4 keeps its three newest ulog directories per instance (`SDLOG_DIRS_MAX`). The compose `px4` service keeps ulogs on a 1 GB tmpfs and Gazebo logs on a 64 MB tmpfs, so they end with the container. A six-quad fleet writes about 100 MB of ulogs an hour. Copy one out with `docker cp` while the container runs. `make sitl-clean` removes the PX4 containers with their logs and ulogs, and leaves other containers and volumes alone.
 
 `fleet.sh` starts PX4 with `-d`. Without it, PX4 runs its `pxh` shell with no stdin and reprints the prompt in a tight loop. Before this was fixed, two containers ran that way for under a day and grew Docker's disk image to 1.5 TiB.

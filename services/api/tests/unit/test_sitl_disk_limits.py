@@ -14,6 +14,11 @@ def test_every_compose_service_caps_its_log() -> None:
         assert options.get("max-size") and options.get("max-file"), name
 
 
+def test_px4_ulogs_are_on_a_capped_tmpfs() -> None:
+    compose = yaml.safe_load((ROOT / "docker-compose.yml").read_text())
+    assert "/root/.local/share/px4:size=1g" in compose["services"]["px4"]["tmpfs"]
+
+
 def test_fleet_runs_px4_without_the_shell() -> None:
     fleet = (ROOT / "deploy/sitl/fleet.sh").read_text()
     assert '/bin/px4" -d -i "$i" &' in fleet
