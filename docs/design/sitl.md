@@ -60,7 +60,17 @@ What the tracker trials show:
 
 - **v1 loses every run within 15 to 23 s**, at the first turn, because a fixed template stops matching once the target rotates.
 - **v2 holds the target in 3 of 5 runs**, through turns and tree occlusion, with the vehicle about 2 m from the target throughout.
-- **In 2 of 5 runs v2 ends up on a parked look-alike.** In both, the target drives within a few metres of an identical parked vehicle while turning. The rotated target scores below the parked one, and the swap happens inside the 4 m gate. `track_motion_keep` now refuses a measurement whose step is under 0.5 m/s while the track was moving faster than 2 m/s, and the harness treats that refusal like a gate miss. The closed-loop PX4 trial has not been rerun since that check was added, so the 2 of 5 figure is still the last measured result.
+- **In 2 of 5 runs v2 ends up on a parked look-alike.** In both, the target drives within a few metres of an identical parked vehicle while turning. The rotated target scores below the parked one, and the swap happens inside the 4 m gate. `track_motion_keep` now refuses a measurement whose step is under 0.5 m/s while the track was moving faster than 2 m/s, and the harness treats that refusal like a gate miss. The published 2 of 5 figure predates that check. One closed-loop rerun with the check (same five seeds, 90 s) gave a mixed result:
+
+| Seed | On target before | On target with check | Look-alike before | Look-alike with check | Lock dropped with check |
+| --- | --- | --- | --- | --- | --- |
+| 0 | 98% | 100% | 0% | 0% | no |
+| 1 | 26% | 26% | 66% | 72% | no |
+| 2 | 100% | 71% | 0% | 0% | at 76 s |
+| 3 | 18% | 98% | 66% | 0% | no |
+| 4 | 99% | 100% | 0% | 0% | no |
+
+The check fixed seed 3, did not fix seed 1, and seed 2 dropped its lock. Whether the check caused that drop is unknown, because this rerun kept up with 85% of real time and the earlier one with 96%. It ran from a Linux container, so the two runs are not a like-for-like comparison. The check also has two known gaps. It refuses a target that really stops for as long as the stop lasts, and it measures the step from the last adopted point, so it does not refuse the jump onto a parked vehicle, only the frames after it.
 
 `sim/sitl/scene_motion.py` is a shorter stand-in: the camera is a point at 25 m that chases the filtered track, with no PX4. Three seeds, 30 s, 501 frames each:
 
