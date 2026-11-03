@@ -94,7 +94,8 @@ export function installStaticDemo(): void {
     if (url.origin === window.location.origin && url.pathname.startsWith("/v1/")) {
       const method = init?.method ?? "GET";
       const raw = typeof init?.body === "string" ? init.body : "";
-      const out = (await gate(method, url, raw)) ?? demo.handle(method, url, raw);
+      const who = signedIn();
+      const out = (await gate(method, url, raw)) ?? demo.handle(method, url, raw, who ? (DEMO_USERS[who] ?? null) : null);
       return new Response(JSON.stringify(out.body), {
         status: out.status,
         headers: { "content-type": "application/json", "X-A2E-Banner": BANNER },

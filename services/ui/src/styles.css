@@ -1715,3 +1715,58 @@ tbody tr:hover td {
     font-size: 26px;
   }
 }
+
+/* Access: role matrix */
+.access-matrix th[scope="row"] {
+  text-align: left;
+  white-space: nowrap;
+}
+.access-matrix th[scope="row"] .meta {
+  display: block;
+  white-space: normal;
+  font-weight: 400;
+  max-width: 260px;
+}
+.access-matrix td {
+  text-align: center;
+}
+.access-matrix thead th {
+  font-size: 11px;
+  vertical-align: bottom;
+}
+
+/* Fleet: birth record in the side panel */
+.birth h3 {
+  margin: 12px 0 6px;
+  font-size: 13px;
+}
+.birth .objective-list li {
+  gap: 2px;
+}
+
+/* Fleet: registry beside the selected tail's record */
+.fleet-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  align-items: start;
+}
+.fleet-detail {
+  position: sticky;
+  top: 16px;
+}
+@media (max-width: 900px) {
+  .fleet-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fleet-detail {
+    position: static;
+  }
+}
+.page[data-testid="access"] > .panel,
+.page[data-testid="access"] > .page-head + .panel {
+  flex: none;
+}
+.page[data-testid="fleet"] > .panel {
+  flex: none;
+}

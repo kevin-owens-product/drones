@@ -8,6 +8,7 @@ const PRIMARY: readonly { id: Section; label: string }[] = [
   { id: "brief", label: "Brief" },
   { id: "missions", label: "Missions" },
   { id: "debrief", label: "Debrief" },
+  { id: "fleet", label: "Fleet" },
   { id: "eval", label: "Eval" },
   { id: "attrition", label: "Attrition" },
   { id: "reports", label: "Reports" },
@@ -16,13 +17,7 @@ const PRIMARY: readonly { id: Section; label: string }[] = [
 ];
 
 const ADMIN: readonly { id: Section; label: string }[] = [
-  { id: "overview", label: "Overview" },
-  { id: "fleet", label: "Fleet registry" },
-  { id: "live", label: "Live roster" },
-  { id: "video", label: "Video wall" },
-  { id: "organization", label: "Organization" },
-  { id: "people", label: "People" },
-  { id: "sharing", label: "Sharing" },
+  { id: "access", label: "Access" },
   { id: "audit", label: "Audit" },
 ];
 

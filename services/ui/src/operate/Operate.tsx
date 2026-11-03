@@ -160,7 +160,12 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
   const [points, setPoints] = useState<LivePoint[]>([]);
   const [withheld, setWithheld] = useState(0);
   const [now, setNow] = useState(() => Date.now());
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(() => {
+    // A tail handed over from Missions or Fleet ("Watch live").
+    const handed = sessionStorage.getItem("a2e-live-tail");
+    if (handed) sessionStorage.removeItem("a2e-live-tail");
+    return handed?.trim() || null;
+  });
   const [follow, setFollow] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");

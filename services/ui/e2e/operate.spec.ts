@@ -45,7 +45,7 @@ test("launch view gives each vehicle on the ground a go or no-go and times power
   }).toPass();
   // Restricted airframe: never go, whatever else is true.
   await expect(page.locator('#fleet [data-tail="NX-08"]')).toContainText("NO-GO");
-  await expect(page.locator('#fleet [data-tail="NX-08"]')).toContainText("Airworthiness: Restricted");
+  await expect(page.locator('#fleet [data-tail="NX-08"]')).toContainText("Airworthiness: Prop strike on recovery");
   // Airborne vehicles are not in the launch view.
   await expect(page.locator('#fleet [data-tail="NX-04"]')).toHaveCount(0);
   await page.locator('#fleet [data-tail="NX-08"]').click();
