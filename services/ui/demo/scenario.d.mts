@@ -6,6 +6,7 @@ export interface DemoOptions {
   terrain?: unknown;
   assetBase?: string;
   attrition?: unknown;
+  readme?: string;
 }
 
 export interface Demo {

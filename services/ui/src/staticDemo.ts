@@ -1,6 +1,7 @@
 import { BANNER, createDemo } from "../demo/scenario.mjs";
 import attrition from "../demo/assets/attrition.json";
 import terrain from "../demo/assets/terrain.json";
+import readme from "../../../README.md?raw";
 
 /**
  * Hosted demo: no server, so the scripted sortie runs in the page and answers
@@ -85,6 +86,7 @@ export function installStaticDemo(): void {
     extra: Number(params.get("fleet") ?? 0) || 0,
     terrain,
     attrition,
+    readme,
     assetBase: `${import.meta.env.BASE_URL}demo-assets/`,
   });
   const real = window.fetch.bind(window);
