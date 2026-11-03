@@ -68,6 +68,57 @@ function cueLabel(kind: string): string {
   return kind;
 }
 
+function AltitudeTrace({ onBanner }: { onBanner: (banner: string) => void }) {
+  const onBannerRef = useRef(onBanner);
+  onBannerRef.current = onBanner;
+  const [points, setPoints] = useState("");
+  useEffect(() => {
+    let stopped = false;
+    void api<{ t_s: number[]; z_m: number[] }>("/v1/logs/ulg/series")
+      .then((result) => {
+        if (stopped) {
+          return;
+        }
+        onBannerRef.current(result.banner);
+        const t = result.body.t_s;
+        const z = result.body.z_m;
+        if (t.length === 0 || z.length === 0) {
+          return;
+        }
+        const tMax = Math.max(...t, 1);
+        const zMin = Math.min(...z);
+        const zMax = Math.max(...z);
+        const span = Math.max(zMax - zMin, 0.1);
+        const poly = t
+          .map((time, index) => {
+            const altitude = z[index] ?? zMin;
+            const x = (time / tMax) * 100;
+            const y = 36 - ((altitude - zMin) / span) * 32;
+            return `${x.toFixed(2)},${y.toFixed(2)}`;
+          })
+          .join(" ");
+        setPoints(poly);
+      })
+      .catch(() => setPoints(""));
+    return () => {
+      stopped = true;
+    };
+  }, []);
+  if (!points) {
+    return null;
+  }
+  return (
+    <section className="panel">
+      <header className="panel-head">
+        <h2>Altitude</h2>
+      </header>
+      <svg viewBox="0 0 100 40" role="img" aria-label="Altitude from the captured PX4 log">
+        <polyline fill="none" stroke="currentColor" strokeWidth="0.6" points={points} />
+      </svg>
+    </section>
+  );
+}
+
 function clock(timeUs: number): string {
   const safe = Number.isFinite(timeUs) && timeUs > 0 ? Math.floor(timeUs) : 0;
   const seconds = Math.floor(safe / 1_000_000);
@@ -221,6 +272,7 @@ export function DebriefPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
           <p className="lede">Choose a plan to replay its sequence as a flight log.</p>
         </div>
       </header>
+      <AltitudeTrace onBanner={onBanner} />
       {fault ? (
         <p className="fault" role="alert">
           {fault}

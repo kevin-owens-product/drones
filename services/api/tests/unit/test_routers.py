@@ -16,6 +16,7 @@ REQUIRED = (
     "/v1/edge/reconcile",
     "/v1/flight/command",
     "/v1/eval/runs",
+    "/v1/logs/ulg/series",
 )
 
 

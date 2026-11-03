@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import TypedDict
 
 from pyulog import ULog  # type: ignore[import-untyped]
+
+_NAME = re.compile(r"[A-Za-z0-9._-]+")
+_FIXTURES = Path(__file__).resolve().parents[3] / "tests" / "fixtures" / "px4"
 
 
 class Summary(TypedDict):
@@ -20,6 +24,18 @@ def summarize(path: str | Path) -> Summary:
     duration_s = (log.last_timestamp - log.start_timestamp) / 1e6
     counts = {name: _count(log, name) for name in names}
     return {"duration_s": duration_s, "messages": names, "counts": counts}
+
+
+def fixture_ulg(name: str) -> Path | None:
+    if _NAME.fullmatch(name) is None:
+        return None
+    root = _FIXTURES.resolve()
+    candidate = (root / name).resolve()
+    if root != candidate and root not in candidate.parents:
+        return None
+    if not candidate.is_file():
+        return None
+    return candidate
 
 
 def plot_series(path: str | Path) -> dict[str, list[float]]:

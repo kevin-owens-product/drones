@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from a2e.authz import Principal
 from a2e.db import fetch_all
 from a2e.debrief.replay import Cue, build_timeline
+from a2e.flight.ulg import fixture_ulg, plot_series
 from a2e.http import fail, get_session, set_banner, transactional
 from a2e.missions.exports import to_csv, to_pdf, to_xapi
 from a2e.routers.deps import (
@@ -112,6 +113,24 @@ async def debrief_export(
         blob = to_pdf("Debrief", banner)
         return JSONResponse({"banner": banner, "pdf_base64": __import__("base64").b64encode(blob).decode()})
     return fail(400, "format_unavailable")
+
+
+@router.get("/v1/logs/ulg/series")
+@transactional
+async def ulg_series(
+    request: Request,
+    name: str = "six-quad-instance5.ulg",
+    principal: Principal = Depends(require_principal),
+    session: AsyncSession = Depends(get_session),
+) -> JSONResponse:
+    denied = await _deny_or_none(request, session, principal, "telemetry.read")
+    if denied:
+        return denied
+    path = fixture_ulg(name)
+    if path is None:
+        return fail(404, "not_found")
+    set_banner(request, request.app.state.settings.system_high, [])
+    return JSONResponse({"name": name, **plot_series(path)})
 
 
 @router.get("/v1/eval/runs")

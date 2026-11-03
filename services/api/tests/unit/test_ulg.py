@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from a2e.flight.ulg import plot_series, summarize
+from a2e.flight.ulg import fixture_ulg, plot_series, summarize
 
 FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "px4" / "six-quad-instance5.ulg"
 
@@ -26,6 +26,12 @@ def test_captured_log_has_the_sensor_suite() -> None:
     counts = report["counts"]
     for name, floor in FLOORS.items():
         assert counts[name] >= floor
+
+
+def test_fixture_name_cannot_escape() -> None:
+    assert fixture_ulg("six-quad-instance5.ulg") == FIXTURE.resolve()
+    assert fixture_ulg("../dev.sql") is None
+    assert fixture_ulg("nope.ulg") is None
 
 
 def test_plot_series_matches_the_log() -> None:
