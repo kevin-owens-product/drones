@@ -23,6 +23,9 @@ FIELDS: tuple[tuple[str, str, str, str], ...] = (
     ("Link success at 50 m", r"success_50m ([0-9.]+)", "fraction", "Phase 5"),
     ("Link success at 5 km", r"success_5km ([0-9.]+)", "fraction", "Phase 5"),
     ("Link success inside jammer", r"success_jammed ([0-9.]+)", "fraction", "Phase 5"),
+    ("Lock retention", r"lock_retention ([0-9]+)/50", "of 50 runs", "Phase 3"),
+    ("Reacquisition", r"reacq_frames ([0-9.]+)", "frames", "Phase 3"),
+    ("Mean pixel error", r"mean_pixel_err ([0-9.]+)", "px", "Phase 3"),
 )
 
 

@@ -24,7 +24,7 @@ test-integration: $(PY)
 	@test -f .env || (echo "Copy .env.example to .env and start postgres + opa" && exit 1)
 	set -a && . ./.env && set +a && cd services/api && $(PY) -m pytest tests/integration
 
-test: test-unit test-crsf test-spoof test-failsafe test-cbba test-separate test-link
+test: test-unit test-crsf test-spoof test-failsafe test-cbba test-separate test-link test-track
 
 test-crsf:
 	$(MAKE) -C firmware/crsf test
@@ -44,13 +44,17 @@ test-separate:
 test-link:
 	$(MAKE) -C onboard/link test
 
+test-track:
+	$(MAKE) -C onboard/track test
+
 eval: $(PY)
 	mkdir -p docs/eval
 	set -e; { $(MAKE) -C firmware/crsf test; \
 	  $(MAKE) -C onboard/spoof test; \
 	  $(MAKE) -C onboard/alloc test; \
 	  $(MAKE) -C onboard/separate test; \
-	  $(MAKE) -C onboard/link test; } > docs/eval/latest.txt
+	  $(MAKE) -C onboard/link test; \
+	  $(MAKE) -C onboard/track test; } > docs/eval/latest.txt
 	$(PY) -c 'from pathlib import Path; import sys; sys.path.insert(0, "services/api/src"); from a2e.evalreport import write_readme; write_readme(Path("README.md"), Path("docs/eval/latest.txt").read_text())'
 	@echo "wrote README results from docs/eval/latest.txt"
 

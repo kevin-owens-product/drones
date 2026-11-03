@@ -17,6 +17,9 @@ def test_parse_and_splice_round_trip() -> None:
     success_50m 0.987
     success_5km 0.087
     success_jammed 0.004
+    lock_retention 50/50
+    reacq_frames 0.00
+    mean_pixel_err 0.168
     """
     found = parse_metrics(log)
     assert found["GNSS loss detect"] == "1.6"
@@ -26,5 +29,6 @@ def test_parse_and_splice_round_trip() -> None:
     out = splice_readme(readme, table)
     assert "1.6 s" in out
     assert "0.004 fraction" in out
+    assert "50 of 50 runs" in out
     assert out.startswith("before\n")
     assert out.endswith("after\n")

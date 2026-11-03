@@ -58,5 +58,8 @@ make test
 | Link success at 50 m | 0.987 fraction | Phase 5 |
 | Link success at 5 km | 0.087 fraction | Phase 5 |
 | Link success inside jammer | 0.004 fraction | Phase 5 |
+| Lock retention | 50 of 50 runs | Phase 3 |
+| Reacquisition | 0.00 frames | Phase 3 |
+| Mean pixel error | 0.168 px | Phase 3 |
 
 <!-- eval:end -->

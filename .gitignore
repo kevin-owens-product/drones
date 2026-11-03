@@ -17,6 +17,7 @@ onboard/failsafe/build/
 onboard/alloc/build/
 onboard/separate/build/
 onboard/link/build/
+onboard/track/build/
 services/ui/test-results/
 services/ui/playwright-report/
 sbom/
