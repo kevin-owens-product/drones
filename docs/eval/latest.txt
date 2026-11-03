@@ -1,0 +1,33 @@
+build/crsf_test testdata
+crsf_frames_per_sec 13280212
+crsf tests passed
+build/crsf_smoke
+crsf fuzz smoke 100000 inputs
+build/spoof_test
+step_detect_samples 3
+drag_detect_s 17.1
+false_alarms_per_hour 0
+recover_samples 50
+spoof tests passed
+build/fault_scenarios
+loss_detect_s 1.6
+step_detect_s 0.2
+drag_detect_s 17.1
+multipath_false_alarms_per_10min 0
+drift_m_per_min 3.00
+rmse_m 1.76
+fault scenarios passed
+build/cbba_test
+replan_us 0.03
+tasks_covered_after_loss 4
+cbba tests passed
+build/separate_test
+unguided_min_m 0.00 guided_min_m 20.10
+parallel_y 0.00 30.00
+separation tests passed
+build/link_test
+success_50m 0.987
+success_5km 0.087
+success_jammed 0.004
+success_outside_jammer 0.987
+link tests passed

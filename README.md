@@ -39,25 +39,24 @@ make test
 
 ## Results
 
-Filled from `make eval` once a phase has a measured run. Empty cells are not measured yet.
+`make eval` runs the onboard checks and rewrites the table between the markers. Do not edit the numbers by hand.
+
+<!-- eval:start -->
 
 | Metric | Value | Where |
 | --- | --- | --- |
-| Telemetry latency p50 / p99 | | Phase 1 |
-| Telemetry messages per second | | Phase 1 |
-| Dropped telemetry messages | | Phase 1 |
-| Position drift, GNSS denied | | Phase 2 |
-| Spoof time to detect | | Phase 2 |
-| Spoof false alarms per flight hour | | Phase 2 |
-| Position RMSE vs ground truth | | Phase 2 |
-| Lock retention | | Phase 3 |
-| Reacquisition time | | Phase 3 |
-| Mean pixel error | | Phase 3 |
-| Frame to setpoint latency | | Phase 3 |
-| Tracker frames per second | | Phase 3 |
-| Area coverage vs vehicles | | Phase 4 |
-| Re-plan time after vehicle loss | | Phase 4 |
-| Minimum separation | | Phase 4 |
-| Operator actions per vehicle per minute | | Phase 4 |
-| Mission success vs packet loss | | Phase 5 |
-| Mission success vs jammer placement | | Phase 5 |
+| GNSS loss detect | 1.6 s | Phase 2 |
+| GNSS step detect | 0.2 s | Phase 2 |
+| GNSS drag detect | 17.1 s | Phase 2 |
+| Spoof false alarms | 0 per hour | Phase 2 |
+| Drift while GNSS denied | 3.00 m/min | Phase 2 |
+| Position RMSE while denied | 1.76 m | Phase 2 |
+| Re-plan time after vehicle loss | 0.03 µs | Phase 4 |
+| Tasks covered after loss | 4 tasks | Phase 4 |
+| Guided minimum separation | 20.10 m | Phase 4 |
+| Unguided minimum separation | 0.00 m | Phase 4 |
+| Link success at 50 m | 0.987 fraction | Phase 5 |
+| Link success at 5 km | 0.087 fraction | Phase 5 |
+| Link success inside jammer | 0.004 fraction | Phase 5 |
+
+<!-- eval:end -->

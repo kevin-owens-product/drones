@@ -44,6 +44,16 @@ test-separate:
 test-link:
 	$(MAKE) -C onboard/link test
 
+eval: $(PY)
+	mkdir -p docs/eval
+	set -e; { $(MAKE) -C firmware/crsf test; \
+	  $(MAKE) -C onboard/spoof test; \
+	  $(MAKE) -C onboard/alloc test; \
+	  $(MAKE) -C onboard/separate test; \
+	  $(MAKE) -C onboard/link test; } > docs/eval/latest.txt
+	$(PY) -c 'from pathlib import Path; import sys; sys.path.insert(0, "services/api/src"); from a2e.evalreport import write_readme; write_readme(Path("README.md"), Path("docs/eval/latest.txt").read_text())'
+	@echo "wrote README results from docs/eval/latest.txt"
+
 lint: $(PY)
 	cd services/api && $(PY) -m ruff check src tests && $(PY) -m mypy src
 
