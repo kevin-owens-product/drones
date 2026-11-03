@@ -4,6 +4,7 @@ import { AttritionPage } from "./pages/Attrition";
 import { AuditPage } from "./pages/Audit";
 import { DebriefPage } from "./pages/Debrief";
 import { EvalPage } from "./pages/Eval";
+import { FieldReportsPage } from "./pages/FieldReports";
 import { FleetPage } from "./pages/Fleet";
 import { LivePage } from "./pages/Live";
 import { MissionsPage } from "./pages/Missions";
@@ -27,6 +28,7 @@ const SECTIONS: readonly Section[] = [
   "debrief",
   "eval",
   "attrition",
+  "reports",
   "organization",
   "people",
   "sharing",
@@ -133,6 +135,7 @@ export function App() {
       {section === "debrief" ? <DebriefPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "eval" ? <EvalPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "attrition" ? <AttritionPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "reports" ? <FieldReportsPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "organization" ? <OrganizationPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "people" ? <PeoplePage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "sharing" ? <SharingPage viewer={viewer} onBanner={setBanner} /> : null}

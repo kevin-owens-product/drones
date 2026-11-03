@@ -2,6 +2,7 @@
 // picture, and training sessions. Pure JavaScript with no Node imports, so the
 // same code runs behind demo/server.mjs and, for the hosted static demo, inside
 // the browser (src/staticDemo.ts). All data is synthetic and labelled so.
+import { FLEET_SHARE, fileReport, seedReports, triage } from "./fieldvoice.mjs";
 import { acknowledge, RESPONSES, scorecard, startSession, visible } from "./training.mjs";
 
 export const BANNER = "UNCLASSIFIED // DEMO DATA";
@@ -412,6 +413,30 @@ export function createDemo(opts = {}) {
     return { status: 404, body: { error: "unknown" } };
   }
 
+  // Field reports: seeded notes plus whatever the operator files this session.
+  const reports = seedReports();
+  function fieldReports(method, raw) {
+    if (method === "POST") {
+      let msg = {};
+      try {
+        msg = JSON.parse(raw);
+      } catch {
+        return { status: 400, body: { error: "json" } };
+      }
+      const out = fileReport(reports, msg);
+      return { status: out.error ? 400 : 200, body: out };
+    }
+    return {
+      status: 200,
+      body: {
+        source: "Demo scenario (simulated): seeded reports plus any filed in this session",
+        fleet_share: FLEET_SHARE,
+        items: [...reports].sort((a, b) => b.at.localeCompare(a.at)),
+        triage: triage(reports, FLEET_SHARE),
+      },
+    };
+  }
+
   // Training mode: open the console with ?scenario=qual-1. One session at a time.
   let session = null;
   function training(method, url, raw) {
@@ -439,6 +464,7 @@ export function createDemo(opts = {}) {
     extra: EXTRA,
     handle(method, url, raw = "") {
       if (url.pathname.startsWith("/v1/attrition")) return attrition(method, url, raw);
+      if (url.pathname === "/v1/field-reports") return fieldReports(method, raw);
       if (url.pathname.startsWith("/v1/training/")) {
         const out = training(method, url, raw);
         return { status: out.error ? 400 : 200, body: out };

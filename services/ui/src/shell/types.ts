@@ -8,6 +8,7 @@ export type Section =
   | "debrief"
   | "eval"
   | "attrition"
+  | "reports"
   | "organization"
   | "people"
   | "sharing"

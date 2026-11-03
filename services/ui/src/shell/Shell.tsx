@@ -9,6 +9,7 @@ const PRIMARY: readonly { id: Section; label: string }[] = [
   { id: "debrief", label: "Debrief" },
   { id: "eval", label: "Eval" },
   { id: "attrition", label: "Attrition" },
+  { id: "reports", label: "Field reports" },
 ];
 
 const ADMIN: readonly { id: Section; label: string }[] = [
