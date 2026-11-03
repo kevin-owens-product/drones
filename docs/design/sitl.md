@@ -69,3 +69,9 @@ What the tracker trials show:
 - The camera is rendered, not Gazebo, and the target is a textured rectangle. The point is the loop, not photorealism.
 - VIO is emulated from truth with realistic error terms, not run on images.
 - SIH runs faster than real time and is not lock-stepped to the harness, so runs vary a little with host load. Three seeds per GNSS case and five per tracker are enough to separate the configurations, not to quote tight confidence intervals.
+
+## Disk use
+
+Every service in `docker-compose.yml` caps its container log at three 10 MB files, and the SIH harness passes the same limit to `docker run`. PX4 keeps its three newest ulog directories per instance (`SDLOG_DIRS_MAX`). `make sitl-clean` removes the PX4 containers with their logs and ulogs, and leaves other containers and volumes alone.
+
+`fleet.sh` starts PX4 with `-d`. Without it, PX4 runs its `pxh` shell with no stdin and reprints the prompt in a tight loop. Before this was fixed, two containers ran that way for under a day and grew Docker's disk image to 1.5 TiB.
