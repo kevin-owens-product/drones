@@ -1767,6 +1767,8 @@ tbody tr:hover td {
 .page[data-testid="access"] > .page-head + .panel {
   flex: none;
 }
-.page[data-testid="fleet"] > .panel {
+/* :first-of-type matches the generic rule's specificity so the panels keep their content height. */
+.page[data-testid="fleet"] > .panel,
+.page[data-testid="fleet"] > .panel:first-of-type {
   flex: none;
 }

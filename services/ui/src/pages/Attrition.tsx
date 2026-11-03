@@ -373,7 +373,21 @@ export function AttritionPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
           <p className="ins-callout">
             {order.length
               ? `Build next: ${order.map(([v, n]) => `${n} of variant ${v}`).join(", ")}, to cover every unit's high case for ${report.demand.horizon_days} days.`
-              : "Spares on hand cover every unit's high case; no extra build needed."}
+              : "Spares on hand cover every unit's high case; no extra build needed."}{" "}
+            {order.length ? (
+              <a
+                href="#company"
+                onClick={() => {
+                  try {
+                    sessionStorage.setItem("a2e-company-tab", "logistics");
+                  } catch {
+                    /* the link still opens the page */
+                  }
+                }}
+              >
+                Plan the replacement kits
+              </a>
+            ) : null}
           </p>
         </section>
       </div>

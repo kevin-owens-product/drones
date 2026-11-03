@@ -4,6 +4,7 @@ import { AccessPage } from "./pages/Access";
 import { AttritionPage } from "./pages/Attrition";
 import { AuditPage } from "./pages/Audit";
 import { BriefPage } from "./pages/Brief";
+import { CompanyPage } from "./pages/Company";
 import { ConfigurePage } from "./pages/Configure";
 import { DebriefPage } from "./pages/Debrief";
 import { DenialMapPage } from "./pages/DenialMap";
@@ -19,6 +20,7 @@ import type { Section, Viewer } from "./shell/types";
 const SECTIONS: readonly Section[] = [
   "operate",
   "fleet",
+  "company",
   "missions",
   "debrief",
   "eval",
@@ -141,6 +143,7 @@ export function App() {
     <Shell banner={banner} viewer={viewer} section={section} onSection={onSection} onLogout={() => void onLogout()}>
       {section === "operate" ? <OperatePage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "fleet" ? <FleetPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "company" ? <CompanyPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "missions" ? <MissionsPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "debrief" ? <DebriefPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "eval" ? <EvalPage viewer={viewer} onBanner={setBanner} /> : null}

@@ -2,7 +2,9 @@
 // picture, and training sessions. Pure JavaScript with no Node imports, so the
 // same code runs behind demo/server.mjs and, for the hosted static demo, inside
 // the browser (src/staticDemo.ts). All data is synthetic and labelled so.
+import { createCompany } from "./company.mjs";
 import { plan as planConfig } from "./configure.mjs";
+import { nameOf, skuForTail } from "./supply.mjs";
 import { denialPicture } from "./denial.mjs";
 import { propose } from "./intent.mjs";
 import { FLEET_SHARE, fileReport, seedReports, triage } from "./fieldvoice.mjs";
@@ -191,7 +193,8 @@ export function createDemo(opts = {}) {
   const PLATFORMS = [...FLEET, ...SWARM].map((c, i) => ({
     id: `p${i}`,
     tail_number: c.tail,
-    designation: c.swarm ? "Quad, 7 in, VIO + GNSS (synthetic)" : i < 7 || c.kind === "pad" ? "Quad, 7 in, VIO + GNSS" : "Quad, 5 in, GNSS",
+    sku: skuForTail(c.tail),
+    designation: `${nameOf(skuForTail(c.tail))}${c.swarm ? " (synthetic)" : ""}`,
     group_size: "Group 1",
     portion_mark: "(U)",
     airworthiness: c.grounded ? "grounded" : c.tail === "NX-08" ? "restricted" : "airworthy",
@@ -202,10 +205,17 @@ export function createDemo(opts = {}) {
   // Factory birth records for the named tails, and the audit log. The log opens
   // with the two airworthiness calls the scenario starts with, then records
   // every proposal, approval, hold and field report made this session.
+  const FRAME_LOT = { "ARCHER-5": "FR-2609", "ARCHER-8": "FR-2604", "ARCHER-10": "FR-2607" };
   const BIRTH = FLEET.map((c, i) => {
     const rec = birthRecord(c.tail, i, c.grounded);
-    return { ...rec, verdict: birthVerdict(rec) };
+    const sku = skuForTail(c.tail);
+    // Frames and motors differ by model, so their lots follow the model (see LOTS in supply.mjs).
+    rec.parts = rec.parts.map((p) => (p.part === "frame" ? { ...p, lot: FRAME_LOT[sku] } : p.part === "motor" && sku === "ARCHER-5" ? { ...p, lot: "MT-1201" } : p));
+    return { ...rec, sku, verdict: birthVerdict(rec) };
   });
+  // The company view: orders, production, supply chain, logistics, sustainment
+  // and training around the same serials (demo/company.mjs).
+  const company = createCompany({ births: BIRTH });
   const audit = createLedger();
   const opened = T0 - 40 * 60_000;
   audit.append({ actor: "EOL bench 2", action: "platform.ground", resource_type: "platform", resource_id: "NX-12", reason_codes: ["birth_record"], detail: "EOL hover test failed: IMU cal out of range", at: opened });
@@ -539,6 +549,49 @@ export function createDemo(opts = {}) {
     return { error: "unknown" };
   }
 
+  function companyRoute(method, url, raw) {
+    const ctx = { holds, demand: opts.attrition?.demand ?? null, platforms: PLATFORMS };
+    if (method === "GET" && url.pathname === "/v1/company") return { status: 200, body: company.overview(ctx) };
+    if (method === "GET" && url.pathname === "/v1/company/thread") {
+      const snap = company.overview(ctx);
+      const out = company.thread(String(url.searchParams.get("tail") ?? ""), snap, PLATFORMS);
+      return out ? { status: 200, body: out } : { status: 404, body: { error: "no birth record for that tail" } };
+    }
+    if (method !== "POST") return { status: 404, body: { error: "unknown" } };
+    let msg = {};
+    try {
+      msg = JSON.parse(raw);
+    } catch {
+      return { status: 400, body: { error: "json" } };
+    }
+    const actor = caller?.display_name ?? String(msg.by ?? "operator");
+    const action = url.pathname === "/v1/company/ship" ? "kit.ship" : url.pathname === "/v1/company/work-orders/close" ? "work_order.close" : null;
+    if (!action) return { status: 404, body: { error: "unknown" } };
+    const resource = String(msg.plan ?? msg.id ?? "");
+    if (caller && !can(caller.roles, "fleet.write")) {
+      audit.append({ actor, action, resource_type: action === "kit.ship" ? "kit" : "work_order", resource_id: resource, decision: "deny", reason_codes: ["role_denied"] });
+      return { status: 403, body: { detail: "This needs the maintainer, mission commander or admin role." } };
+    }
+    if (action === "kit.ship") {
+      const out = company.ship(resource, ctx.demand, holds, actor);
+      if (out.error) return { status: out.status, body: { detail: out.error } };
+      const s = out.shipment;
+      audit.append({ actor, action, resource_type: "kit", resource_id: s.id, detail: `${s.qty} ${nameOf(s.sku)} to ${s.unit} now, ${s.build_order} released to the line${s.dg ? "; lithium packs ship as dangerous goods" : ""}` });
+      return { status: 200, body: out };
+    }
+    const out = company.closeWorkOrder(resource, holds, actor);
+    if (out.error) return { status: out.status, body: { detail: out.error } };
+    const wo = out.work_order;
+    audit.append({ actor, action, resource_type: "work_order", resource_id: wo.id, detail: `${wo.tail}: ${wo.issued.map((x) => `${x.qty} ${x.pn} from ${x.lot}`).join(", ") || "no parts"}` });
+    const platform = PLATFORMS.find((p) => p.tail_number === wo.tail);
+    if (wo.returns_to_service && platform && platform.airworthiness !== "grounded") {
+      platform.airworthiness = "airworthy";
+      platform.airworthiness_reason = null;
+      audit.append({ actor, action: "platform.return_to_service", resource_type: "platform", resource_id: wo.tail, reason_codes: ["maintenance"], detail: `${wo.id} closed` });
+    }
+    return { status: 200, body: out };
+  }
+
   let caller = null;
   return {
     extra: EXTRA,
@@ -547,6 +600,11 @@ export function createDemo(opts = {}) {
       if (url.pathname === "/v1/audit" && caller && !can(caller.roles, "audit.read")) return { status: 403, body: { detail: "role_denied" } };
       if (url.pathname.startsWith("/v1/attrition")) return attrition(method, url, raw);
       if (url.pathname === "/v1/field-reports") return fieldReports(method, raw);
+      if (url.pathname.startsWith("/v1/company")) return companyRoute(method, url, raw);
+      if (url.pathname === "/v1/maintenance") {
+        const items = company.openWorkOrders(holds).filter((w) => w.status === "open").map((w) => ({ id: w.id, tail_number: w.tail, summary: w.summary, status: "open" }));
+        return { status: 200, body: { items } };
+      }
       if (url.pathname.startsWith("/v1/intent")) return intent(method, url, raw);
       if (url.pathname === "/v1/configure") {
         const q = url.searchParams;

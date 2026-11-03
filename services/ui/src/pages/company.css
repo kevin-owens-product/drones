@@ -1,0 +1,201 @@
+/* Company page: tabs, the digital thread and the product catalogue. */
+.co-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.co-tab {
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.co-tab:hover {
+  color: inherit;
+}
+
+.co-tab.is-on {
+  border-bottom-color: var(--accent);
+  color: inherit;
+}
+
+.co-kpis .co-warn .stat-value {
+  color: var(--warn);
+}
+
+.co-chain {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.co-thread {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+
+.co-thread > li {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 4px 12px;
+  padding: 8px 0 8px 14px;
+  border-left: 2px solid var(--ok);
+  font-size: 13px;
+}
+
+.co-thread > li.is-bad {
+  border-left-color: var(--warn);
+}
+
+.co-stage {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.co-parts {
+  grid-column: 2;
+  margin: 4px 0 0;
+  padding-left: 16px;
+  color: var(--muted);
+}
+
+.co-split {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .co-split {
+    grid-template-columns: 1fr;
+  }
+  .co-thread > li {
+    grid-template-columns: 1fr;
+  }
+  .co-parts {
+    grid-column: 1;
+  }
+}
+
+.co-family h3 {
+  margin: 12px 0 6px;
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.co-skus {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.co-sku {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.co-sku:hover,
+.co-sku.is-on {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.co-specs {
+  width: 100%;
+  margin: 8px 0;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.co-specs th,
+.co-specs td {
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.co-specs th {
+  width: 40%;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.co-adr {
+  padding: 8px 10px;
+  border-left: 2px solid var(--warn);
+  font-size: 13px;
+}
+
+.co-filter {
+  min-width: 180px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+}
+
+.objective-list li.co-wo {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+}
+
+.co-wo > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.co-wo > .btn {
+  flex: none;
+}
+
+/* A note under a full-bleed table needs room; the table's negative margin would sit on it. */
+.co-page .panel > .table-wrap:not(:last-child) {
+  margin-bottom: 12px;
+}
+
+.co-page .panel > h3 {
+  margin: 16px 0 8px;
+  font-size: 14px;
+}
+
+.page.co-page.ins-page > .panel:first-of-type {
+  flex: none;
+}

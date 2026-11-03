@@ -1,6 +1,7 @@
 export type Section =
   | "operate"
   | "fleet"
+  | "company"
   | "missions"
   | "debrief"
   | "eval"
