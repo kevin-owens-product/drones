@@ -24,7 +24,7 @@ test-integration: $(PY)
 	@test -f .env || (echo "Copy .env.example to .env and start postgres + opa" && exit 1)
 	set -a && . ./.env && set +a && cd services/api && $(PY) -m pytest tests/integration
 
-test: test-unit test-crsf test-spoof test-failsafe test-cbba test-separate test-link test-track test-mesh test-flowhold test-associate test-scale
+test: test-unit test-crsf test-spoof test-failsafe test-cbba test-separate test-link test-track test-mesh test-flowhold test-associate test-scale test-contested
 
 test-crsf:
 	$(MAKE) -C firmware/crsf test
@@ -53,6 +53,9 @@ test-mesh:
 test-flowhold:
 	$(MAKE) -C onboard/flowhold test
 
+test-contested:
+	$(MAKE) -C onboard/contested test
+
 test-associate:
 	$(MAKE) -C onboard/associate test
 
@@ -71,6 +74,7 @@ eval: $(PY)
 	  $(MAKE) -C onboard/separate test; \
 	  $(MAKE) -C onboard/link test; \
 	  $(MAKE) -C onboard/track test; \
+	  $(MAKE) -C onboard/contested test; \
 	  cat docs/eval/sitl.txt; } > docs/eval/latest.txt
 	$(PY) -c 'from pathlib import Path; import sys; sys.path.insert(0, "services/api/src"); from a2e.evalreport import check_scenarios, write_readme; log=Path("docs/eval/latest.txt").read_text(); write_readme(Path("README.md"), log); failed=check_scenarios(log, Path("scenarios")); print("\n".join(failed)); sys.exit(1 if failed else 0)'
 	@echo "wrote README results from docs/eval/latest.txt"

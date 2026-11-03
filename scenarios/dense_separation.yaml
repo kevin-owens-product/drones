@@ -1,0 +1,6 @@
+name: dense_separation
+phase: Phase 4
+vehicles: 8
+min_separation_m: 4
+metric: Dense crossing losses of separation
+max: 0

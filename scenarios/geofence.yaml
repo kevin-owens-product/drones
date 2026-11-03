@@ -1,0 +1,5 @@
+name: geofence
+phase: Phase 4
+fence_half_width_m: 170
+metric: Dense crossing geofence breaches
+max: 0
