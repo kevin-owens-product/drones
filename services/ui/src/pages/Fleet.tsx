@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { planLabel, type PlanAssignment } from "../plans";
+import { can, inCustomerView } from "../shell/workspace";
 
 interface Viewer {
   id: string;
@@ -10,6 +11,7 @@ interface Viewer {
   clearance: string;
   ntk_programs: string[];
   roles: string[];
+  org?: string;
 }
 
 interface Platform {
@@ -20,6 +22,8 @@ interface Platform {
   portion_mark: string;
   airworthiness: string;
   airworthiness_reason?: string | null;
+  /** Set when the last work order on this tail closed and it flies again. */
+  service_note?: string | null;
   classification: string;
   home_station?: string | null;
   owner_name?: string | null;
@@ -115,6 +119,10 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
   const [holds, setHolds] = useState<Hold[]>([]);
   const [plans, setPlans] = useState<PlanAssignment[]>([]);
   const [recordsFault, setRecordsFault] = useState("");
+  // Bumped after every change so the registry, holds and work orders reload from the one record.
+  const [version, setVersion] = useState(0);
+  const customer = inCustomerView(viewer);
+  const canWrite = can(viewer, "fleet.write");
 
   useEffect(() => {
     let stopped = false;
@@ -132,9 +140,15 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
     void loadFleet();
     return () => {
       stopped = true;
-      mountedRef.current = false;
     };
-  }, []);
+  }, [version]);
+
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+    },
+    [],
+  );
 
   useEffect(() => {
     let stopped = false;
@@ -165,7 +179,7 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
     return () => {
       stopped = true;
     };
-  }, []);
+  }, [version]);
 
   async function setAirworthiness(row: Platform, status: string) {
     setPendingId(row.id);
@@ -178,11 +192,30 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
       });
       if (!mountedRef.current) return;
       onBanner(result.banner);
-      setRows((current) => (current ?? []).map((item) => (item.id === row.id ? { ...item, airworthiness: status } : item)));
-      setExportResult(`${row.tail_number} is ${status}`);
+      setExportResult(status === "airworthy" ? `${row.tail_number} is back in service.` : `${row.tail_number} is grounded.`);
+      setVersion((v) => v + 1);
     } catch (error) {
       if (!mountedRef.current) return;
       setExportResult(messageOf(error, "status failed"));
+      setExportIsFault(true);
+    } finally {
+      if (mountedRef.current) setPendingId(null);
+    }
+  }
+
+  async function closeOrder(id: string) {
+    setPendingId(id);
+    setExportResult("");
+    setExportIsFault(false);
+    try {
+      const result = await api<{ work_order: { tail: string } }>("/v1/maintenance/close", { method: "POST", body: JSON.stringify({ id }) });
+      if (!mountedRef.current) return;
+      onBanner(result.banner);
+      setExportResult(`${id} closed; parts issued for ${result.body.work_order.tail}.`);
+      setVersion((v) => v + 1);
+    } catch (error) {
+      if (!mountedRef.current) return;
+      setExportResult(messageOf(error, "Could not close the work order."));
       setExportIsFault(true);
     } finally {
       if (mountedRef.current) setPendingId(null);
@@ -241,13 +274,21 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
                   key={row.id}
                   className={row.id === selectedId ? "is-selected" : undefined}
                   onClick={() => setSelectedId(row.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedId(row.id);
+                    }
+                  }}
+                  tabIndex={0}
+                  aria-selected={row.id === selectedId}
                 >
                   <td>{row.tail_number}</td>
                   <td className="meta">{birthOf(row.tail_number)?.serial ?? "—"}</td>
                   <td>{row.designation}</td>
                   <td><span className={statusClass(row.airworthiness)}>{statusText(row.airworthiness)}</span></td>
                   <td className="meta">
-                    {row.airworthiness_reason ?? (flaggedLot(birthOf(row.tail_number)) ? `Carries flagged lot ${flaggedLot(birthOf(row.tail_number))?.value}` : birthOf(row.tail_number)?.verdict.reason ?? "—")}
+                    {row.airworthiness_reason ?? row.service_note ?? (flaggedLot(birthOf(row.tail_number)) ? `Carries flagged lot ${flaggedLot(birthOf(row.tail_number))?.value}` : birthOf(row.tail_number)?.verdict.reason ?? "—")}
                   </td>
                 </tr>
               ))}
@@ -265,13 +306,19 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
               <p>{selected.designation}</p>
               <p className="meta">{groupText(selected.group_size)} · Home {homeText(selected.home_station)}</p>
               {selected.airworthiness_reason ? <p className="fault">{selected.airworthiness_reason}</p> : null}
+              {!selected.airworthiness_reason && selected.service_note ? <p className="meta">{selected.service_note}</p> : null}
               {(() => {
                 const plan = plans.find((item) => item.tail_number === selected.tail_number);
                 return plan ? <p><span className="pill pill-ok pill-plan">{planLabel(plan.state, plan.mission_name)}</span></p> : <p className="meta">Standby</p>;
               })()}
               {openMaintenance.map((item) => (
                 <p key={item.id}>
-                  <span className="pill pill-warn">Maintenance open</span> {item.summary}
+                  <span className="pill pill-warn">{item.id} open</span> {item.summary}{" "}
+                  {canWrite ? (
+                    <button type="button" className="btn btn-quiet" disabled={pendingId !== null} onClick={() => void closeOrder(item.id)}>
+                      Close work order
+                    </button>
+                  ) : null}
                 </p>
               ))}
               {birth ? (
@@ -284,6 +331,7 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
                         <li key={part.part}>
                           <strong>{part.part}</strong>
                           <span className="meta">
+                            {customer ? part.lot : (
                             <a
                               href="#company"
                               title="Open this lot in Company, Supply chain"
@@ -298,6 +346,7 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
                             >
                               {part.lot}
                             </a>
+                            )}
                             {flagged ? (
                               <>
                                 {" "}
@@ -343,6 +392,7 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
                 >
                   Watch live
                 </button>
+                {customer ? null : (
                 <button
                   type="button"
                   className="btn btn-quiet"
@@ -358,6 +408,7 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
                 >
                   Trace contract to field
                 </button>
+                )}
                 {(() => {
                   const plan = plans.find((item) => item.tail_number === selected.tail_number);
                   if (!plan) return null;
@@ -375,16 +426,23 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
                   );
                 })()}
               </div>
-              {viewer.roles.includes("maintainer") ? (
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  disabled={pendingId !== null}
-                  onClick={() => void setAirworthiness(selected, selected.airworthiness === "airworthy" ? "grounded" : "airworthy")}
-                >
-                  {selected.airworthiness === "airworthy" ? "Ground" : "Return to service"}
-                </button>
-              ) : null}
+              {canWrite ? (
+                selected.airworthiness === "airworthy" ? (
+                  <button type="button" className="btn btn-primary" disabled={pendingId !== null} onClick={() => void setAirworthiness(selected, "grounded")}>
+                    Ground
+                  </button>
+                ) : openMaintenance.length > 0 ? (
+                  <p className="meta" data-testid="rts-blocked">
+                    Close {openMaintenance.map((item) => item.id).join(", ")} to return {selected.tail_number} to service.
+                  </p>
+                ) : (
+                  <button type="button" className="btn btn-primary" disabled={pendingId !== null} onClick={() => void setAirworthiness(selected, "airworthy")}>
+                    Return to service
+                  </button>
+                )
+              ) : (
+                <p className="meta">Grounding and returning airframes needs the maintainer, mission commander or admin role.</p>
+              )}
             </>
           ) : (
             <p className="empty">Select a tail to see its birth record.</p>
@@ -410,8 +468,14 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
                     <span className={held ? "pill pill-ok" : "pill pill-warn"}>{held ? `Held by ${held.by}` : "Not held yet"}</span>
                   </strong>
                   <span className="meta">
-                    {a.ratio.toFixed(1)}x expected losses ({a.losses}), mostly {a.top_cause}. {a.in_service_count} airframes from it still in service
-                    {tails.length > 0 ? `, including ${tails.join(", ")} in this registry` : ""}.
+                    {a.ratio.toFixed(1)}x expected losses ({a.losses}), mostly {a.top_cause}.{" "}
+                    {held
+                      ? tails.length > 0
+                        ? `${tails.join(", ")} restricted until the part is inspected and replaced.`
+                        : "No airframe in this registry carries it."
+                      : tails.length > 0
+                        ? `${tails.join(", ")} in this registry ${tails.length === 1 ? "carries" : "carry"} it and ${tails.length === 1 ? "is" : "are"} still flying.`
+                        : `${a.in_service_count} airframes from it are still in service.`}
                   </span>
                 </li>
               );
@@ -425,8 +489,13 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
           <ul className="objective-list">
             {openOrders.map((item) => (
               <li key={item.id}>
-                <strong>{item.tail_number}</strong>
+                <strong>{item.tail_number} · {item.id}</strong>
                 <span className="meta">{item.summary}</span>
+                {canWrite ? (
+                  <button type="button" className="btn btn-quiet" disabled={pendingId !== null} onClick={() => void closeOrder(item.id)}>
+                    Close work order
+                  </button>
+                ) : null}
               </li>
             ))}
           </ul>

@@ -55,3 +55,20 @@ test("asking for more than the fleet has says how short it is", () => {
   assert.equal(out.plan[0].tails.length, 3);
   assert.match(out.short[0], /wanted 6, got 3/);
 });
+
+test("weapons employment is refused however it is phrased", () => {
+  for (const brief of ["drop payload on the truck", "release the payload over area a", "arm the payload", "drop a grenade on gate 3", "strike the road junction"]) {
+    assert.match(parse(brief).refused ?? "", /ADR-0016/, brief);
+  }
+  for (const brief of ["survey area b with 2 drones", "inspect the culvert", "relay on the ridge"]) {
+    assert.equal(parse(brief).refused, null, brief);
+  }
+});
+
+test("a vehicle flying another plan is taken last and flagged", () => {
+  const fleet = FLEET.map((v) => (v.tail === "NX-02" ? { ...v, busy: "flying M-1031 (Survey grid north)" } : v));
+  const out = assign(parse("survey area b with 2 drones"), fleet);
+  assert.ok(!out.plan[0].tails.includes("NX-02"));
+  const all = assign(parse("survey area b with 5 drones"), fleet);
+  assert.deepEqual(all.conflicts.map((c) => c.tail), ["NX-02"]);
+});

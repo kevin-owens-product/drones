@@ -30,7 +30,8 @@ const VERBS = {
   inspect: ["check", "inspect", "look at"],
 };
 
-const REFUSE = /\b(strike|attack|engage|destroy|bomb|drop on|release on|kill|neutrali[sz]e|target (?:the )?(?:enemy|vehicle|person|people|troops))\b/;
+// Weapons employment in any phrasing: verbs of harm, payload release, and arming. Checked before anything else.
+const REFUSE = /\b(strike|strikes|attack|engage|destroy|bomb|bombs|kill|neutrali[sz]e|shoot|fire (?:on|at)|hit (?:the|a)|detonate|explode|blow up|arm (?:the |a |it )?(?:payload|warhead|munition|weapon)|weapon|weapons|warhead|munition|munitions|explosive|explosives|grenade|ordnance|payload release|release (?:the )?payload|drop (?:the |a )?(?:payload|bomb|grenade|munition|charge|ordnance)|drop (?:it )?on|release (?:it )?on|target (?:the )?(?:enemy|vehicle|truck|person|people|troops|building))\b/;
 
 const NUMBERS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, a: 1, an: 1, single: 1, pair: 2 };
 const num = (w) => (w in NUMBERS ? NUMBERS[w] : Number.parseInt(w, 10));
@@ -55,7 +56,7 @@ export function parse(brief) {
   const text = String(brief ?? "").toLowerCase().replace(/\s+/g, " ").trim();
   if (!text) return { tasks: [], reserve: 0, deadline: null, avoid: [], unread: ["(empty brief)"], refused: null };
   const refused = text.match(REFUSE);
-  if (refused) return { tasks: [], reserve: 0, deadline: null, avoid: [], unread: [], refused: `"${refused[0]}" is not something this system plans. It surveys, observes, relays and inspects; it never arms or releases (ADR-0016).` };
+  if (refused) return { tasks: [], reserve: 0, deadline: null, avoid: [], unread: [], refused: `This brief asks for weapons employment ("${refused[0]}"), which this system never plans. It surveys, observes, relays and inspects; it never arms or releases (ADR-0016).` };
 
   const clauses = text.split(/,|;|\bthen\b|\band then\b|\. /).map((c) => c.trim()).filter(Boolean);
   const tasks = [];
@@ -106,7 +107,8 @@ export function assign(intent, fleet) {
   const short = [];
   for (const t of intent.tasks) {
     const place = PLACES.find((p) => p.id === t.place);
-    free.sort((a, b) => Math.hypot(a.x - place.x, a.y - place.y) - Math.hypot(b.x - place.x, b.y - place.y));
+    // Free vehicles first, nearest first; one already flying another plan only when nothing else is left.
+    free.sort((a, b) => Number(Boolean(a.busy)) - Number(Boolean(b.busy)) || Math.hypot(a.x - place.x, a.y - place.y) - Math.hypot(b.x - place.x, b.y - place.y));
     const need = Math.max(0, Math.min(t.vehicles, free.length - intent.reserve));
     const took = free.splice(0, need).map((v) => v.tail);
     if (took.length < t.vehicles) short.push(`${t.label} wanted ${t.vehicles}, got ${took.length}`);
@@ -115,13 +117,15 @@ export function assign(intent, fleet) {
   const reserve = free.slice(0, intent.reserve).map((v) => v.tail);
   if (reserve.length < intent.reserve) short.push(`reserve wanted ${intent.reserve}, got ${reserve.length}`);
   const unavailable = fleet.filter((v) => !v.available).map((v) => ({ tail: v.tail, why: v.why ?? "not available" }));
-  return { plan, reserve, idle: free.slice(intent.reserve).map((v) => v.tail), unavailable, short };
+  const taken = new Set([...plan.flatMap((t) => t.tails), ...reserve]);
+  const conflicts = fleet.filter((v) => v.busy && taken.has(v.tail)).map((v) => ({ tail: v.tail, why: v.busy }));
+  return { plan, reserve, idle: free.slice(intent.reserve).map((v) => v.tail), unavailable, short, conflicts };
 }
 
 /** Parse, assign and package a proposal that waits for approval. */
 export function propose(brief, fleet, now = Date.now()) {
   const intent = parse(brief);
-  const result = intent.refused ? { plan: [], reserve: [], idle: [], unavailable: [], short: [] } : assign(intent, fleet);
+  const result = intent.refused ? { plan: [], reserve: [], idle: [], unavailable: [], short: [], conflicts: [] } : assign(intent, fleet);
   return {
     id: `P-${now.toString(36).toUpperCase()}`,
     brief: String(brief ?? ""),

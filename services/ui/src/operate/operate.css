@@ -1008,12 +1008,86 @@ kbd {
     overflow: auto;
   }
 
-  .tabs .tab:not(.is-active) {
+}
+
+/* Narrow screens: the section tabs fold into one menu button. */
+.nav-toggle {
+  display: none;
+}
+
+@media (max-width: 1279px) {
+  .topbar {
+    position: relative;
+    gap: 12px;
+  }
+
+  .nav-toggle {
+    display: inline-flex;
+    color: var(--text);
+  }
+
+  .tabs {
     display: none;
+  }
+
+  .tabs.is-open {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    padding: 6px 10px 10px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line-strong);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  }
+
+  .tabs.is-open .tab {
+    height: 40px;
+    justify-content: flex-start;
+  }
+
+  .tabs.is-open .tab.is-active::after {
+    left: 0;
+    right: auto;
+    top: 10px;
+    bottom: 10px;
+    width: 2px;
+    height: auto;
+  }
+
+  .tabs.is-open .menu {
+    flex-direction: column;
+  }
+
+  .tabs.is-open .menu-list {
+    position: static;
+    box-shadow: none;
   }
 
   .who-text {
     display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .topbar {
+    padding: 0 10px;
+    gap: 8px;
+  }
+
+  .topbar .zulu,
+  .topbar .brand span {
+    display: none;
+  }
+
+  .topbar-right {
+    gap: 8px;
   }
 }
 

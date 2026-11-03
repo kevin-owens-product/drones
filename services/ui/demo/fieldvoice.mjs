@@ -63,6 +63,8 @@ export function triage(reports, fleetShare, { minReports = 4, minOnBuild = 3, mi
 
 /** Firmware build per demo tail, and the fleet share of each build. */
 export const TAIL_BUILD = { "NX-01": "4.5.2", "NX-02": "4.6.0", "NX-03": "4.5.2", "NX-04": "4.6.0", "NX-05": "4.5.2", "NX-06": "4.5.1", "NX-07": "4.6.0", "NX-08": "4.5.2", "NX-09": "4.5.1", "NX-10": "4.5.2", "NX-11": "4.5.1", "NX-12": "4.5.2" };
+/** The unit each named tail flies with, matching what each unit flies (UNITS in supply.mjs). */
+export const TAIL_UNIT = { "NX-01": "Delta", "NX-02": "Delta", "NX-03": "Delta", "NX-04": "Charlie", "NX-05": "Charlie", "NX-06": "Charlie", "NX-07": "Charlie", "NX-08": "Alpha", "NX-09": "Alpha", "NX-10": "Alpha", "NX-11": "Bravo", "NX-12": "Bravo" };
 export const FLEET_SHARE = { "4.5.1": 0.3, "4.5.2": 0.45, "4.6.0": 0.25 };
 
 const SEED = [
@@ -86,7 +88,8 @@ const SEED = [
 
 /** Seeded reports, timed relative to `now`, labelled simulated. */
 export function seedReports(now = Date.now()) {
-  return SEED.map(([days, hours, tail, unit, text], i) => {
+  return SEED.map(([days, hours, tail, , text], i) => {
+    const unit = TAIL_UNIT[tail] ?? "Alpha";
     const at = new Date(now - days * 86_400_000);
     at.setUTCHours(hours, (i * 7) % 60, 0, 0);
     return { id: `FR-${String(i + 1).padStart(3, "0")}`, at: at.toISOString(), tail, unit, firmware: TAIL_BUILD[tail] ?? "unknown", by: "seeded", text, themes: classify(text), samples: [], seeded: true };
@@ -104,7 +107,7 @@ export function fileReport(store, msg, now = Date.now()) {
     id: `FR-${String(store.length + 1).padStart(3, "0")}`,
     at: new Date(now).toISOString(),
     tail,
-    unit: String(msg.unit ?? "Alpha"),
+    unit: TAIL_UNIT[tail] ?? String(msg.unit ?? "Alpha"),
     firmware: TAIL_BUILD[tail] ?? "unknown",
     by: String(msg.by ?? "operator"),
     text,

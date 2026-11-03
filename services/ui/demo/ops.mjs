@@ -281,11 +281,14 @@ export function createOps({ company, audit, platforms }) {
       const shortBy = d.reduce((s, x) => s + x.short, 0);
       const t = train.find((x) => x.unit === u.unit);
       const spares = supply.spareParts(u.sku, Math.max(5, shortBy));
+      // Airframes already asked for (or proposed) count against the shortfall, so the row never asks twice.
+      const open = openReplacement(org, u.unit);
       return {
+        open_request: open ? { id: open.id, qty: open.qty, status: open.status } : null,
         unit: u.unit, sku: u.sku, name: u.name, airframes: u.airframes, gcs: u.gcs, operators: u.operators, instructors: u.instructors,
         losses: d.reduce((s, x) => s + x.losses, 0),
         days_of_supply: d.length ? Math.round(Math.min(...d.map((x) => x.days_of_supply))) : null,
-        short: shortBy,
+        short: Math.max(0, shortBy - (open?.qty ?? 0)),
         spares_on_hand: Object.entries(u).filter(([k]) => /^[A-Z]+-/.test(k)).map(([pn, qty]) => ({ pn, qty })),
         suggested_spares: spares.map((s) => ({ pn: s.pn, name: s.name, qty: s.qty })),
         training_gaps: t?.gaps ?? [],
@@ -320,6 +323,10 @@ export function createOps({ company, audit, platforms }) {
   }
 
   // ---------------- Actions ----------------
+
+  function openReplacement(org, unit) {
+    return requests.find((r) => r.org === org && r.unit === unit && r.kind === "replacement" && !["declined", "delivered"].includes(r.status)) ?? null;
+  }
 
   function newRequest(fields) {
     const r = { id: `REQ-${(reqSeq += 1)}`, created: TODAY, status: "submitted", origin: "customer", qty: 0, ...fields };
@@ -454,6 +461,8 @@ export function createOps({ company, audit, platforms }) {
         if (!ownUnit(unit)) return { error: "not one of your units", status: 403 };
         const qty = Math.round(Number(a.qty));
         if (!Number.isFinite(qty) || qty <= 0 || qty > 500) return { error: "quantity must be 1 to 500", status: 400 };
+        const open = openReplacement(org, unit);
+        if (open) return { error: `${open.id} for ${open.qty} airframes is already open for ${unit} (${open.status}). Wait for it, or ask Neros to change it.`, status: 409 };
         const r = newRequest({ org, by: actor, note: String(a.note ?? "").slice(0, 200), ...replacement(unit, qty) });
         return { ok: true, request: r, message: `${r.id} sent to Neros: ${describe(r)}` };
       }

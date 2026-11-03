@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import type { Viewer } from "../shell/types";
+import { can, inCustomerView } from "../shell/workspace";
 import "./insights.css";
 
 interface LedgerRow {
@@ -181,6 +182,8 @@ export function AttritionPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
   const held = (a: Finding) => holds.find((h) => h.attribute === a.attribute && h.value === a.value);
   const order = Object.entries(report.demand.build_order).filter(([, n]) => n > 0);
   const first = report.demand.rows[0];
+  const customer = inCustomerView(viewer);
+  const canHold = can(viewer, "fleet.write");
 
   return (
     <section className="page ins-page" data-testid="attrition">
@@ -189,8 +192,13 @@ export function AttritionPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
           <p className="kicker">Fleet</p>
           <h1 className="page-title">Attrition</h1>
           <p className="lede">
-            What each effective sortie costs, which factory lots are losing airframes, and what to build next. An effective sortie finished the task it was flown for.
+            {customer
+              ? "What each effective sortie costs your units, which factory lots are losing your airframes, and when each unit runs short. An effective sortie finished the task it was flown for."
+              : "What each effective sortie costs, which factory lots are losing airframes, and what to build next. An effective sortie finished the task it was flown for."}
           </p>
+          {customer ? null : (
+            <p className="meta">Loss data shared by Customer A. Customers B and C don't share theirs, so they aren't in these numbers.</p>
+          )}
         </div>
         <span className="pill pill-warn" title={report.source}>
           SIM
@@ -251,9 +259,18 @@ export function AttritionPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
                   </p>
                 ) : null}
               </div>
-              <button type="button" className="btn btn-primary" disabled={Boolean(h)} onClick={() => void hold(a)}>
-                {h ? "Held" : `Hold ${a.in_service_count} airframes`}
-              </button>
+              <div className="ins-hold">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={Boolean(h) || !canHold}
+                  title={canHold ? undefined : "Holding a lot needs the maintainer, mission commander or admin role."}
+                  onClick={() => void hold(a)}
+                >
+                  {h ? "Held" : `Hold ${a.in_service_count} airframes`}
+                </button>
+                {!h && !canHold ? <p className="meta">Needs the maintainer, mission commander or admin role.</p> : null}
+              </div>
             </article>
           );
         })}
@@ -333,12 +350,12 @@ export function AttritionPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
 
         <section className="panel">
           <div className="panel-head">
-            <h2>Supply and build order</h2>
+            <h2>{customer ? "When each unit runs short" : "Supply and build order"}</h2>
           </div>
           {first?.days_of_supply != null ? (
             <p className="ins-callout">
               {first.unit} runs out of variant {first.variant} spares in {first.days_of_supply} days at {first.per_day} lost a day
-              {first.trend && first.trend > 1.2 ? `, ${first.trend}x the rate of the week before` : ""}. Ship to {first.unit} first.
+              {first.trend && first.trend > 1.2 ? `, ${first.trend}x the rate of the week before` : ""}. {customer ? `Ask Neros to resupply ${first.unit} first.` : `Ship to ${first.unit} first.`}
             </p>
           ) : null}
           <div className="table-wrap">
@@ -370,6 +387,12 @@ export function AttritionPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
               </tbody>
             </table>
           </div>
+          {customer ? (
+            <p className="ins-callout">
+              Neros sees this forecast because you share loss data, and proposes resupply before a unit runs short.{" "}
+              <a href="#supply">Request replacements on Supply &amp; support</a>
+            </p>
+          ) : (
           <p className="ins-callout">
             {order.length
               ? `Build next: ${order.map(([v, n]) => `${n} of variant ${v}`).join(", ")}, to cover every unit's high case for ${report.demand.horizon_days} days.`
@@ -389,6 +412,7 @@ export function AttritionPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
               </a>
             ) : null}
           </p>
+          )}
         </section>
       </div>
 

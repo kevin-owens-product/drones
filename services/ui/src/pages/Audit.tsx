@@ -62,10 +62,44 @@ const ACTION_TEXT: Record<string, string> = {
   "field_report.file": "Field report filed",
   "platform.ground": "Airframe grounded",
   "platform.restrict": "Airframe restricted",
+  "platform.return_to_service": "Airframe returned to service",
+  "mission.draft": "Plan drafted",
+  "mission.review": "Plan sent for review",
+  "mission.execute": "Plan released to operators",
+  "mission.close": "Plan closed",
+  "debrief.release": "Debrief released",
+  "work_order.close": "Work order closed",
+  "kit.ship": "Replacement kit shipped",
+  "request.approve": "Customer request approved",
+  "request.decline": "Customer request declined",
+  "request.fulfil": "Customer request shipped",
+  "request.propose": "Resupply proposed to a customer",
+  "order.ship": "Order shipped",
+  "licence.record": "Export licence recorded",
+  "build.run": "Build run",
+  "po.raise": "Purchase order raised",
+  "po.expedite": "Purchase order expedited",
+  "po.receive": "Purchase order received",
+  "lot.accept": "Parts lot accepted",
+  "lot.reject": "Parts lot rejected",
+  "lot.disposition": "Parts lot dispositioned",
+  "scar.close": "Supplier corrective action closed",
+  "eco.approve": "Engineering change approved",
+  "wo.close": "Work order closed",
+  "request.replacement": "Customer asked for airframes",
+  "request.spares": "Customer asked for spares",
+  "request.training": "Customer asked for training",
+  "request.rma": "Customer reported a fault",
+  "proposal.accept": "Customer accepted a proposal",
+  "proposal.decline": "Customer declined a proposal",
+  "shipment.receive": "Customer signed for a shipment",
+  "airframe.accept": "Customer accepted an airframe",
+  "sharing.set": "Customer changed data sharing",
 };
 
 function actionText(action: string): string {
-  return ACTION_TEXT[action] ?? action;
+  const key = action.startsWith("ops.") ? action.slice(4) : action;
+  return ACTION_TEXT[key] ?? ACTION_TEXT[action] ?? key.replaceAll(/[._]/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 }
 
 /** Row index where a row stops pointing at the hash of the row before it, or -1. Scheme-independent. */

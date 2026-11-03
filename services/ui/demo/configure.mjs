@@ -77,7 +77,8 @@ export function evaluate(m, variant, battery, band) {
   const hop = hopKm(band, variant, m.jamming);
   const relays = hop >= m.range_km ? 0 : Math.ceil(m.range_km / hop) - 1;
   const reasons = [];
-  if (margin < ASSUMPTIONS.reserve) reasons.push(`energy margin ${Math.round(margin * 100)}% is under the ${ASSUMPTIONS.reserve * 100}% reserve`);
+  if (margin < 0) reasons.push(`needs ${(need / usable).toFixed(1)}x the pack's usable energy`);
+  else if (margin < ASSUMPTIONS.reserve) reasons.push(`energy margin ${Math.round(margin * 100)}% is under the ${ASSUMPTIONS.reserve * 100}% reserve`);
   if (hop < 0.3) reasons.push("link cannot hold 300 m under this jamming");
   return {
     ok: reasons.length === 0,

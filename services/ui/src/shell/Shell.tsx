@@ -3,11 +3,11 @@ import { usePageCommands, type Command } from "./commands";
 import { Palette } from "./Palette";
 import "../pages/ops.css";
 import type { Section, Viewer } from "./types";
-import { canSwitch, NAV, type Workspace } from "./workspace";
+import { can, canSwitch, NAV, type Workspace } from "./workspace";
 
-const ADMIN: readonly { id: Section; label: string }[] = [
+const ADMIN_ALL: readonly { id: Section; label: string; needs?: string }[] = [
   { id: "access", label: "Access" },
-  { id: "audit", label: "Audit" },
+  { id: "audit", label: "Audit", needs: "audit.read" },
 ];
 
 function formatRoles(roles: readonly string[]): string {
@@ -67,6 +67,9 @@ export function Shell(props: {
   const [palette, setPalette] = useState(false);
   const [help, setHelp] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+  // Audit is in the menu only for the roles that can read it; Access (who can do what) is for everyone.
+  const ADMIN = useMemo(() => ADMIN_ALL.filter((item) => !item.needs || can(props.viewer, item.needs)), [props.viewer]);
   const adminRef = useRef<HTMLDivElement>(null);
   const pageCommands = usePageCommands();
   const { onSection, onLogout, onWorkspace } = props;
@@ -84,7 +87,7 @@ export function Shell(props: {
       { id: "help", label: "Keyboard shortcuts", group: "Help", hint: "?", run: () => setHelp(true) },
       { id: "logout", label: "Log out", group: "Session", run: onLogout },
     ],
-    [pageCommands, onSection, onLogout, onWorkspace, PRIMARY, switchable, props.workspace],
+    [pageCommands, onSection, onLogout, onWorkspace, PRIMARY, ADMIN, switchable, props.workspace],
   );
 
   useEffect(() => {
@@ -101,6 +104,7 @@ export function Shell(props: {
       } else if (event.key === "Escape") {
         setHelp(false);
         setAdminOpen(false);
+        setNavOpen(false);
       }
     }
     window.addEventListener("keydown", onKey);
@@ -117,6 +121,12 @@ export function Shell(props: {
   }, [adminOpen]);
 
   const inAdmin = ADMIN.some((item) => item.id === props.section);
+  const current = [...PRIMARY, ...ADMIN].find((item) => item.id === props.section)?.label ?? "Menu";
+  const go = (next: Section) => {
+    setNavOpen(false);
+    setAdminOpen(false);
+    onSection(next);
+  };
 
   return (
     <div className="shell">
@@ -138,11 +148,14 @@ export function Shell(props: {
             </button>
           </div>
         ) : null}
-        <nav className="tabs" aria-label="Sections">
+        <button type="button" className="tab nav-toggle" aria-expanded={navOpen} aria-controls="sections" onClick={() => setNavOpen((open) => !open)}>
+          {current} <span aria-hidden="true">▾</span>
+        </button>
+        <nav id="sections" className={navOpen ? "tabs is-open" : "tabs"} aria-label="Sections">
           {PRIMARY.map((item) => {
             const active = props.section === item.id;
             return (
-              <button key={item.id} type="button" className={active ? "tab is-active" : "tab"} aria-current={active ? "page" : undefined} onClick={() => onSection(item.id)}>
+              <button key={item.id} type="button" className={active ? "tab is-active" : "tab"} aria-current={active ? "page" : undefined} onClick={() => go(item.id)}>
                 {item.label}
               </button>
             );
@@ -159,10 +172,7 @@ export function Shell(props: {
                     type="button"
                     role="menuitem"
                     className={props.section === item.id ? "is-active" : undefined}
-                    onClick={() => {
-                      setAdminOpen(false);
-                      onSection(item.id);
-                    }}
+                    onClick={() => go(item.id)}
                   >
                     {item.label}
                   </button>
@@ -172,7 +182,7 @@ export function Shell(props: {
           </div>
         </nav>
         <button type="button" className="search-trigger" onClick={() => setPalette(true)} aria-label="Open command palette">
-          <span>Search or run a command</span>
+          <span>Go to a page, vehicle or command</span>
           <kbd>⌘K</kbd>
         </button>
         <div className="topbar-right">
