@@ -1,0 +1,200 @@
+{
+  "report": {
+    "serial": "DEMO-good",
+    "profile": "variant-a",
+    "source": "emulator",
+    "seconds": 5.0,
+    "checks": [
+      {
+        "name": "heartbeat",
+        "passed": true,
+        "detail": "autopilot 12, vehicle type 2",
+        "value": null,
+        "low": null,
+        "high": null
+      },
+      {
+        "name": "disarmed",
+        "passed": true,
+        "detail": "disarmed for the whole capture",
+        "value": null,
+        "low": null,
+        "high": null
+      },
+      {
+        "name": "link loss",
+        "passed": true,
+        "detail": "0.00% of 743 packets",
+        "value": 0.0,
+        "low": 0,
+        "high": 0.01
+      },
+      {
+        "name": "firmware",
+        "passed": true,
+        "detail": "1.18.0",
+        "value": null,
+        "low": null,
+        "high": null
+      },
+      {
+        "name": "sensors",
+        "passed": true,
+        "detail": "gyro, accel, mag and baro healthy",
+        "value": null,
+        "low": null,
+        "high": null
+      },
+      {
+        "name": "param NAV_RCL_ACT",
+        "passed": true,
+        "detail": "2",
+        "value": 2.0,
+        "low": 2,
+        "high": 2
+      },
+      {
+        "name": "param NAV_DLL_ACT",
+        "passed": true,
+        "detail": "2",
+        "value": 2.0,
+        "low": 2,
+        "high": 2
+      },
+      {
+        "name": "param COM_DL_LOSS_T",
+        "passed": true,
+        "detail": "10",
+        "value": 10.0,
+        "low": 1,
+        "high": 10
+      },
+      {
+        "name": "param COM_RC_LOSS_T",
+        "passed": true,
+        "detail": "0.5",
+        "value": 0.5,
+        "low": 0.2,
+        "high": 1.0
+      },
+      {
+        "name": "param COM_LOW_BAT_ACT",
+        "passed": true,
+        "detail": "3",
+        "value": 3.0,
+        "low": 3,
+        "high": 3
+      },
+      {
+        "name": "param GF_ACTION",
+        "passed": true,
+        "detail": "3",
+        "value": 3.0,
+        "low": 3,
+        "high": 3
+      },
+      {
+        "name": "param BAT_CRIT_THR",
+        "passed": true,
+        "detail": "0.07",
+        "value": 0.07000000029802322,
+        "low": 0.05,
+        "high": 0.15
+      },
+      {
+        "name": "imu gyro_noise_rad_s",
+        "passed": true,
+        "detail": "0.0031",
+        "value": 0.00314,
+        "low": 0,
+        "high": 0.01
+      },
+      {
+        "name": "imu gyro_bias_rad_s",
+        "passed": true,
+        "detail": "0.0010",
+        "value": 0.00102,
+        "low": 0,
+        "high": 0.02
+      },
+      {
+        "name": "imu accel_noise_m_s2",
+        "passed": true,
+        "detail": "0.0308",
+        "value": 0.03078,
+        "low": 0,
+        "high": 0.08
+      },
+      {
+        "name": "imu accel_gravity_m_s2",
+        "passed": true,
+        "detail": "9.8104",
+        "value": 9.81039,
+        "low": 9.5,
+        "high": 10.1
+      },
+      {
+        "name": "attitude rate",
+        "passed": true,
+        "detail": "48.8 Hz",
+        "value": 48.8,
+        "low": 45,
+        "high": null
+      }
+    ]
+  },
+  "birth": {
+    "serial": "DEMO-good",
+    "parts": [
+      {
+        "part": "FC-H743",
+        "lot": "L2611-04"
+      },
+      {
+        "part": "ESC-2611",
+        "lot": "L2611-11"
+      },
+      {
+        "part": "MOTOR-2207",
+        "lot": "L2610-31"
+      },
+      {
+        "part": "FRAME-A",
+        "lot": "L2609-02"
+      }
+    ],
+    "calibrations": [
+      {
+        "name": "gyro_noise_rad_s",
+        "value": 0.00314,
+        "low": 0,
+        "high": 0.01
+      },
+      {
+        "name": "gyro_bias_rad_s",
+        "value": 0.00102,
+        "low": 0,
+        "high": 0.02
+      },
+      {
+        "name": "accel_noise_m_s2",
+        "value": 0.03078,
+        "low": 0,
+        "high": 0.08
+      },
+      {
+        "name": "accel_gravity_m_s2",
+        "value": 9.81039,
+        "low": 9.5,
+        "high": 10.1
+      }
+    ],
+    "firmware_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "eol": {
+      "kind": "bench",
+      "passed": true,
+      "note": ""
+    },
+    "recorded_at": "2026-11-03T17:45:00.450344+00:00"
+  }
+}

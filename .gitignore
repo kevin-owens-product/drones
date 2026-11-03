@@ -27,3 +27,4 @@ sbom/
 .test-keys/
 *.pem
 .DS_Store
+sim/bench/out/
