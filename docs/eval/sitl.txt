@@ -1,0 +1,16 @@
+sitl results (PX4 SIH, closed loop)
+sitl_gnss_runs 45
+sitl_loss_end_err_gnss_only_m 374.9
+sitl_loss_end_err_gated_m 3.4
+sitl_loss_drift_gated_m_per_min 1.24
+sitl_drag_end_err_fused_m 7.9
+sitl_drag_end_err_gated_m 4.3
+sitl_drag_detect_worst_s 25.5
+sitl_step_detect_worst_s 0.54
+sitl_false_drops 0
+sitl_track_v1_on_target 0.180
+sitl_track_v1_held_runs 0/5
+sitl_track_v1_follow_err_m 72.2
+sitl_track_v2_on_target 0.984
+sitl_track_v2_held_runs 3/5
+sitl_track_v2_follow_err_m 1.8

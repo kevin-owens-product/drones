@@ -25,6 +25,19 @@ def test_parse_and_splice_round_trip() -> None:
     lock_retention 50/50
     reacq_frames 0.00
     mean_pixel_err 0.168
+    sitl_loss_end_err_gnss_only_m 374.9
+    sitl_loss_end_err_gated_m 3.4
+    sitl_loss_drift_gated_m_per_min 1.24
+    sitl_drag_end_err_fused_m 7.9
+    sitl_drag_end_err_gated_m 4.3
+    sitl_drag_detect_worst_s 25.5
+    sitl_step_detect_worst_s 0.48
+    sitl_false_drops 0
+    sitl_track_v1_on_target 0.174
+    sitl_track_v2_on_target 0.700
+    sitl_track_v1_held_runs 0/5
+    sitl_track_v2_held_runs 3/5
+    sitl_track_v2_follow_err_m 2.1
     """
     found = parse_metrics(log)
     assert found["GNSS loss detect"] == "1.6"
@@ -38,8 +51,14 @@ def test_parse_and_splice_round_trip() -> None:
     assert out.startswith("before\n")
     assert out.endswith("after\n")
     rows = metric_rows(log)
-    assert len(rows) == 17
+    assert len(rows) == 30
     assert ("GNSS loss detect", 1.6, "s", "Phase 2") in rows
+    # The unit-check and SITL rows for the same fault must not read each other's lines.
+    assert found["GNSS drag detect"] == "17.1"
+    assert found["Spoofed drag caught within"] == "25.5"
+    assert found["Drift while GNSS denied"] == "3.00"
+    assert "| GNSS drag detect | 17.1 s | Unit check | Phase 2 |" in table
+    assert "| Spoofed drag caught within | 25.5 s, worst run | PX4 SITL | Phase 2 |" in table
 
 
 def test_scenario_rejects_a_slow_loss() -> None:

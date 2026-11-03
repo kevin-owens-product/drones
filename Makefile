@@ -63,9 +63,18 @@ eval: $(PY)
 	  $(MAKE) -C onboard/alloc test; \
 	  $(MAKE) -C onboard/separate test; \
 	  $(MAKE) -C onboard/link test; \
-	  $(MAKE) -C onboard/track test; } > docs/eval/latest.txt
+	  $(MAKE) -C onboard/track test; \
+	  cat docs/eval/sitl.txt; } > docs/eval/latest.txt
 	$(PY) -c 'from pathlib import Path; import sys; sys.path.insert(0, "services/api/src"); from a2e.evalreport import check_scenarios, write_readme; log=Path("docs/eval/latest.txt").read_text(); write_readme(Path("README.md"), log); failed=check_scenarios(log, Path("scenarios")); print("\n".join(failed)); sys.exit(1 if failed else 0)'
 	@echo "wrote README results from docs/eval/latest.txt"
+
+# Closed-loop trials against PX4 SIH in Docker. About an hour on four cores.
+# Writes the raw rows and summary that `make eval` reads.
+sitl: $(PY)
+	cd sim/sitl && $(abspath $(PY)) gnss_denied.py --faults none,loss,step,drag,multipath --modes gnss_only,fused,gated --seeds 3 --speed 3 --denied 120 --out ../../docs/eval/sitl_gnss.jsonl
+	cd sim/sitl && $(abspath $(PY)) track_loop.py --tracker v1 --seeds 5 --speed 1 --duration 90 --out ../../docs/eval/sitl_track.jsonl
+	cd sim/sitl && $(abspath $(PY)) track_loop.py --tracker v2 --seeds 5 --speed 1 --duration 90 --out ../../docs/eval/sitl_track.jsonl
+	$(PY) sim/sitl/summarize.py
 
 eval-store: $(PY)
 	$(PY) -c 'import os,subprocess,sys; from pathlib import Path; sys.path.insert(0,"services/api/src"); from a2e.evalreport import store_metrics; sha=subprocess.check_output(["git","rev-parse","--short","HEAD"],text=True).strip(); dsn=os.environ.get("A2E_EVAL_DATABASE_URL","postgresql://a2e:change-me-db@127.0.0.1:15432/a2e"); n=store_metrics(dsn, Path("docs/eval/latest.txt").read_text(), sha); print(f"stored {n} metrics at {sha}")'
