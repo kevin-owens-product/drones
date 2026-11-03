@@ -139,6 +139,20 @@ services:
       - "18554:8554"
       - "18888:8888"
 
+  px4:
+    image: px4io/px4-sitl-gazebo:v1.18.0-rc1@sha256:aa4bbf35f0bd6bdb3269cc96e317c8e78b87f1fc769c734c0818094074e1cc0a
+    environment:
+      A2E_SITL_COUNT: "${A2E_SITL_COUNT:-6}"
+      HEADLESS: "1"
+      PX4_GZ_WORLD: default
+    volumes:
+      - ./deploy/sitl/fleet.sh:/fleet.sh:ro
+      - ./deploy/sitl/models:/models:ro
+      - ./deploy/sitl/models/x500_a2e:/opt/px4-gazebo/share/gz/models/x500_a2e:ro
+    entrypoint: ["sh", "/fleet.sh"]
+    ports:
+      - "18570-18575:18570-18575/udp"
+
   gateway:
     build:
       context: .
