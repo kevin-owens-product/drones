@@ -4,4 +4,4 @@
 
 The regression test fails if `sensor_combined` drops below 400 samples, `vehicle_attitude` below 250, `vehicle_local_position` below 180, or `vehicle_gps_position` below 40. The log also contains barometer, magnetometer, GPS, and optical-flow datasets. `plot_series` returns the down position and the attitude scalar for the debrief plot.
 
-Betaflight blackbox ingest is not in this commit. The SITL image that will produce a blackbox is `deploy/betaflight/Dockerfile`, pinned to Betaflight `21e67d203d32ce46d39e996493c39c1378c4974b`.
+Betaflight blackbox ingest is in `docs/design/blackbox.md`. The SITL image that wrote the log is `deploy/betaflight/Dockerfile`, pinned to Betaflight `21e67d203d32ce46d39e996493c39c1378c4974b`.

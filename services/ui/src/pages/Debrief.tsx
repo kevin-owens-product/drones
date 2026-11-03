@@ -119,6 +119,57 @@ function AltitudeTrace({ onBanner }: { onBanner: (banner: string) => void }) {
   );
 }
 
+function GyroTrace({ onBanner }: { onBanner: (banner: string) => void }) {
+  const onBannerRef = useRef(onBanner);
+  onBannerRef.current = onBanner;
+  const [points, setPoints] = useState("");
+  useEffect(() => {
+    let stopped = false;
+    void api<{ t_s: number[]; gyro_roll: number[] }>("/v1/logs/blackbox/series")
+      .then((result) => {
+        if (stopped) {
+          return;
+        }
+        onBannerRef.current(result.banner);
+        const t = result.body.t_s;
+        const gyro = result.body.gyro_roll;
+        if (t.length === 0 || gyro.length === 0) {
+          return;
+        }
+        const tMax = Math.max(...t, 1);
+        const low = Math.min(...gyro);
+        const high = Math.max(...gyro);
+        const span = Math.max(high - low, 1);
+        const poly = t
+          .map((time, index) => {
+            const sample = gyro[index] ?? low;
+            const x = (time / tMax) * 100;
+            const y = 36 - ((sample - low) / span) * 32;
+            return `${x.toFixed(2)},${y.toFixed(2)}`;
+          })
+          .join(" ");
+        setPoints(poly);
+      })
+      .catch(() => setPoints(""));
+    return () => {
+      stopped = true;
+    };
+  }, []);
+  if (!points) {
+    return null;
+  }
+  return (
+    <section className="panel">
+      <header className="panel-head">
+        <h2>Roll gyro</h2>
+      </header>
+      <svg viewBox="0 0 100 40" role="img" aria-label="Roll gyro from the captured Betaflight blackbox">
+        <polyline fill="none" stroke="currentColor" strokeWidth="0.6" points={points} />
+      </svg>
+    </section>
+  );
+}
+
 function clock(timeUs: number): string {
   const safe = Number.isFinite(timeUs) && timeUs > 0 ? Math.floor(timeUs) : 0;
   const seconds = Math.floor(safe / 1_000_000);
@@ -273,6 +324,7 @@ export function DebriefPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
         </div>
       </header>
       <AltitudeTrace onBanner={onBanner} />
+      <GyroTrace onBanner={onBanner} />
       {fault ? (
         <p className="fault" role="alert">
           {fault}

@@ -12,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from a2e.authz import Principal
 from a2e.db import fetch_all
 from a2e.debrief.replay import Cue, build_timeline
+from a2e.flight.blackbox import fixture_blackbox
+from a2e.flight.blackbox import plot_series as blackbox_series
 from a2e.flight.ulg import fixture_ulg, plot_series
 from a2e.http import fail, get_session, set_banner, transactional
 from a2e.missions.exports import to_csv, to_pdf, to_xapi
@@ -131,6 +133,24 @@ async def ulg_series(
         return fail(404, "not_found")
     set_banner(request, request.app.state.settings.system_high, [])
     return JSONResponse({"name": name, **plot_series(path)})
+
+
+@router.get("/v1/logs/blackbox/series")
+@transactional
+async def blackbox_log_series(
+    request: Request,
+    name: str = "sitl.bfl",
+    principal: Principal = Depends(require_principal),
+    session: AsyncSession = Depends(get_session),
+) -> JSONResponse:
+    denied = await _deny_or_none(request, session, principal, "telemetry.read")
+    if denied:
+        return denied
+    path = fixture_blackbox(name)
+    if path is None:
+        return fail(404, "not_found")
+    set_banner(request, request.app.state.settings.system_high, [])
+    return JSONResponse({"name": name, **blackbox_series(path)})
 
 
 @router.get("/v1/eval/runs")
