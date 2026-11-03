@@ -1,0 +1,5 @@
+name: replan
+phase: Phase 4
+network: line with relay, 20% message loss, one vehicle lost
+metric: Re-plan latency after vehicle loss
+max: 3000

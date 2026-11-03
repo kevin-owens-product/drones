@@ -1,8 +1,11 @@
+make[1]: Entering directory '/home/claude/drones/firmware/crsf'
 build/crsf_test testdata
-crsf_frames_per_sec 13085580
+crsf_frames_per_sec 6598484
 crsf tests passed
 build/crsf_smoke
 crsf fuzz smoke 100000 inputs
+make[1]: Leaving directory '/home/claude/drones/firmware/crsf'
+make[1]: Entering directory '/home/claude/drones/onboard/spoof'
 build/spoof_test
 step_detect_samples 3
 drag_detect_s 17.1
@@ -17,24 +20,44 @@ multipath_false_alarms_per_10min 0
 drift_m_per_min 3.00
 rmse_m 1.76
 fault scenarios passed
+make[1]: Leaving directory '/home/claude/drones/onboard/spoof'
+make[1]: Entering directory '/home/claude/drones/onboard/alloc'
 build/cbba_test
-replan_us 0.03
 tasks_covered_after_loss 4
+cbba_random_worlds 500 line_drop 0.20
+cbba_conflicts 0
+cbba_unconverged 0
+cbba_line_vs_full_mismatch 10 worst_score_ratio 0.981
+cbba_rounds_p50 14 p95 22
+replan_rounds_mean 13.1 worst 25
+replan_ms_at_10hz 1313
 cbba tests passed
+build/intent_test
+cells 4 coverage_1 0.25 coverage_2 0.50 actions_per_vehicle_per_min 0.50
+intent tests passed
+make[1]: Leaving directory '/home/claude/drones/onboard/alloc'
+make[1]: Entering directory '/home/claude/drones/onboard/separate'
 build/separate_test
 unguided_min_m 0.00 guided_min_m 20.10
 parallel_y 0.00 30.00
 separation tests passed
-build/link_test
+make[1]: Leaving directory '/home/claude/drones/onboard/separate'
+make[1]: Entering directory '/home/claude/drones/onboard/link'
+mkdir -p ../../docs/eval
+build/link_test ../../docs/eval/link.svg
 success_50m 0.987
 success_5km 0.087
 success_jammed 0.004
 success_outside_jammer 0.987
+link_plot ../../docs/eval/link.svg
 link tests passed
+make[1]: Leaving directory '/home/claude/drones/onboard/link'
+make[1]: Entering directory '/home/claude/drones/onboard/track'
 build/track_test
 servo_err_px 0.00 -0.00 area 60.9
 lock_retention 50/50
 reacq_frames 0.00
 mean_pixel_err 0.168
-track_fps 89532
+track_fps 30353
 track tests passed
+make[1]: Leaving directory '/home/claude/drones/onboard/track'

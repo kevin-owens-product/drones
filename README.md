@@ -51,7 +51,8 @@ make test
 | Spoof false alarms | 0 per hour | Phase 2 |
 | Drift while GNSS denied | 3.00 m/min | Phase 2 |
 | Position RMSE while denied | 1.76 m | Phase 2 |
-| Re-plan time after vehicle loss | 0.03 µs | Phase 4 |
+| Re-plan latency after vehicle loss | 1313 ms at 10 Hz | Phase 4 |
+| Tasks held by two vehicles | 0 in 1,000 runs | Phase 4 |
 | Tasks covered after loss | 4 tasks | Phase 4 |
 | Guided minimum separation | 20.10 m | Phase 4 |
 | Unguided minimum separation | 0.00 m | Phase 4 |

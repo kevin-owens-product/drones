@@ -1,0 +1,5 @@
+name: cbba_conflicts
+phase: Phase 4
+network: line, 20% message loss, 500 random worlds
+metric: Tasks held by two vehicles
+max: 0
