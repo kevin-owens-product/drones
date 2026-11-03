@@ -22,6 +22,8 @@ The map draws the operating picture from the demo scenario, each overlay labelle
 
 `npm run build:static` builds a version with no server: the same scenario code (`demo/scenario.mjs`) answers the console's API calls in the browser. `render.yaml` (a Render Blueprint) builds and publishes it at drones.productexec.co. Add `?fleet=300` to the URL for the fleet-scale view.
 
+The hosted build opens on a sign-in page with four demo accounts, one per role: `admin`, `commander` (mission commander and planner), `operator` and `maintainer`. Passwords are shared out of band; `src/staticDemo.ts` holds only salted SHA-256 hashes. The check runs in the browser because there is no server, so it keeps casual visitors and search engines out (the page is also `noindex`) but is not a security boundary. The local `npm run demo` still signs you in automatically.
+
 ### Launch readiness
 
 ![The launch view: a go or no-go for every vehicle on the ground, the failing check, and the power-on-to-ready time](docs/media/launch.png)
