@@ -1,4 +1,4 @@
-.PHONY: up down demo test test-unit test-integration test-scale scale lint opa ui sbom ci bench-demo
+.PHONY: up down demo test test-unit test-integration test-scale scale sitl-clean lint opa ui sbom ci bench-demo
 
 up:
 	@test -f .env || (echo "Copy .env.example to .env first" && exit 1)
@@ -95,6 +95,13 @@ sitl: $(PY)
 	cd sim/sitl && $(abspath $(PY)) track_loop.py --tracker v1 --seeds 5 --speed 1 --duration 90 --out ../../docs/eval/sitl_track.jsonl
 	cd sim/sitl && $(abspath $(PY)) track_loop.py --tracker v2 --seeds 5 --speed 1 --duration 90 --out ../../docs/eval/sitl_track.jsonl
 	$(PY) sim/sitl/summarize.py
+
+# Remove PX4 containers with their logs and ulogs, then return the freed blocks to the host.
+# Other containers and volumes are left alone.
+sitl-clean:
+	docker compose rm -sf px4
+	docker ps -aq --filter 'name=^/a2e-(px4-fleet|sih-|trk-)' | xargs -r docker rm -f
+	docker run --rm --privileged --pid=host alpine:3.20 nsenter -t 1 -m -- fstrim /var/lib/docker
 
 eval-store: $(PY)
 	$(PY) -c 'import os,subprocess,sys; from pathlib import Path; sys.path.insert(0,"services/api/src"); from a2e.evalreport import store_metrics; sha=subprocess.check_output(["git","rev-parse","--short","HEAD"],text=True).strip(); dsn=os.environ.get("A2E_EVAL_DATABASE_URL","postgresql://a2e:change-me-db@127.0.0.1:15432/a2e"); n=store_metrics(dsn, Path("docs/eval/latest.txt").read_text(), sha); print(f"stored {n} metrics at {sha}")'

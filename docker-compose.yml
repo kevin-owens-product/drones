@@ -1,5 +1,12 @@
+x-logging: &bounded-logs
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   postgres:
+    logging: *bounded-logs
     build:
       context: ./deploy/postgres
     environment:
@@ -21,6 +28,7 @@ services:
       - log_line_prefix=%m [%d] %u
 
   redis:
+    logging: *bounded-logs
     image: redis:7.4-alpine
     command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--appendonly", "yes"]
     ports:
@@ -33,6 +41,7 @@ services:
 
   # Upstream minio images left Docker Hub. Silo is the API-compatible community fork.
   minio:
+    logging: *bounded-logs
     image: pgsty/silo:RELEASE.2026-10-15T00-00-00Z
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
@@ -48,6 +57,7 @@ services:
       retries: 20
 
   minio-init:
+    logging: *bounded-logs
     image: pgsty/silo:RELEASE.2026-10-15T00-00-00Z
     depends_on:
       minio:
@@ -60,6 +70,7 @@ services:
       - mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" && mc mb --ignore-existing local/a2e-artifacts && mc anonymous set none local/a2e-artifacts
 
   opa:
+    logging: *bounded-logs
     build:
       context: .
       dockerfile: deploy/opa/Dockerfile
@@ -74,6 +85,7 @@ services:
       retries: 20
 
   keycloak:
+    logging: *bounded-logs
     image: quay.io/keycloak/keycloak:26.0.7
     command: ["start-dev", "--import-realm", "--http-port=8080"]
     environment:
@@ -91,6 +103,7 @@ services:
       - "19002:9000"
 
   otel-collector:
+    logging: *bounded-logs
     image: otel/opentelemetry-collector:0.114.0
     command: ["--config=/etc/otel/config.yaml"]
     volumes:
@@ -99,6 +112,7 @@ services:
       - "14317:4317"
 
   prometheus:
+    logging: *bounded-logs
     image: prom/prometheus:v2.55.1
     volumes:
       - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -106,6 +120,7 @@ services:
       - "19090:9090"
 
   grafana:
+    logging: *bounded-logs
     image: grafana/grafana:11.3.1
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
@@ -119,12 +134,14 @@ services:
       - prometheus
 
   nats:
+    logging: *bounded-logs
     image: nats:2.10-alpine
     command: ["-js", "-m", "8222"]
     ports:
       - "14222:4222"
 
   mosquitto:
+    logging: *bounded-logs
     image: eclipse-mosquitto:2
     volumes:
       - ./deploy/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
@@ -132,6 +149,7 @@ services:
       - "11883:1883"
 
   mediamtx:
+    logging: *bounded-logs
     image: bluenviron/mediamtx:1.9.3
     volumes:
       - ./deploy/mediamtx/mediamtx.yml:/mediamtx.yml:ro
@@ -140,6 +158,7 @@ services:
       - "18888:8888"
 
   betaflight:
+    logging: *bounded-logs
     profiles: ["fpv"]
     build:
       context: ./deploy/betaflight
@@ -148,6 +167,7 @@ services:
       - "15761:5761"
 
   px4:
+    logging: *bounded-logs
     image: px4io/px4-sitl-gazebo:v1.18.0-rc1@sha256:aa4bbf35f0bd6bdb3269cc96e317c8e78b87f1fc769c734c0818094074e1cc0a
     environment:
       A2E_SITL_COUNT: "${A2E_SITL_COUNT:-6}"
@@ -158,10 +178,15 @@ services:
       - ./deploy/sitl/models:/models:ro
       - ./deploy/sitl/models/x500_a2e:/opt/px4-gazebo/share/gz/models/x500_a2e:ro
     entrypoint: ["sh", "/fleet.sh"]
+    # Ulogs live in memory and end with the container. Copy one out with docker cp while it runs.
+    tmpfs:
+      - /root/.local/share/px4:size=1g
+      - /root/.gz/sim/log:size=64m
     ports:
       - "18570-18575:18570-18575/udp"
 
   gateway:
+    logging: *bounded-logs
     build:
       context: .
       dockerfile: services/gateway/Dockerfile
@@ -185,6 +210,7 @@ services:
         condition: service_started
 
   api:
+    logging: *bounded-logs
     build:
       context: .
       dockerfile: services/api/Dockerfile

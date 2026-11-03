@@ -1,11 +1,16 @@
-make[1]: Entering directory '/home/claude/drones/firmware/crsf'
+mkdir -p build
+cc -std=c17 -O2 -Wall -Wextra -Werror -Iinclude -o build/crsf_test src/crsf.c test/crsf_test.c
+mkdir -p build
+cc -std=c17 -O2 -Wall -Wextra -Werror -Iinclude -o build/crsf_smoke src/crsf.c fuzz/crsf_fuzzer.c fuzz/driver.c
 build/crsf_test testdata
-crsf_frames_per_sec 6060553
+crsf_frames_per_sec 12509382
 crsf tests passed
 build/crsf_smoke
 crsf fuzz smoke 100000 inputs
-make[1]: Leaving directory '/home/claude/drones/firmware/crsf'
-make[1]: Entering directory '/home/claude/drones/onboard/spoof'
+mkdir -p build
+cc -std=c17 -O2 -Wall -Wextra -Werror -Iinclude -o build/spoof_test src/spoof.c test/spoof_test.c -lm
+mkdir -p build
+cc -std=c17 -O2 -Wall -Wextra -Werror -Iinclude -o build/fault_scenarios src/spoof.c src/fault.c test/scenarios.c -lm
 build/spoof_test
 step_detect_samples 3
 drag_detect_s 17.1
@@ -20,8 +25,10 @@ multipath_false_alarms_per_10min 0
 drift_m_per_min 3.00
 rmse_m 1.76
 fault scenarios passed
-make[1]: Leaving directory '/home/claude/drones/onboard/spoof'
-make[1]: Entering directory '/home/claude/drones/onboard/alloc'
+mkdir -p build
+cc -std=c17 -O2 -Wall -Wextra -Werror -Iinclude -o build/cbba_test src/cbba.c test/cbba_test.c -lm
+mkdir -p build
+cc -std=c17 -O2 -Wall -Wextra -Werror -Iinclude -o build/intent_test src/cbba.c src/intent.c test/intent_test.c -lm
 build/cbba_test
 tasks_covered_after_loss 4
 cbba_random_worlds 500 line_drop 0.20
@@ -35,14 +42,14 @@ cbba tests passed
 build/intent_test
 cells 4 coverage_1 0.25 coverage_2 0.50 actions_per_vehicle_per_min 0.50
 intent tests passed
-make[1]: Leaving directory '/home/claude/drones/onboard/alloc'
-make[1]: Entering directory '/home/claude/drones/onboard/separate'
+mkdir -p build
+cc -std=c17 -O2 -Wall -Wextra -Werror -Iinclude -o build/separate_test src/separate.c test/separate_test.c -lm
 build/separate_test
 unguided_min_m 0.00 guided_min_m 20.10
 parallel_y 0.00 30.00
 separation tests passed
-make[1]: Leaving directory '/home/claude/drones/onboard/separate'
-make[1]: Entering directory '/home/claude/drones/onboard/link'
+mkdir -p build
+cc -std=c17 -O2 -Wall -Wextra -Werror -Iinclude -o build/link_test src/link.c test/link_test.c -lm
 mkdir -p ../../docs/eval
 build/link_test ../../docs/eval/link.svg
 success_50m 0.987
@@ -51,18 +58,16 @@ success_jammed 0.004
 success_outside_jammer 0.987
 link_plot ../../docs/eval/link.svg
 link tests passed
-make[1]: Leaving directory '/home/claude/drones/onboard/link'
-make[1]: Entering directory '/home/claude/drones/onboard/track'
+mkdir -p build
+cc -std=c17 -O2 -Wall -Wextra -Werror -Iinclude -o build/track_test src/track.c test/track_test.c -lm
 build/track_test
 servo_err_px 0.00 -0.00 area 60.9
 lock_retention 50/50
 reacq_frames 0.00
 mean_pixel_err 0.000
-track_fps 5691
+track_fps 14825
 hidden_false_hits 0/40 reacquired_after 0 frames
 track tests passed
-make[1]: Leaving directory '/home/claude/drones/onboard/track'
-make[1]: Entering directory '/home/claude/drones/onboard/contested'
 mkdir -p build
 cc -std=c17 -O2 -Wall -Wextra -Werror -I../alloc/include -I../link/include -I../mesh/include -I../failsafe/include -I../separate/include -o build/fleet_test test/fleet_test.c ../alloc/src/cbba.c ../link/src/link.c ../mesh/src/mesh.c ../failsafe/src/failsafe.c ../failsafe/src/lostlink.c -lm
 mkdir -p build
@@ -75,10 +80,9 @@ fleet_sorties_policy_only 1.000 fleet_cells_policy_only 1.000
 fleet_sorties_mesh_policy 1.000 fleet_cells_mesh_policy 1.000
 fleet tests passed
 build/dense_test
-dense_min_sep_m 5.93 dense_los_events 0 geofence_breaches 0 dense_arrived 8/8
+dense_min_sep_m 5.97 dense_los_events 0 geofence_breaches 0 dense_arrived 8/8
 dense_unguided_min_sep_m 0.00 dense_unguided_los_events 28
 dense tests passed
-make[1]: Leaving directory '/home/claude/drones/onboard/contested'
 sitl results (PX4 SIH, closed loop)
 sitl_gnss_runs 45
 sitl_loss_end_err_gnss_only_m 374.9
