@@ -39,7 +39,11 @@ fs_state fs_step(fs_machine *m, fs_input in) {
         enter(m, FS_RETURN);
         return m->state;
     }
-    if (in.link_up && (m->state == FS_LOITER || m->state == FS_RETURN)) {
+    if (in.track_lost && m->state == FS_CONTINUE) {
+        enter(m, FS_LOITER);
+        return m->state;
+    }
+    if (in.link_up && !in.track_lost && (m->state == FS_LOITER || m->state == FS_RETURN)) {
         enter(m, FS_CONTINUE);
         return m->state;
     }

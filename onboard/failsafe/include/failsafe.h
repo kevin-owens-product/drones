@@ -26,6 +26,7 @@ typedef struct {
     int link_up;
     int operator_return;
     int operator_land;
+    int track_lost;
     double dt_s;
 } fs_input;
 

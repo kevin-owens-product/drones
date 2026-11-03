@@ -12,6 +12,7 @@ static fs_input in(int link, int ret, int land, double dt) {
     x.link_up = link;
     x.operator_return = ret;
     x.operator_land = land;
+    x.track_lost = 0;
     x.dt_s = dt;
     return x;
 }
@@ -83,6 +84,25 @@ static int test_operator(void) {
     return 0;
 }
 
+static int test_track_lost_loiters(void) {
+    fs_machine m;
+    fs_input lost;
+    fs_init(&m);
+    lost = in(1, 0, 0, 0.1);
+    lost.track_lost = 1;
+    if (fs_step(&m, lost) != FS_LOITER) {
+        return fail("track loss should loiter while the link is up");
+    }
+    if (fs_step(&m, lost) != FS_LOITER) {
+        return fail("track loss should hold loiter");
+    }
+    if (fs_step(&m, in(1, 0, 0, 0.1)) != FS_CONTINUE) {
+        return fail("clearing the track loss should resume");
+    }
+    printf("track_lost continue->loiter->continue\n");
+    return 0;
+}
+
 static int test_store(void) {
     sf_buf b;
     unsigned char out[SF_LEN];
@@ -121,7 +141,7 @@ static int test_store(void) {
 }
 
 int main(void) {
-    if (test_link_ladder() || test_restore() || test_operator() || test_store()) {
+    if (test_link_ladder() || test_restore() || test_operator() || test_track_lost_loiters() || test_store()) {
         return 1;
     }
     printf("failsafe tests passed\n");
