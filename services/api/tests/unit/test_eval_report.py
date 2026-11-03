@@ -14,7 +14,8 @@ def test_parse_and_splice_round_trip() -> None:
     false_alarms_per_hour 0
     drift_m_per_min 3.00
     rmse_m 1.76
-    replan_us 0.03
+    replan_ms_at_10hz 1313
+    cbba_conflicts 0
     tasks_covered_after_loss 4
     unguided_min_m 0.00
     guided_min_m 20.10
@@ -37,7 +38,7 @@ def test_parse_and_splice_round_trip() -> None:
     assert out.startswith("before\n")
     assert out.endswith("after\n")
     rows = metric_rows(log)
-    assert len(rows) == 16
+    assert len(rows) == 17
     assert ("GNSS loss detect", 1.6, "s", "Phase 2") in rows
 
 

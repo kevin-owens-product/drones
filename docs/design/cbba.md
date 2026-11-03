@@ -1,10 +1,37 @@
-# Task allocation
+# Task allocation (CBBA)
 
-`onboard/alloc` is a bundle builder. Each live vehicle bids its reward minus distance and keeps a task only when its bid is the highest. A dead vehicle is marked not alive and the others run the same builder again.
+`onboard/alloc` is the consensus-based bundle algorithm from Choi, Brunet, and How (2009).
 
-On the three-vehicle, four-task case, the nearest vehicle wins each nearby task. After vehicle 0 is removed, the other two cover all four tasks. One thousand replans averaged 0.03 microseconds. The test fails if a replan takes longer than 1 millisecond or the dropped vehicle still owns a task.
+## How it works
 
-This is one consensus round with static scores, not yet messages on a simulated radio.
+Every vehicle keeps its own table: the winning bid and winner it believes in for each task, and a timestamp for the last time it heard (directly or relayed) from each peer. Each round has two phases.
+
+1. **Bundle build.** The vehicle adds tasks one at a time. For each candidate it tries every insertion point in its current path and takes the best marginal gain. The score is time-discounted reward (`reward * 0.98^seconds`), so a task far down a long path is worth less. It only adds a task if its bid beats the bid in its table.
+2. **Consensus.** The vehicle reads the tables of the neighbors it heard this round and applies the CBBA update, reset, and leave rules (Table 1 of the paper), using the timestamps to decide whose information is newer.
+
+After consensus, if the vehicle lost a task in its bundle it **releases that task and everything it added after it**. Those later bids were computed on a path that no longer exists. The old greedy auction skipped this step, so an outbid vehicle kept the task in its bundle and two vehicles could fly to the same place.
+
+Path insertion can make a later bid larger than an earlier one, which breaks the diminishing-marginal-gain property CBBA needs to converge. Each bid is capped at the previous bid in the bundle (bid warping, Johnson, Choi, and How, 2011). Before the cap, 13 of 1,000 runs did not converge. After it, all of them did.
+
+The rounds run in one process for testing, but each agent reads only its own state and the messages it received. A message is dropped with a set probability, and the network is an adjacency matrix, so a line of vehicles that can each only hear their neighbors is a normal case.
+
+## Results
+
+From `make -C onboard/alloc test`, six vehicles and twelve tasks in a 500 m square:
+
+| Check | Result |
+| --- | --- |
+| Random worlds, line network, 20% message loss | 500 |
+| Tasks held by two vehicles (full and line runs) | 0 |
+| Runs that did not converge | 0 |
+| Line results that differ from the fully connected result | 10 of 500, worst at 98.1% of its value |
+| Consensus rounds, p50 / p95 | 14 / 22 |
+| Re-plan after losing an interior vehicle, mean / worst | 13.1 / 25 rounds |
+| Re-plan latency at a 10 Hz message rate | about 1.3 s |
+
+Bid warping keeps convergence but lets message order decide between plans of nearly equal value, which is why a few lossy runs land on a slightly different plan. The test allows up to 5% of seeds to differ and requires at least 90% of the full-network value.
+
+**Limits.** This is a unit check, not a SITL flight. Tasks are points with no time windows. Vehicles do not move during consensus. Loss detection is given (the dead vehicle is marked), where a fielded system would use a heartbeat timeout.
 
 ## One search command
 
