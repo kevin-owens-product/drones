@@ -15,6 +15,7 @@ REQUIRED = (
     "/v1/session/dev-login",
     "/v1/edge/reconcile",
     "/v1/flight/command",
+    "/v1/flight/track",
     "/v1/eval/runs",
     "/v1/logs/ulg/series",
     "/v1/logs/blackbox/series",
