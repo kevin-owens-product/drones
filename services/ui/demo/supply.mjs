@@ -300,6 +300,10 @@ const SPARES_PER_AIRFRAME = { prop: 8, arm: 2, motor: 1, battery: 3 };
  */
 export function createSupply({ births = [] } = {}) {
   const lots = LOTS.map((l) => ({ ...l }));
+  const pos = OPEN_PO.map((p) => ({ ...p }));
+  const scarsClosed = new Set();
+  let poSeq = 41240;
+  let lotSeq = 100;
   const finished = { ...FINISHED };
   const unitStock = Object.fromEntries(Object.entries(UNIT_STOCK).map(([k, v]) => [k, { ...v }]));
   const shipments = [
@@ -320,7 +324,9 @@ export function createSupply({ births = [] } = {}) {
     return lots.map((l) => {
       const part = partOf(l.pn);
       const tails = births.filter((b) => b.parts.some((p) => p.lot === l.lot)).map((b) => ({ tail: b.tail_number, serial: b.serial }));
-      return { ...l, name: part.name, supplier: part.supplier, status: held.has(l.lot) ? "quarantined" : "released", where_used: tails };
+      // A disposition or an incoming inspection outranks the Attrition hold.
+      const status = l.disposition ?? (l.inspection === "pending" ? "pending inspection" : held.has(l.lot) ? "quarantined" : "released");
+      return { ...l, name: part.name, supplier: part.supplier, status, where_used: tails };
     });
   }
 
@@ -386,7 +392,7 @@ export function createSupply({ births = [] } = {}) {
       const toBuild = short - fromStock;
       const req = requirements(u.sku, toBuild, stock);
       const blocking = req.filter((r) => r.short > 0);
-      const po = blocking.map((b) => OPEN_PO.find((p) => p.pn === b.pn)).filter(Boolean);
+      const po = blocking.map((b) => pos.find((p) => p.pn === b.pn)).filter(Boolean);
       out.push({
         id: `KIT-${unit}`,
         unit,
@@ -411,7 +417,7 @@ export function createSupply({ births = [] } = {}) {
     for (const [pn, rop] of Object.entries(REORDER)) {
       const have = stock[pn] ?? 0;
       if (have < rop) {
-        const po = OPEN_PO.find((p) => p.pn === pn);
+        const po = pos.find((p) => p.pn === pn);
         out.push({
           kind: "below reorder point",
           pn,
@@ -424,7 +430,7 @@ export function createSupply({ births = [] } = {}) {
     for (const l of held) {
       out.push({ kind: "lot quarantined", pn: l.pn, name: l.name, detail: `${l.lot}: ${l.on_hand} on the shelf held by the Attrition hold; ${l.where_used.length} named tails built from it`, severity: "high" });
     }
-    for (const p of OPEN_PO.filter((x) => x.late_days > 0)) {
+    for (const p of pos.filter((x) => x.late_days > 0)) {
       out.push({ kind: "late purchase order", pn: p.pn, name: partOf(p.pn).name, detail: `${p.po} is ${p.late_days} days past the promised date`, severity: "medium" });
     }
     return out;
@@ -435,12 +441,14 @@ export function createSupply({ births = [] } = {}) {
     return SUPPLIERS.map((s) => {
       const mine = rows.filter((l) => l.supplier === s.id);
       const quarantined = mine.filter((l) => l.status === "quarantined");
+      // A held or rejected lot opens a supplier corrective action request (SCAR); quality closes it.
+      const flagged = mine.filter((l) => (l.status === "quarantined" || l.held_once || l.status === "rejected") && !scarsClosed.has(l.lot));
       return {
         ...s,
         lots: mine.length,
         quarantined: quarantined.map((l) => l.lot),
-        // A held lot opens a supplier corrective action request.
-        scar: quarantined.length > 0 ? `SCAR open for ${quarantined.map((l) => l.lot).join(", ")}` : null,
+        scar_lots: flagged.map((l) => l.lot),
+        scar: flagged.length > 0 ? `SCAR open for ${flagged.map((l) => l.lot).join(", ")}` : null,
       };
     });
   }
@@ -476,7 +484,7 @@ export function createSupply({ births = [] } = {}) {
       parts: PARTS.map((p) => ({ ...p, on_hand: stock[p.pn] ?? 0, reorder_point: REORDER[p.pn] ?? null })),
       lots: lotRows(holds),
       suppliers: supplierRows(holds),
-      open_po: OPEN_PO,
+      open_po: pos,
       build,
       eol: eolYield(),
       exceptions: exceptions(holds),
@@ -504,14 +512,13 @@ export function createSupply({ births = [] } = {}) {
     const wo = openWorkOrders(holds).find((w) => w.id === id);
     if (!wo) return { error: "no such work order", status: 404 };
     if (wo.status !== "open") return { error: `work order is ${wo.status}`, status: 409 };
-    const held = heldLots(holds);
     const stock = usable(holds);
     const missing = wo.parts.filter((p) => (stock[p.pn] ?? 0) < p.qty);
     if (missing.length) return { error: `Not enough released stock: ${missing.map((m) => m.name).join(", ")}`, status: 409 };
     const issued = [];
     for (const p of wo.parts) {
       let left = p.qty;
-      for (const l of lots.filter((x) => x.pn === p.pn && !held.has(x.lot) && x.on_hand > 0).sort((a, b) => a.received.localeCompare(b.received))) {
+      for (const l of releasedLots(holds).filter((x) => x.pn === p.pn && x.on_hand > 0)) {
         const take = Math.min(left, l.on_hand);
         l.on_hand -= take;
         left -= take;
@@ -525,5 +532,159 @@ export function createSupply({ births = [] } = {}) {
     return { work_order: { ...wo, status: "closed", closed_by: by, issued } };
   }
 
-  return { snapshot, replenishment, ship, closeWorkOrder, openWorkOrders, usable };
+  /** Released lots, oldest first: the order parts are issued in. */
+  function releasedLots(holds) {
+    const ok = new Set(lotRows(holds).filter((l) => l.status === "released").map((l) => l.lot));
+    return lots.filter((l) => ok.has(l.lot)).sort((a, b) => a.received.localeCompare(b.received));
+  }
+
+  function addDays(iso, days) {
+    const d = new Date(`${iso}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+
+  // ---- Actions. Each returns { ok, message } or { error, status }. ----
+
+  /** Raise a purchase order to the part's supplier, due after its lead time. */
+  function raisePo(pn, qty, today) {
+    const part = partOf(pn);
+    if (!part) return { error: "no such part", status: 404 };
+    const n = Math.round(Number(qty));
+    if (!Number.isFinite(n) || n <= 0 || n > 100000) return { error: "quantity must be 1 to 100,000", status: 400 };
+    const po = { po: `PO-${(poSeq += 1)}`, pn, qty: n, due: addDays(today, part.lead_days), supplier: part.supplier, late_days: 0, raised: today };
+    pos.push(po);
+    return { ok: true, po, message: `${po.po}: ${n} × ${part.name.toLowerCase()} from ${SUPPLIERS.find((x) => x.id === part.supplier)?.name}, due ${po.due}` };
+  }
+
+  /** Expedite: the supplier commits to ship in 5 days at a premium (assumed 12% of the order value). */
+  function expeditePo(id, today) {
+    const po = pos.find((p) => p.po === id);
+    if (!po) return { error: "no such PO", status: 404 };
+    if (po.expedited) return { error: "already expedited", status: 409 };
+    const premium = Math.round(partOf(po.pn).usd * po.qty * 0.12);
+    Object.assign(po, { due: addDays(today, 5), late_days: 0, expedited: true, premium_usd: premium });
+    return { ok: true, po, message: `${po.po} expedited to ${po.due}; premium freight about $${premium.toLocaleString("en-US")} (assumed 12%)` };
+  }
+
+  /** Receive a PO at the dock: a new lot waits for incoming inspection. */
+  function receivePo(id, today) {
+    const i = pos.findIndex((p) => p.po === id);
+    if (i < 0) return { error: "no such PO", status: 404 };
+    const po = pos[i];
+    pos.splice(i, 1);
+    const lot = { lot: `${po.pn.split("-")[0]}-R${(lotSeq += 1)}`, pn: po.pn, received: today, qty: po.qty, on_hand: po.qty, inspection: "pending", po: po.po };
+    lots.push(lot);
+    return { ok: true, lot, message: `${po.po} received as lot ${lot.lot}; waiting for incoming inspection` };
+  }
+
+  /** Incoming inspection: accept releases the lot to stock, reject sends it back and opens a SCAR. */
+  function inspectLot(id, accept) {
+    const lot = lots.find((l) => l.lot === id);
+    if (!lot) return { error: "no such lot", status: 404 };
+    if (lot.inspection !== "pending") return { error: "lot is not waiting for inspection", status: 409 };
+    lot.inspection = accept ? "accepted" : "rejected";
+    if (!accept) {
+      lot.disposition = "rejected";
+      lot.on_hand = 0;
+    }
+    return { ok: true, message: accept ? `${lot.lot} accepted: ${lot.on_hand} released to stock` : `${lot.lot} rejected and returned; supplier corrective action opened` };
+  }
+
+  /** Disposition a held lot: return to supplier, scrap, or release after inspection (material review). */
+  function dispositionLot(id, action, holds) {
+    const lot = lots.find((l) => l.lot === id);
+    if (!lot) return { error: "no such lot", status: 404 };
+    const row = lotRows(holds).find((l) => l.lot === id);
+    if (row?.status !== "quarantined") return { error: "lot is not on hold", status: 409 };
+    const n = lot.on_hand;
+    if (action === "return") {
+      Object.assign(lot, { held_once: true, disposition: "returned to supplier", on_hand: 0 });
+      return { ok: true, message: `${lot.lot}: ${n} returned to the supplier for credit` };
+    }
+    if (action === "scrap") {
+      Object.assign(lot, { held_once: true, disposition: "scrapped", on_hand: 0 });
+      return { ok: true, message: `${lot.lot}: ${n} scrapped` };
+    }
+    if (action === "release") {
+      Object.assign(lot, { held_once: true, disposition: "released" });
+      return { ok: true, message: `${lot.lot} released after inspection; fielded serials keep their own work orders` };
+    }
+    return { error: "action must be return, scrap or release", status: 400 };
+  }
+
+  function closeScar(supplierId, holds) {
+    const s = supplierRows(holds).find((x) => x.id === supplierId);
+    if (!s?.scar) return { error: "no open SCAR", status: 409 };
+    const rows = lotRows(holds);
+    const still = s.scar_lots.filter((lot) => rows.find((l) => l.lot === lot)?.status === "quarantined");
+    if (still.length) return { error: `Disposition ${still.join(", ")} first`, status: 409 };
+    for (const lot of s.scar_lots) scarsClosed.add(lot);
+    return { ok: true, message: `SCAR closed for ${s.name}` };
+  }
+
+  /** Build finished airframes from released parts, issuing the oldest lots first. */
+  function build(sku, qty, holds) {
+    const n = Math.round(Number(qty));
+    if (!BOMS[sku]) return { error: "this SKU has no build plan here", status: 400 };
+    const can = buildable(sku, usable(holds));
+    if (!Number.isFinite(n) || n <= 0) return { error: "quantity must be at least 1", status: 400 };
+    if (n > can.qty) return { error: `Only ${can.qty} can be built; ${partOf(can.limit)?.name ?? can.limit} runs out`, status: 409 };
+    const issued = [];
+    for (const [pn, per] of BOMS[sku]) {
+      let left = per * n;
+      for (const l of releasedLots(holds).filter((x) => x.pn === pn && x.on_hand > 0)) {
+        const take = Math.min(left, l.on_hand);
+        l.on_hand -= take;
+        left -= take;
+        issued.push({ pn, lot: l.lot, qty: take });
+        if (!left) break;
+      }
+    }
+    finished[sku] = (finished[sku] ?? 0) + n;
+    return { ok: true, issued, message: `${n} ${nameOf(sku)} built and through EOL; ${finished[sku]} now in finished goods` };
+  }
+
+  /** Issue loose parts (a spares pack) from released lots, oldest first. All or nothing. */
+  function issueParts(items, holds) {
+    const stock = usable(holds);
+    const missing = items.filter((i) => (stock[i.pn] ?? 0) < i.qty);
+    if (missing.length) return { error: `Not enough released stock: ${missing.map((m) => partOf(m.pn)?.name ?? m.pn).join(", ")}`, status: 409 };
+    const issued = [];
+    for (const i of items) {
+      let left = i.qty;
+      for (const l of releasedLots(holds).filter((x) => x.pn === i.pn && x.on_hand > 0)) {
+        const take = Math.min(left, l.on_hand);
+        l.on_hand -= take;
+        left -= take;
+        issued.push({ pn: i.pn, lot: l.lot, qty: take });
+        if (!left) break;
+      }
+    }
+    return { ok: true, issued };
+  }
+
+  /** Take finished goods for a shipment; false when there are not enough. */
+  function pick(sku, qty) {
+    if ((finished[sku] ?? 0) < qty) return false;
+    finished[sku] -= qty;
+    return true;
+  }
+
+  function addShipment(s) {
+    const out = { id: `SHP-${(seq += 1)}`, status: "in transit", created: new Date().toISOString().slice(0, 10), ...s };
+    shipments.push(out);
+    return out;
+  }
+
+  function receiveAtUnit(unit, qty) {
+    if (unitStock[unit]) unitStock[unit].airframes += qty;
+  }
+
+  return {
+    snapshot, replenishment, ship, closeWorkOrder, openWorkOrders, usable, buildable,
+    raisePo, expeditePo, receivePo, inspectLot, dispositionLot, closeScar, build, pick, issueParts, addShipment, receiveAtUnit, spareParts,
+    shipments, finished, unitStock, pos,
+  };
+
 }

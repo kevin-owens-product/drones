@@ -1,5 +1,7 @@
 export type Section =
   | "operate"
+  | "ops"
+  | "supply"
   | "fleet"
   | "company"
   | "missions"
@@ -21,4 +23,7 @@ export type Viewer = {
   clearance: string;
   ntk_programs: string[];
   roles: string[];
+  /** "neros" runs operations; a customer id runs its own fleet. Absent on the real API: everything shows. */
+  org?: string;
+  org_name?: string;
 };

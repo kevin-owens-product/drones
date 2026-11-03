@@ -13,12 +13,17 @@ import { FieldReportsPage } from "./pages/FieldReports";
 import { FleetPage } from "./pages/Fleet";
 import { MissionsPage } from "./pages/Missions";
 import { OperatePage } from "./operate/Operate";
+import { OpsPage } from "./pages/Ops";
+import { PortalPage } from "./pages/Portal";
 import { Login } from "./shell/Login";
 import { Shell } from "./shell/Shell";
 import type { Section, Viewer } from "./shell/types";
+import { homeOf, rememberWorkspace, sectionsFor, workspaceOf, type Workspace } from "./shell/workspace";
 
 const SECTIONS: readonly Section[] = [
   "operate",
+  "ops",
+  "supply",
   "fleet",
   "company",
   "missions",
@@ -114,6 +119,26 @@ export function App() {
     setSection(next);
   }
 
+  // Each organisation sees its own workspace; a section outside it lands on that workspace's home.
+  const [workspace, setWorkspace] = useState<Workspace>("all");
+  useEffect(() => {
+    if (viewer) setWorkspace(workspaceOf(viewer));
+  }, [viewer]);
+  useEffect(() => {
+    if (!viewer) return;
+    const w = workspaceOf(viewer);
+    if (!sectionsFor(w).includes(section)) {
+      window.history.replaceState(null, "", `#${homeOf(w)}`);
+      setSection(homeOf(w));
+    }
+  }, [viewer, workspace, section]);
+
+  function onWorkspace(next: Workspace) {
+    rememberWorkspace(next);
+    setWorkspace(next);
+    onSection(homeOf(next));
+  }
+
   async function onLogin(event: FormEvent) {
     event.preventDefault();
     setFault("");
@@ -140,7 +165,9 @@ export function App() {
   }
 
   const page = viewer ? (
-    <Shell banner={banner} viewer={viewer} section={section} onSection={onSection} onLogout={() => void onLogout()}>
+    <Shell banner={banner} viewer={viewer} section={section} onSection={onSection} workspace={workspace} onWorkspace={onWorkspace} onLogout={() => void onLogout()}>
+      {section === "ops" ? <OpsPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "supply" ? <PortalPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "operate" ? <OperatePage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "fleet" ? <FleetPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "company" ? <CompanyPage viewer={viewer} onBanner={setBanner} /> : null}

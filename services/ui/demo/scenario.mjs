@@ -3,6 +3,7 @@
 // same code runs behind demo/server.mjs and, for the hosted static demo, inside
 // the browser (src/staticDemo.ts). All data is synthetic and labelled so.
 import { createCompany } from "./company.mjs";
+import { createOps, NEROS } from "./ops.mjs";
 import { plan as planConfig } from "./configure.mjs";
 import { nameOf, skuForTail } from "./supply.mjs";
 import { denialPicture } from "./denial.mjs";
@@ -200,6 +201,8 @@ export function createDemo(opts = {}) {
     airworthiness: c.grounded ? "grounded" : c.tail === "NX-08" ? "restricted" : "airworthy",
     airworthiness_reason: c.grounded ?? (c.tail === "NX-08" ? "Prop strike on recovery; hover check before next sortie" : null),
     classification: "UNCLASSIFIED",
+    // The named tails are Customer A's fleet (SIM); synthetic ones belong to no one.
+    owner: c.swarm ? null : "CUS-A",
   }));
 
   // Factory birth records for the named tails, and the audit log. The log opens
@@ -406,6 +409,7 @@ export function createDemo(opts = {}) {
 
     const ROUTES = {
     "/v1/session/config": () => ({ auth_mode: "dev", dev_login: true, system_high: "UNCLASSIFIED", login_url: "" }),
+    // The local demo server has no sign-in and no org, so every page shows (both workspaces at once).
     "/v1/me": () => ({ id: "u1", username: "demo.operator", display_name: "Demo Operator", citizenship: "USA", clearance: "UNCLASSIFIED", ntk_programs: [], roles: ["operator"] }),
     "/v1/platforms": () => ({ items: PLATFORMS }),
     "/v1/telemetry/live": () => {
@@ -568,7 +572,7 @@ export function createDemo(opts = {}) {
     const action = url.pathname === "/v1/company/ship" ? "kit.ship" : url.pathname === "/v1/company/work-orders/close" ? "work_order.close" : null;
     if (!action) return { status: 404, body: { error: "unknown" } };
     const resource = String(msg.plan ?? msg.id ?? "");
-    if (caller && !can(caller.roles, "fleet.write")) {
+    if (caller && !can(caller.roles, "fleet.write") && !caller.roles.includes("ops_lead")) {
       audit.append({ actor, action, resource_type: action === "kit.ship" ? "kit" : "work_order", resource_id: resource, decision: "deny", reason_codes: ["role_denied"] });
       return { status: 403, body: { detail: "This needs the maintainer, mission commander or admin role." } };
     }
@@ -592,15 +596,49 @@ export function createDemo(opts = {}) {
     return { status: 200, body: out };
   }
 
+  // Two workspaces: the Neros operations queue and each customer's portal (demo/ops.mjs).
+  const ops = createOps({ company, audit, platforms: PLATFORMS });
+  function opsRoute(method, url, raw) {
+    const ctx = { holds, demand: opts.attrition?.demand ?? null, platforms: PLATFORMS };
+    const viewer = caller ? { ...caller, org: caller.org ?? NEROS.id } : null;
+    if (method === "GET" && url.pathname === "/v1/ops/queue") {
+      if (viewer && viewer.org !== NEROS.id) return { status: 403, body: { detail: "The operations queue is Neros's own workspace." } };
+      return { status: 200, body: ops.queue(ctx) };
+    }
+    if (method === "GET" && url.pathname === "/v1/ops/portal") {
+      // Neros staff can open any customer's portal to see what the customer sees; customers only their own.
+      const asked = url.searchParams.get("org");
+      const org = viewer && viewer.org !== NEROS.id ? viewer.org : asked ?? "CUS-A";
+      const out = ops.portal(org, ctx);
+      return out ? { status: 200, body: out } : { status: 404, body: { detail: "no such customer" } };
+    }
+    if (method === "POST" && url.pathname === "/v1/ops/act") {
+      let msg = {};
+      try {
+        msg = JSON.parse(raw);
+      } catch {
+        return { status: 400, body: { error: "json" } };
+      }
+      return ops.act(viewer, String(msg.action ?? ""), msg.args ?? {}, ctx);
+    }
+    return { status: 404, body: { error: "unknown" } };
+  }
+
   let caller = null;
   return {
     extra: EXTRA,
     handle(method, url, raw = "", who = null) {
       caller = who;
       if (url.pathname === "/v1/audit" && caller && !can(caller.roles, "audit.read")) return { status: 403, body: { detail: "role_denied" } };
+      const customer = caller?.org && caller.org !== NEROS.id;
+      // Neros internals stay out of customer workspaces.
+      if (customer && (url.pathname.startsWith("/v1/company") || url.pathname === "/v1/ops/queue")) return { status: 403, body: { detail: "That is Neros's own workspace." } };
+      // Loss data is the customer's. Neros sees it only while Customer A shares it.
+      if (url.pathname.startsWith("/v1/attrition") && caller && !customer && !ops.sharing["CUS-A"]) return { status: 403, body: { detail: "Customer A has turned off sharing of loss data with Neros." } };
       if (url.pathname.startsWith("/v1/attrition")) return attrition(method, url, raw);
       if (url.pathname === "/v1/field-reports") return fieldReports(method, raw);
       if (url.pathname.startsWith("/v1/company")) return companyRoute(method, url, raw);
+      if (url.pathname.startsWith("/v1/ops/")) return opsRoute(method, url, raw);
       if (url.pathname === "/v1/maintenance") {
         const items = company.openWorkOrders(holds).filter((w) => w.status === "open").map((w) => ({ id: w.id, tail_number: w.tail, summary: w.summary, status: "open" }));
         return { status: 200, body: { items } };
