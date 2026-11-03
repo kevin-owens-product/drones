@@ -4,8 +4,9 @@
   "north": 35.784432495024426,
   "east": -120.68792924190807,
   "elevation_m": [
-    171,
-    660
+    170.6,
+    660.2
   ],
+  "heightmap": "terrain-height.png",
   "attribution": "Terrain: AWS Terrain Tiles (SRTM, USGS NED). 20 m contours."
 }

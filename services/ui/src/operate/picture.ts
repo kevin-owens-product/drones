@@ -16,6 +16,10 @@ export interface Basemap {
   north: number;
   east: number;
   attribution: string;
+  /** Optional 8-bit greyscale heightmap over the same bounds, for the 3D view. */
+  heightmap?: string;
+  /** Elevation at grey 0 and grey 255, metres above sea level. */
+  elevation_m?: [number, number];
 }
 
 export interface Zone {

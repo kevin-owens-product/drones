@@ -1649,3 +1649,79 @@ kbd {
     animation: none;
   }
 }
+
+/* 3D view */
+.m3 {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #070a0e;
+}
+
+.m3 canvas {
+  display: block;
+  cursor: grab;
+}
+
+.m3 canvas:active {
+  cursor: grabbing;
+}
+
+.m3-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.m3-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: rgba(220, 232, 244, 0.85);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  white-space: nowrap;
+  text-shadow: 0 0 3px #070a0e, 0 0 3px #070a0e;
+}
+
+.m3-label[data-health="warn"] {
+  color: #f7cb7a;
+}
+
+.m3-label[data-health="alert"] {
+  color: #ff9b8f;
+}
+
+.m3-label.is-sel {
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.m3-note {
+  position: absolute;
+  right: 14px;
+  top: 10px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.m3-failed,
+.op-3d-loading {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+}
+
+.op-3d-loading {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+}
+
+.chip-3d {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}

@@ -1,0 +1,23 @@
+# Hosted demo of the operator console at drones.productexec.co.
+# Static build: the scripted sortie runs in the browser (services/ui/src/staticDemo.ts),
+# so there is no API, database or server behind it. Every page says DEMO DATA.
+[build]
+  base = "services/ui"
+  command = "npm ci && npm run build:static"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "DENY"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
