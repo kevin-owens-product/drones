@@ -1,4 +1,4 @@
-.PHONY: up down demo test test-unit test-integration test-scale scale lint opa ui sbom ci
+.PHONY: up down demo test test-unit test-integration test-scale scale lint opa ui sbom ci bench-demo
 
 up:
 	@test -f .env || (echo "Copy .env.example to .env first" && exit 1)
@@ -81,6 +81,15 @@ eval: $(PY)
 
 # Closed-loop trials against PX4 SIH in Docker. About an hour on four cores.
 # Writes the raw rows and summary that `make eval` reads.
+# End-of-line bench against the loopback emulator (no hardware). With a board:
+#   $(PY) sim/bench/bench.py --connect /dev/ttyACM0 --serial <serial> --parts <parts.json> --firmware <image>
+bench-demo: $(PY)
+	$(PY) -m pip install -q "pymavlink>=2.4.41"
+	cd sim/bench && for f in good bad-imu bad-param armed lossy no-mag; do \
+	  $(abspath $(PY)) bench.py --emulate $$f --serial DEMO-$$f --seconds 5 --parts examples/parts.json \
+	    --firmware-sha256 0000000000000000000000000000000000000000000000000000000000000000 \
+	    --out out/DEMO-$$f.json || true; done
+
 sitl: $(PY)
 	cd sim/sitl && $(abspath $(PY)) gnss_denied.py --faults none,loss,step,drag,multipath --modes gnss_only,fused,gated --seeds 3 --speed 3 --denied 120 --out ../../docs/eval/sitl_gnss.jsonl
 	cd sim/sitl && $(abspath $(PY)) track_loop.py --tracker v1 --seeds 5 --speed 1 --duration 90 --out ../../docs/eval/sitl_track.jsonl

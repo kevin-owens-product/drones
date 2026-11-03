@@ -22,6 +22,11 @@ jobs:
       - name: Baked demo reports match the code
         working-directory: services/api
         run: python -m a2e.attrition.report | diff - ../ui/demo/assets/attrition.json
+      - name: Bench checks (against the MAVLink emulator)
+        run: |
+          pip install "pymavlink>=2.4.41"
+          ruff check sim/bench
+          pytest sim/bench -q
       - name: Onboard C suites
         run: |
           for d in firmware/crsf onboard/*; do make -C "$d" test; done
