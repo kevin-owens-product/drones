@@ -98,6 +98,11 @@ Each row says where it was measured. **Unit check** rows come from the onboard C
 | Link success at 50 m | 0.987 fraction | Unit check | Phase 5 |
 | Link success at 5 km | 0.087 fraction | Unit check | Phase 5 |
 | Link success inside jammer | 0.004 fraction | Unit check | Phase 5 |
+| Fleet sorties completed under jammer, default failsafe | 0.671 fraction | Unit check | Phase 5 |
+| Fleet sorties completed under jammer, mesh and lost-link policy | 1.000 fraction | Unit check | Phase 5 |
+| Dense crossing minimum separation | 5.97 m | Unit check | Phase 4 |
+| Dense crossing losses of separation | 0 events | Unit check | Phase 4 |
+| Dense crossing geofence breaches | 0 events | Unit check | Phase 4 |
 | Lock retention | 50 of 50 runs | Unit check | Phase 3 |
 | Reacquisition | 0.00 frames | Unit check | Phase 3 |
 | Mean pixel error | 0.000 px | Unit check | Phase 3 |
