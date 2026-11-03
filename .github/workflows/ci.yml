@@ -19,6 +19,9 @@ jobs:
       - name: Unit tests
         working-directory: services/api
         run: pytest tests/unit
+      - name: Onboard C suites
+        run: |
+          for d in firmware/crsf onboard/*; do make -C "$d" test; done
       - name: OPA
         run: docker run --rm -v "$PWD/policies:/policies" openpolicyagent/opa:0.70.0 test /policies -v
       - name: SBOM
@@ -68,17 +71,10 @@ jobs:
         run: |
           pip install "./services/api[dev]"
           export A2E_DATA_KEY="$(python -c 'import base64; print(base64.b64encode(b"u"*32).decode())')"
-          python -c 'import urllib.request,time
-url="http://127.0.0.1:8181/health"
-last=""
-for _ in range(30):
-    try:
-        urllib.request.urlopen(url, timeout=2)
-        break
-    except Exception as exc:
-        last=str(exc)
-        time.sleep(1)
-else:
-    raise SystemExit(last)'
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8181/health >/dev/null && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8181/health
           python -m a2e.bootstrap
           cd services/api && pytest tests/unit tests/integration --cov=a2e
