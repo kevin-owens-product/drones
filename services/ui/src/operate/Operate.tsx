@@ -6,9 +6,10 @@ import type { Viewer } from "../shell/types";
 import { Hud } from "./Hud";
 import { TacMap, type Trail } from "./TacMap";
 import { Timeline } from "./Timeline";
+import { blocker, checks, isGo, median, onGround, seconds, tick, type Check, type ReadyClock } from "./readiness";
 import { ago, diffEvents, fmt, mergeFleet, type OpsEvent, type Vehicle } from "./vehicle";
 
-type Filter = "all" | "attention" | "denied";
+type Filter = "all" | "attention" | "denied" | "launch";
 
 function messageOf(error: unknown, fallback: string): string {
   return error instanceof Error && error.message.length > 0 ? error.message : fallback;
@@ -29,8 +30,9 @@ function Battery({ pct }: { pct: number | undefined }): JSX.Element {
   );
 }
 
-function RailRow({ v, selected, onSelect }: { v: Vehicle; selected: boolean; onSelect: () => void }): JSX.Element {
+function RailRow({ v, selected, onSelect, launch }: { v: Vehicle; selected: boolean; onSelect: () => void; launch?: readonly Check[] | undefined }): JSX.Element {
   const p = v.live;
+  const go = launch ? isGo(launch) : false;
   return (
     <li>
       <button type="button" className={`vrow health-${v.health}${selected ? " is-selected" : ""}`} aria-pressed={selected} onClick={onSelect} data-tail={v.tail}>
@@ -38,11 +40,15 @@ function RailRow({ v, selected, onSelect }: { v: Vehicle; selected: boolean; onS
         <span className="vrow-main">
           <span className="vrow-top">
             <span className="mono vrow-tail">{v.tail}</span>
-            {p?.mode ? <span className="tag">{p.mode}</span> : null}
+            {launch ? <span className={go ? "tag tag-go" : "tag tag-nogo"}>{go ? "GO" : "NO-GO"}</span> : p?.mode ? <span className="tag">{p.mode}</span> : null}
             {p?.gnss_trusted === false ? <span className="tag tag-warn">{(p.nav_source ?? "DR").toUpperCase()}</span> : null}
           </span>
           <span className="vrow-sub meta">
-            {v.reasons.length > 0 ? v.reasons.join(" · ") : `${fmt(p?.alt_m, 0, " m")} · ${fmt(p?.ground_mps, 1, " m/s")}`}
+            {launch
+              ? (blocker(launch) ?? "All checks pass")
+              : v.reasons.length > 0
+                ? v.reasons.join(" · ")
+                : `${fmt(p?.alt_m, 0, " m")} · ${fmt(p?.ground_mps, 1, " m/s")}`}
           </span>
         </span>
         <span className="vrow-side">
@@ -51,6 +57,31 @@ function RailRow({ v, selected, onSelect }: { v: Vehicle; selected: boolean; onS
         </span>
       </button>
     </li>
+  );
+}
+
+function Readiness({ list, entry, now }: { list: readonly Check[]; entry: { upAt: number | null; readyAt: number | null } | undefined; now: number }): JSX.Element {
+  const go = isGo(list);
+  let clock = "Waiting for power-on";
+  if (entry?.readyAt != null) clock = entry.upAt === null ? "Ready when the console opened" : `Ready ${seconds(entry.readyAt - entry.upAt)} after power-on`;
+  else if (entry?.upAt != null) clock = `Powered on ${seconds(now - entry.upAt)} ago`;
+  else if (entry) clock = "Power-on time not seen";
+  return (
+    <section className="ready" aria-label="Launch readiness">
+      <header className="ready-head">
+        <span className={go ? "ready-verdict is-go" : "ready-verdict is-nogo"}>{go ? "GO" : "NO-GO"}</span>
+        <span className="meta">{clock}</span>
+      </header>
+      <ul className="ready-checks">
+        {list.map((c) => (
+          <li key={c.id} className={c.ok ? "is-ok" : "is-bad"}>
+            <span className="ready-mark" aria-hidden="true">{c.ok ? "✓" : "✕"}</span>
+            <span>{c.label}</span>
+            <span className="mono meta">{c.detail}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -80,6 +111,8 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
   const search = useRef<HTMLInputElement>(null);
   const previous = useRef<Map<string, Vehicle> | null>(null);
   const eventId = useRef(0);
+  const readyClock = useRef<ReadyClock>(new Map());
+  const [readyTimes, setReadyTimes] = useState<number[]>([]);
   void viewer;
 
   useEffect(() => {
@@ -136,6 +169,7 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
   }, []);
 
   const fleet = useMemo(() => mergeFleet(registry, points, now), [registry, points, now]);
+  const launch = useMemo(() => new Map(fleet.filter(onGround).map((v) => [v.tail, checks(v)] as const)), [fleet]);
 
   useEffect(() => {
     const before = previous.current;
@@ -148,14 +182,28 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
         .map<OpsEvent>((v) => ({ id: ++eventId.current, at: now, tail: v.tail, level: v.health === "alert" ? "alert" : "warn", text: v.reasons.join(" · ") }));
       setEvents(seed);
     }
-    if (fleet.length > 0) previous.current = new Map(fleet.map((v) => [v.tail, v]));
-  }, [fleet, now]);
+    if (fleet.length > 0) {
+      const go = new Map([...launch].map(([tail, list]) => [tail, isGo(list)] as const));
+      // Vehicles already up when the console first hears the fleet have no power-on time.
+      const heardBefore = before !== null && [...before.values()].some((v) => v.live !== null);
+      const { clock, ready } = tick(readyClock.current, fleet, go, now, !heardBefore);
+      readyClock.current = clock;
+      if (ready.length > 0) {
+        const timed = ready.flatMap((r) => (r.ms === null ? [] : [r.ms]));
+        if (timed.length > 0) setReadyTimes((list) => [...list, ...timed].slice(-50));
+        const fresh = ready.map<OpsEvent>((r) => ({ id: ++eventId.current, at: now, tail: r.tail, level: "info", text: r.ms === null ? "Ready to launch" : `Ready to launch, ${seconds(r.ms)} from power-on` }));
+        setEvents((list) => [...fresh, ...list].slice(0, 200));
+      }
+      previous.current = new Map(fleet.map((v) => [v.tail, v]));
+    }
+  }, [fleet, launch, now]);
 
   const needle = query.trim().toLowerCase();
   const shown = fleet.filter((v) => {
     if (needle && !v.tail.toLowerCase().includes(needle) && !v.designation.toLowerCase().includes(needle)) return false;
     if (filter === "attention") return v.health === "alert" || v.health === "warn";
     if (filter === "denied") return v.live?.gnss_trusted === false;
+    if (filter === "launch") return launch.has(v.tail);
     return true;
   });
   const current = fleet.find((v) => v.tail === selected) ?? null;
@@ -163,7 +211,10 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
     live: fleet.filter((v) => v.live !== null).length,
     attention: fleet.filter((v) => v.health === "alert" || v.health === "warn").length,
     denied: fleet.filter((v) => v.live?.gnss_trusted === false).length,
+    ready: [...launch.values()].filter(isGo).length,
+    ground: launch.size,
   };
+  const readyMedian = median(readyTimes);
 
   const step = useCallback(
     (dir: 1 | -1) => {
@@ -195,6 +246,8 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
         setFollow((on) => !on);
       } else if (key === "a") {
         setFilter((f) => (f === "attention" ? "all" : "attention"));
+      } else if (key === "l") {
+        setFilter((f) => (f === "launch" ? "all" : "launch"));
       } else if (event.key === "Escape") {
         setSelected(null);
         setFollow(false);
@@ -215,6 +268,7 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
       { id: "follow", label: follow ? "Stop following on the map" : "Follow the selected vehicle", group: "Map", hint: "F", run: () => setFollow((on) => !on) },
       { id: "attention", label: "Show vehicles that need me", group: "Filter", hint: "A", run: () => setFilter("attention") },
       { id: "denied", label: "Show GNSS-denied vehicles", group: "Filter", run: () => setFilter("denied") },
+      { id: "launch", label: "Check launch readiness", group: "Filter", hint: "L", run: () => setFilter("launch") },
       { id: "all", label: "Show the whole fleet", group: "Filter", run: () => setFilter("all") },
       ...fleet.map<Command>((v) => ({
         id: `v-${v.tail}`,
@@ -240,21 +294,27 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
           <div><strong className="mono">{counts.live}</strong><span className="meta">live</span></div>
           <div className={counts.attention ? "is-alert" : undefined}><strong className="mono">{counts.attention}</strong><span className="meta">need you</span></div>
           <div className={counts.denied ? "is-warn" : undefined}><strong className="mono">{counts.denied}</strong><span className="meta">GNSS denied</span></div>
+          <div className={counts.ready ? "is-ok" : undefined}><strong className="mono">{counts.ready}<span className="op-summary-of">/{counts.ground}</span></strong><span className="meta">ready</span></div>
         </div>
         <div className="op-search">
           <input ref={search} id="tail-search" aria-label="Find a vehicle" placeholder="Find a vehicle" value={query} onChange={(e) => setQuery(e.target.value)} />
           <kbd>/</kbd>
         </div>
         <div className="chips" role="group" aria-label="Filter">
-          {(["all", "attention", "denied"] as const).map((f) => (
+          {(["all", "attention", "denied", "launch"] as const).map((f) => (
             <button key={f} type="button" className={filter === f ? "chip is-on" : "chip"} aria-pressed={filter === f} onClick={() => setFilter(f)}>
-              {f === "all" ? "All" : f === "attention" ? "Need you" : "GNSS denied"}
+              {f === "all" ? "All" : f === "attention" ? "Need you" : f === "denied" ? "GNSS denied" : "Launch"}
             </button>
           ))}
         </div>
+        {filter === "launch" ? (
+          <p className="meta op-launch-note" data-testid="ready-median">
+            {readyMedian === null ? "Power-on to ready: no vehicle timed yet" : `Power-on to ready: median ${seconds(readyMedian)} across ${readyTimes.length} ${readyTimes.length === 1 ? "vehicle" : "vehicles"}`}
+          </p>
+        ) : null}
         <ul id="fleet" className="vlist">
           {shown.map((v) => (
-            <RailRow key={v.tail} v={v} selected={v.tail === selected} onSelect={() => setSelected(v.tail === selected ? null : v.tail)} />
+            <RailRow key={v.tail} v={v} launch={filter === "launch" ? launch.get(v.tail) : undefined} selected={v.tail === selected} onSelect={() => setSelected(v.tail === selected ? null : v.tail)} />
           ))}
           {shown.length === 0 ? <li className="meta vlist-empty">No vehicles match.</li> : null}
         </ul>
@@ -283,10 +343,11 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
                 {current.health === "ok" ? "Nominal" : current.health === "offline" ? "Offline" : current.reasons[0]}
               </span>
             </header>
+            {launch.has(current.tail) ? <Readiness list={launch.get(current.tail) ?? []} entry={readyClock.current.get(current.tail)} now={now} /> : null}
             <Hud vehicle={current} />
             <dl className="stats">
               <Stat label="Mode" value={p?.mode ?? "—"} />
-              <Stat label="Nav source" value={p ? (p.gnss_trusted === false ? (p.nav_source ?? "dead reckoning").toUpperCase() : "GNSS") : "—"} />
+              <Stat label="Nav source" value={p ? (p.nav_source === "none" ? "NO FIX" : p.gnss_trusted === false ? (p.nav_source ?? "dead reckoning").toUpperCase() : "GNSS") : "—"} />
               <Stat label="Ground speed" value={fmt(p?.ground_mps, 1, " m/s")} />
               <Stat label="Climb" value={fmt(p?.climb_mps, 1, " m/s")} />
               <Stat label="Altitude" value={fmt(p?.alt_m, 0, " m")} />
@@ -316,12 +377,12 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
                 Registry record
               </button>
             </div>
-            <p className="meta op-note">This console monitors. It does not send flight commands; tasking goes through an approved mission plan.</p>
+            <p className="meta op-note">This console monitors. It does not send flight commands or arm vehicles; GO is advice to the operator, and tasking goes through an approved mission plan.</p>
           </>
         ) : (
           <div className="op-empty">
             <Hud vehicle={null} />
-            <p className="meta">Pick a vehicle from the list or the map. <kbd>J</kbd> <kbd>K</kbd> step through the list, <kbd>⌘K</kbd> searches everything.</p>
+            <p className="meta">Pick a vehicle from the list or the map. <kbd>J</kbd> <kbd>K</kbd> step through the list, <kbd>L</kbd> shows launch readiness, <kbd>⌘K</kbd> searches everything.</p>
           </div>
         )}
       </aside>

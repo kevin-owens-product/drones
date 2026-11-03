@@ -30,7 +30,14 @@ const FLEET = [
   { tail: "NX-07", kind: "orbit", x: 1900, y: -300, r: 200, v: 12, alt: 60, stale: true },
   { tail: "NX-08", kind: "hold", x: -2400, y: -1600, alt: 0, mode: "HOLD", armed: false },
   { tail: "NX-09", kind: "lawnmower", x: -1800, y: -200, w: 900, h: 500, legs: 4, v: 13, alt: 110 },
+  // On the pad: taken out of the case, powered on, waiting for a position fix.
+  // They cycle every PAD_CYCLE demo seconds so the launch view always has something to show.
+  { tail: "NX-10", kind: "pad", x: -2400, y: -1250, boot: 60, fix: 210, battery: 97 },
+  { tail: "NX-11", kind: "pad", x: -2650, y: -1450, boot: 90, fix: 140, battery: 41 },
+  { tail: "NX-12", kind: "pad", x: -2150, y: -1450, boot: 30, fix: 90, battery: 100 },
 ];
+const PAD_CYCLE = 360;
+const PAD_DOWN = 330;
 
 function lawnmower(c, s) {
   const leg = c.h / (c.legs - 1);
@@ -52,7 +59,7 @@ function lawnmower(c, s) {
   return [c.x, c.y - c.h, 0];
 }
 
-function state(c, t) {
+function state(c, t, tp) {
   const s = t * (c.v ?? 0);
   let x = c.x;
   let y = c.y;
@@ -72,30 +79,32 @@ function state(c, t) {
     hdg = ((Math.atan2(c.tx - c.x, c.ty - c.y) * 180) / Math.PI + 360) % 360;
   }
   const lag = c.stale ? 45_000 : 400;
+  const pad = c.kind === "pad";
+  const acquiring = pad && tp < c.fix;
   return {
     tail_number: c.tail,
     tenant_id: "demo",
     time: new Date(Date.now() - lag).toISOString(),
     lat: LAT0 + y / M_LAT,
     lon: LON0 + x / M_LON,
-    alt_m: c.alt + 2 * Math.sin(t / 7),
+    alt_m: pad ? 0 : c.alt + 2 * Math.sin(t / 7),
     classification: "UNCLASSIFIED",
     caveats: [],
-    heading_deg: c.kind === "hold" ? undefined : hdg,
+    heading_deg: c.kind === "hold" || pad ? undefined : hdg,
     ground_mps: c.v ?? 0,
-    climb_mps: 0.1 * Math.sin(t / 5),
-    battery_pct: Math.max(5, (c.battery ?? 88) - t / 90),
-    mode: c.mode ?? (c.kind === "transit" ? "RTL" : "MISSION"),
-    armed: c.armed ?? true,
-    nav_source: c.denied ? "vio" : "gnss",
-    gnss_trusted: !c.denied,
+    climb_mps: pad ? 0 : 0.1 * Math.sin(t / 5),
+    battery_pct: pad ? c.battery : Math.max(5, (c.battery ?? 88) - t / 90),
+    mode: pad ? "PREFLIGHT" : c.mode ?? (c.kind === "transit" ? "RTL" : "MISSION"),
+    armed: pad ? false : c.armed ?? true,
+    nav_source: acquiring ? "none" : c.denied ? "vio" : "gnss",
+    gnss_trusted: acquiring ? undefined : !c.denied,
   };
 }
 
 const PLATFORMS = FLEET.map((c, i) => ({
   id: `p${i}`,
   tail_number: c.tail,
-  designation: i < 7 ? "Quad, 7 in, VIO + GNSS" : "Quad, 5 in, GNSS",
+  designation: i < 7 || c.kind === "pad" ? "Quad, 7 in, VIO + GNSS" : "Quad, 5 in, GNSS",
   group_size: "Group 1",
   portion_mark: "(U)",
   airworthiness: c.tail === "NX-08" ? "restricted" : "airworthy",
@@ -109,7 +118,9 @@ const ROUTES = {
   "/v1/telemetry/live": () => {
     // The sortie loops every ten minutes of demo time so it never runs dry.
     const t = ((((Date.now() - T0) / 1000) * SPEED) % 600) + 60;
-    return { items: FLEET.map((c) => state(c, t)), withheld: 0 };
+    const tp = (((Date.now() - T0) / 1000) * SPEED) % PAD_CYCLE;
+    const up = FLEET.filter((c) => c.kind !== "pad" || (tp >= c.boot && tp < PAD_DOWN));
+    return { items: up.map((c) => state(c, t, tp)), withheld: 0 };
   },
   "/v1/operations/board": () => ({ items: [] }),
   "/v1/session/dev-login": () => ({ ok: true }),

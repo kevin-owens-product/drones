@@ -58,6 +58,7 @@ const SHORTCUTS: readonly [string, string][] = [
   ["J / K", "Next / previous vehicle"],
   ["F", "Follow the selected vehicle on the map"],
   ["A", "Show only vehicles that need you"],
+  ["L", "Check launch readiness"],
   ["Esc", "Clear selection"],
   ["?", "This list"],
 ];

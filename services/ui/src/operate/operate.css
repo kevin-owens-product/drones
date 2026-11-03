@@ -1096,3 +1096,88 @@ kbd {
 .hud-big {
   font-size: 15px;
 }
+
+/* Launch readiness */
+.op-summary {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.op-summary .is-ok strong {
+  color: var(--ok);
+}
+
+.op-summary-of {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.op-launch-note {
+  margin: 0;
+  padding: 0 14px 8px;
+}
+
+.tag-go {
+  background: rgba(63, 214, 154, 0.16);
+  color: var(--ok);
+}
+
+.tag-nogo {
+  background: rgba(255, 107, 91, 0.14);
+  color: var(--danger);
+}
+
+.ready {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.ready-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.ready-verdict {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.ready-verdict.is-go {
+  color: var(--ok);
+}
+
+.ready-verdict.is-nogo {
+  color: var(--danger);
+}
+
+.ready-checks {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ready-checks li {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.ready-checks .is-ok .ready-mark {
+  color: var(--ok);
+}
+
+.ready-checks .is-bad .ready-mark,
+.ready-checks .is-bad .meta {
+  color: var(--danger);
+}
