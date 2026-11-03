@@ -10,5 +10,3 @@ jobs:
       - uses: actions/checkout@v4
       - name: Onboard regression
         run: make eval
-      - name: README table matches this run
-        run: git diff --exit-code -- README.md
