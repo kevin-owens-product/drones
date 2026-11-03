@@ -103,3 +103,13 @@ test("a large fleet switches to the density view with exceptions drawn individua
   await expect(page.getByTestId("density-summary")).toContainText(/\d{3} vehicles/);
   await expect(page.getByRole("button", { name: "Density" })).toHaveAttribute("aria-pressed", "true");
 });
+
+test("the 3D view shows the fleet over terrain and switches back to the flat map", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("#fleet [data-tail]")).toHaveCount(12);
+  await page.getByRole("button", { name: "3D", exact: true }).click();
+  await expect(page.getByTestId("map-3d")).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator(".m3-label", { hasText: "NX-04" })).toContainText(/m AGL/, { timeout: 15_000 });
+  await page.getByRole("button", { name: "3D", exact: true }).click();
+  await expect(page.locator(".tac")).toBeVisible();
+});

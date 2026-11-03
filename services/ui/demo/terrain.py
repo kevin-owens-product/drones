@@ -81,12 +81,20 @@ def main() -> None:
     img[edge] = img[edge] * 0.7 + np.array([70, 110, 130]) * 0.3
     img[medge] = img[medge] * 0.45 + np.array([90, 140, 160]) * 0.55
 
+    # Heightmap for the 3D view: 8-bit grey between the min and max elevation.
+    e0, e1 = float(elev.min()), float(elev.max())
+    height = Image.fromarray(np.clip((elev - e0) / max(1.0, e1 - e0) * 255, 0, 255).astype(np.uint8), "L")
+    hw = 350
+    height = height.resize((hw, round(hw * out_h / OUT_W)), Image.Resampling.BILINEAR)
+
     pic = Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)).filter(ImageFilter.SMOOTH)
     OUT.mkdir(exist_ok=True)
     pic.save(OUT / "terrain.jpg", quality=82, optimize=True)
+    height.save(OUT / "terrain-height.png", optimize=True)
     meta = {
         "south": SOUTH, "west": WEST, "north": NORTH, "east": EAST,
-        "elevation_m": [round(float(elev.min())), round(float(elev.max()))],
+        "elevation_m": [round(e0, 1), round(e1, 1)],
+        "heightmap": "terrain-height.png",
         "attribution": "Terrain: AWS Terrain Tiles (SRTM, USGS NED). 20 m contours.",
     }
     (OUT / "terrain.json").write_text(json.dumps(meta, indent=2) + "\n")

@@ -22,6 +22,7 @@ when something happened while it was looking elsewhere.
 | Links | `links` | Station and mesh links coloured by quality; a link that is down blinks. |
 | Tasks | `tasks` | A line from each task to its owner. When the owner changes, the new line draws bright for a few seconds and the timeline logs the re-plan. |
 | Density | Fleet size | Above 60 live vehicles, nominal vehicles go into a hex density field and only exceptions and the selected vehicle are drawn as glyphs. |
+| 3D view | Same picture plus the heightmap | Three.js, loaded only when the operator presses 3D. Terrain in relief from `basemap.heightmap`, vehicles at reported height above ground with a line to the ground, jamming zone as a dome, error disc, links and task lines. Heights are exaggerated ×2 and the view says so. |
 | Replay | Received history | Drag the timeline strip (or arrow keys on it) to show the fleet as this console received it, up to ten minutes back. Events and readiness keep running on live data underneath. Esc returns to live. |
 
 Everything but motion, trails, pulses, density and replay comes from

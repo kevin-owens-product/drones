@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { api, type PlatformRow } from "../api";
 import type { LivePoint } from "../live";
 import { setPageCommands, type Command } from "../shell/commands";
@@ -9,6 +9,9 @@ import { TacMap, type Pulse, type Trail } from "./TacMap";
 import { Timeline } from "./Timeline";
 import { blocker, checks, isGo, median, onGround, seconds, tick, type Check, type ReadyClock } from "./readiness";
 import { ago, diffEvents, fmt, mergeFleet, type OpsEvent, type Vehicle } from "./vehicle";
+
+// Three.js is large; load it only when the operator asks for 3D.
+const Map3D = lazy(() => import("./Map3D").then((m) => ({ default: m.Map3D })));
 
 type Filter = "all" | "attention" | "denied" | "launch";
 
@@ -166,6 +169,7 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
   const [picture, setPicture] = useState<Picture | null>(null);
   const [layers, setLayers] = useState<Layers>(loadLayers);
   const [densityPref, setDensityPref] = useState<boolean | null>(null);
+  const [view3d, setView3d] = useState(false);
   const history = useRef<Snapshot[]>([]);
   const historyPoints = useRef(0);
   const [replayAt, setReplayAt] = useState<number | null>(null);
@@ -455,7 +459,13 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
 
       <div className={replayAt === null ? "op-map" : "op-map is-replay"}>
         {fault ? <p className="fault op-fault" role="alert">{fault}</p> : null}
-        <TacMap fleet={view} trails={trails} selected={selected} follow={follow} onSelect={setSelected} picture={viewPicture} layers={layers} pulses={pulses} density={density} />
+        {view3d ? (
+          <Suspense fallback={<p className="meta op-3d-loading">Loading the 3D view…</p>}>
+            <Map3D fleet={view} picture={viewPicture} layers={layers} selected={selected} follow={follow} onSelect={setSelected} />
+          </Suspense>
+        ) : (
+          <TacMap fleet={view} trails={trails} selected={selected} follow={follow} onSelect={setSelected} picture={viewPicture} layers={layers} pulses={pulses} density={density} />
+        )}
         {picture || liveCount > 20 ? (
           <div className="op-layers chips" role="group" aria-label="Map layers">
             {picture
@@ -467,7 +477,10 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
                     </button>
                   ))
               : null}
-            {liveCount > 20 ? (
+            <button type="button" className={view3d ? "chip chip-3d is-on" : "chip chip-3d"} aria-pressed={view3d} onClick={() => setView3d((on) => !on)}>
+              3D
+            </button>
+            {liveCount > 20 && !view3d ? (
               <button type="button" className={density ? "chip is-on" : "chip"} aria-pressed={density} onClick={() => setDensityPref(!density)}>
                 Density
               </button>

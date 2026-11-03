@@ -14,9 +14,13 @@ cd services/ui && npm ci && npm run build && npm run demo   # http://localhost:4
 
 The demo server plays a scripted sortie, nine vehicles in the air and three on the pad, and marks every page `DEMO DATA`.
 
-The map draws the operating picture from the demo scenario, each overlay labelled `SIM`: real terrain baked offline, survey coverage filling in, a GNSS jamming zone with the position error of the vehicle flying on VIO, link quality, and task lines that re-plan when NX-07 drops off the link about every 100 s. Drag the timeline to replay what the console received. For the fleet-scale view, run a second server with `A2E_DEMO_FLEET=300 PORT=4174 npm run demo`. [Design](docs/design/operating-picture.md).
+The map draws the operating picture from the demo scenario, each overlay labelled `SIM`: real terrain baked offline, survey coverage filling in, a GNSS jamming zone with the position error of the vehicle flying on VIO, link quality, and task lines that re-plan when NX-07 drops off the link about every 100 s. Drag the timeline to replay what the console received. For the fleet-scale view, run a second server with `A2E_DEMO_FLEET=300 PORT=4174 npm run demo`. Press **3D** on the map for the same picture in relief: real terrain, each vehicle at its height above ground, the jamming zone as a dome (heights ×2). [Design](docs/design/operating-picture.md).
 
 ![The Operate map with terrain, survey coverage, the jamming zone, link quality and task allocation](docs/media/operating-picture.png)
+
+### Hosted demo
+
+`npm run build:static` builds a version with no server: the same scenario code (`demo/scenario.mjs`) answers the console's API calls in the browser. `render.yaml` (a Render Blueprint) builds and publishes it at drones.productexec.co. Add `?fleet=300` to the URL for the fleet-scale view.
 
 ### Launch readiness
 

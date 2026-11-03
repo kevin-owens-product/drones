@@ -1,0 +1,34 @@
+# Render Blueprint for the hosted demo of the operator console at
+# drones.productexec.co. Static build: the scripted sortie runs in the browser
+# (services/ui/src/staticDemo.ts), so there is no API, database or server behind
+# it, and every page says DEMO DATA.
+services:
+  - type: web
+    runtime: static
+    name: drones-demo
+    rootDir: services/ui
+    buildCommand: npm ci && npm run build:static
+    staticPublishPath: dist
+    pullRequestPreviewsEnabled: true
+    domains:
+      - drones.productexec.co
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
