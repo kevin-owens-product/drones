@@ -18,6 +18,7 @@ onboard/alloc/build/
 onboard/separate/build/
 onboard/link/build/
 onboard/track/build/
+onboard/mesh/build/
 services/ui/test-results/
 services/ui/playwright-report/
 sbom/

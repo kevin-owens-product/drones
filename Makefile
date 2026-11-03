@@ -24,7 +24,7 @@ test-integration: $(PY)
 	@test -f .env || (echo "Copy .env.example to .env and start postgres + opa" && exit 1)
 	set -a && . ./.env && set +a && cd services/api && $(PY) -m pytest tests/integration
 
-test: test-unit test-crsf test-spoof test-failsafe test-cbba test-separate test-link test-track
+test: test-unit test-crsf test-spoof test-failsafe test-cbba test-separate test-link test-track test-mesh
 
 test-crsf:
 	$(MAKE) -C firmware/crsf test
@@ -46,6 +46,9 @@ test-link:
 
 test-track:
 	$(MAKE) -C onboard/track test
+
+test-mesh:
+	$(MAKE) -C onboard/mesh test
 
 eval: $(PY)
 	mkdir -p docs/eval
