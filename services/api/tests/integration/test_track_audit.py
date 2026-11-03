@@ -33,12 +33,9 @@ def require_services() -> None:
         pytest.skip(f"integration dependencies are down: {exc}")
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_track_events_are_audited(require_services: None) -> None:
     from a2e.main import app
-
-    # Each test has its own event loop. Drop connections pooled on an earlier test's closed loop.
-    await app.state.engine.dispose(close=False)
 
     password = os.environ["A2E_DEV_LOGIN_PASSWORD"]
     body = {"tenant_id": str(TEAM_NORTH), "system_id": 1, "event": "lock", "confirm": False}
