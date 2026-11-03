@@ -170,6 +170,9 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
   const [layers, setLayers] = useState<Layers>(loadLayers);
   const [densityPref, setDensityPref] = useState<boolean | null>(null);
   const [view3d, setView3d] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const [reportText, setReportText] = useState("");
+  const [reportNote, setReportNote] = useState("");
   const history = useRef<Snapshot[]>([]);
   const historyPoints = useRef(0);
   const [replayAt, setReplayAt] = useState<number | null>(null);
@@ -179,7 +182,7 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
   const eventId = useRef(0);
   const readyClock = useRef<ReadyClock>(new Map());
   const [readyTimes, setReadyTimes] = useState<number[]>([]);
-  void viewer;
+
 
   useEffect(() => {
     let stopped = false;
@@ -379,6 +382,10 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
         setFilter((f) => (f === "attention" ? "all" : "attention"));
       } else if (key === "l") {
         setFilter((f) => (f === "launch" ? "all" : "launch"));
+      } else if (key === "r" && selected) {
+        event.preventDefault();
+        setReporting(true);
+        setReportNote("");
       } else if (event.key === "Escape") {
         if (replayAt !== null) {
           setReplayAt(null);
@@ -391,7 +398,30 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [step, replayAt]);
+  }, [step, replayAt, selected]);
+
+  async function fileReport(tail: string) {
+    const since = Date.now() - 30_000;
+    const samples = history.current
+      .filter((snap) => snap.at >= since)
+      .flatMap((snap) => {
+        const pt = snap.points.find((q) => q.tail_number === tail);
+        return pt
+          ? [{ t: snap.at, alt_m: pt.alt_m, ground_mps: pt.ground_mps, battery_pct: pt.battery_pct, mode: pt.mode, nav_source: pt.nav_source, gnss_trusted: pt.gnss_trusted, pos_sigma_m: pt.pos_sigma_m }]
+          : [];
+      });
+    try {
+      const out = await api<{ id: string; themes: string[] }>("/v1/field-reports", {
+        method: "POST",
+        body: JSON.stringify({ tail, text: reportText, samples, by: viewer.display_name }),
+      });
+      setReportNote(`Filed ${out.body.id} with ${samples.length} telemetry samples from the last 30 s. Theme: ${out.body.themes.join(", ")}.`);
+      setReportText("");
+      setReporting(false);
+    } catch (error) {
+      setReportNote(messageOf(error, "Could not file the report."));
+    }
+  }
 
   useEffect(() => {
     if (!selected) return;
@@ -549,7 +579,51 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
               >
                 Registry record
               </button>
+              <button
+                type="button"
+                className="btn btn-quiet"
+                onClick={() => {
+                  setReporting((on) => !on);
+                  setReportNote("");
+                }}
+              >
+                Report issue <kbd>R</kbd>
+              </button>
             </div>
+            {reporting ? (
+              <form
+                className="op-report"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void fileReport(current.tail);
+                }}
+              >
+                <label htmlFor="op-report-text">What went wrong with {current.tail}?</label>
+                <textarea
+                  id="op-report-text"
+                  autoFocus
+                  rows={3}
+                  maxLength={1000}
+                  value={reportText}
+                  onChange={(e) => setReportText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") setReporting(false);
+                  }}
+                  placeholder="Video froze at the tree line…"
+                />
+                <div className="op-report-actions">
+                  <span className="meta">The last 30 s of telemetry and the firmware build go with it.</span>
+                  <button type="submit" className="btn btn-primary" disabled={!reportText.trim()}>
+                    File report
+                  </button>
+                </div>
+              </form>
+            ) : null}
+            {reportNote ? (
+              <p className="meta op-report-note" role="status">
+                {reportNote}
+              </p>
+            ) : null}
             <p className="meta op-note">This console monitors. It does not send flight commands or arm vehicles; GO is advice to the operator, and tasking goes through an approved mission plan.</p>
           </>
         ) : (
