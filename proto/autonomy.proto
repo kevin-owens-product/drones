@@ -2,6 +2,17 @@ syntax = "proto3";
 
 package a2e.autonomy.v1;
 
+// Interface version 1.0.0. Versioning policy (docs/design/integration.md):
+// - The package suffix (v1) is the major version. A breaking change (removing
+//   or renumbering a field, changing a type or an rpc signature) ships as a new
+//   package a2e.autonomy.v2 beside this one; v1 stays served until retired.
+// - Additive changes (new optional field, new rpc, new message) bump the minor
+//   version above and stay in v1.
+// - A removed field's number and name are listed with `reserved` in its message
+//   and are never reused. No field has been removed from v1 yet.
+// - No message here may carry weapons, targeting, fire control, or payload
+//   release fields (ADR 0016).
+//
 // Contract for FANTOM Core. This build implements it with SimRuntime.
 // STUB: the government SDK is not linked. See FantomRuntime.
 
