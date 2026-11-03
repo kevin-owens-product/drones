@@ -15,6 +15,7 @@ export type Health = "ok" | "warn" | "alert" | "offline";
 export interface Vehicle {
   tail: string;
   designation: string;
+  airworthiness: string;
   live: LivePoint | null;
   linkAgeMs: number | null;
   health: Health;
@@ -62,12 +63,12 @@ export function mergeFleet(registry: readonly Registered[], live: readonly LiveP
     seen.add(row.tail_number);
     const point = byTail.get(row.tail_number) ?? null;
     const { health, reasons, age } = assess(point, row.airworthiness, now);
-    out.push({ tail: row.tail_number, designation: row.designation, live: point, linkAgeMs: age, health, reasons });
+    out.push({ tail: row.tail_number, designation: row.designation, airworthiness: row.airworthiness, live: point, linkAgeMs: age, health, reasons });
   }
   for (const point of live) {
     if (seen.has(point.tail_number)) continue;
     const { health, reasons, age } = assess(point, point.airworthiness ?? "", now);
-    out.push({ tail: point.tail_number, designation: "", live: point, linkAgeMs: age, health, reasons });
+    out.push({ tail: point.tail_number, designation: "", airworthiness: point.airworthiness ?? "", live: point, linkAgeMs: age, health, reasons });
   }
   return out.sort((a, b) => RANK[a.health] - RANK[b.health] || a.tail.localeCompare(b.tail));
 }

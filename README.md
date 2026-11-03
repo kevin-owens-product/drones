@@ -4,7 +4,7 @@ Flight software and an autonomy testbed for small quadcopters. Simulated vehicle
 
 ![The Operate screen: vehicles that need the operator first, a tactical picture, the flight display, and the event timeline](docs/media/operate.gif)
 
-The console is one Operate screen. Vehicles that need the operator sort to the top with the reason (link lost, GNSS rejected by the spoof gate, low battery). The tactical picture is a local metric plane that needs no map tiles, so it works air-gapped. `⌘K` jumps to any vehicle, page, or filter, and `J`/`K`, `F`, `A`, and `/` drive it from the keyboard. It monitors; it does not send flight commands.
+The console is one Operate screen. Vehicles that need the operator sort to the top with the reason (link lost, GNSS rejected by the spoof gate, low battery). The tactical picture is a local metric plane that needs no map tiles, so it works air-gapped. `⌘K` jumps to any vehicle, page, or filter, and `J`/`K`, `F`, `A`, `L`, and `/` drive it from the keyboard. It monitors; it does not send flight commands.
 
 To see it without the stack:
 
@@ -12,7 +12,13 @@ To see it without the stack:
 cd services/ui && npm ci && npm run build && npm run demo   # http://localhost:4173
 ```
 
-The demo server plays a scripted nine-vehicle sortie and marks every page `DEMO DATA`.
+The demo server plays a scripted sortie, nine vehicles in the air and three on the pad, and marks every page `DEMO DATA`.
+
+### Launch readiness
+
+![The launch view: a go or no-go for every vehicle on the ground, the failing check, and the power-on-to-ready time](docs/media/launch.png)
+
+`L` switches the list to vehicles on the ground. Each gets a go or no-go from four checks: a fresh link, airworthiness from the registry, battery at or above 60%, and a position fix (trusted GNSS, or VIO). The row shows the first check that fails, so the operator knows what to fix without opening anything. The console times each vehicle from power-on to GO and keeps the median, which is the case-to-launch metric in the product brief. GO is advice. The console does not arm or launch anything.
 
 ## Architecture
 

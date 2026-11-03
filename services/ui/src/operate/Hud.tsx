@@ -89,8 +89,8 @@ export function Hud({ vehicle }: { vehicle: Vehicle | null }): JSX.Element {
               <line x1={W / 2} x2={W / 2} y1={H / 2 + 22} y2={H / 2 + 32} />
             </g>
             <text x={14} y={H - 16} className="hud-text hud-strong">{p.mode ?? "MODE —"}{p.armed === false ? " · DISARMED" : ""}</text>
-            <text x={W / 2} y={H - 16} textAnchor="middle" className={denied ? "hud-text hud-warn" : "hud-text"}>
-              {denied ? `GNSS REJECTED · ${(p.nav_source ?? "dead reckoning").toUpperCase()}` : "GNSS"}
+            <text x={W / 2} y={H - 16} textAnchor="middle" className={denied || p.nav_source === "none" ? "hud-text hud-warn" : "hud-text"}>
+              {p.nav_source === "none" ? "NO POSITION FIX" : denied ? `GNSS REJECTED · ${(p.nav_source ?? "dead reckoning").toUpperCase()}` : "GNSS"}
             </text>
             <text x={W - 14} y={H - 16} textAnchor="end" className={(p.battery_pct ?? 100) < 25 ? "hud-text hud-alert" : "hud-text"}>
               BAT {fmt(p.battery_pct, 0, "%")}
