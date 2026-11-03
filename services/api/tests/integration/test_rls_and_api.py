@@ -159,7 +159,8 @@ def test_hash_matches_postgres(admin: psycopg.Connection[tuple[object, ...]]) ->
     assert row[0] == chain_hash(GENESIS, "{}")
 
 
-@pytest.mark.asyncio
+# The app keeps pooled connections and an OPA client, so API tests share one event loop.
+@pytest.mark.asyncio(loop_scope="session")
 async def test_api_release_and_banner(require_services: None) -> None:
     from a2e.main import app
 
