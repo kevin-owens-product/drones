@@ -284,7 +284,20 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
                         <li key={part.part}>
                           <strong>{part.part}</strong>
                           <span className="meta">
-                            {part.lot}
+                            <a
+                              href="#company"
+                              title="Open this lot in Company, Supply chain"
+                              onClick={() => {
+                                try {
+                                  sessionStorage.setItem("a2e-company-tab", "supply");
+                                  sessionStorage.setItem("a2e-company-lot", part.lot);
+                                } catch {
+                                  /* the link still opens the page */
+                                }
+                              }}
+                            >
+                              {part.lot}
+                            </a>
                             {flagged ? (
                               <>
                                 {" "}
@@ -329,6 +342,21 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
                   }}
                 >
                   Watch live
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-quiet"
+                  onClick={() => {
+                    try {
+                      sessionStorage.setItem("a2e-company-tab", "overview");
+                      sessionStorage.setItem("a2e-company-tail", selected.tail_number);
+                    } catch {
+                      /* the page opens on its default tail */
+                    }
+                    window.location.hash = "company";
+                  }}
+                >
+                  Trace contract to field
                 </button>
                 {(() => {
                   const plan = plans.find((item) => item.tail_number === selected.tail_number);
