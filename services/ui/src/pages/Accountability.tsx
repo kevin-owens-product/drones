@@ -180,7 +180,7 @@ export function AccountabilityPage({ viewer, onBanner }: { viewer: Viewer; onBan
           <p className="meta">
             {d.sharing
               ? `You share outcome fields with Neros (${d.shared_fields.join(", ")}). Neros never sees operators, units, stations or the day flown.`
-              : "You do not share these records with Neros. Turn sharing on in Supply & support to get resupply proposals and quality follow-up."}
+              : "You do not share these records with Neros. Turn sharing on in Requests to Neros to get resupply proposals and quality follow-up."}
           </p>
         </section>
       </div>

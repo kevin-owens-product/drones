@@ -35,7 +35,7 @@ export function CasesPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
     <section className="page ins-page co-page ops-page" data-testid="cases">
       <PageHead
         kicker="Neros analysis"
-        title="Fix loop"
+        title="Field fixes"
         lede="A field report becomes a case with an engineer and a partner unit. A change ships to that unit, and the case closes only when its end-of-flight records improve more than the units that did not get the change. Closing a ticket is not fixing a drone."
       />
       <p className="ins-source">{d.source}</p>

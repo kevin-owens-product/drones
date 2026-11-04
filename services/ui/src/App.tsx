@@ -161,16 +161,18 @@ export function App() {
   useEffect(() => {
     if (!viewer) return;
     const w = workspaceOf(viewer);
-    if (!sectionsFor(w).includes(section)) {
-      window.history.replaceState(null, "", `#${homeOf(w)}`);
-      setSection(homeOf(w));
+    // A bare address, or a page outside this workspace, lands on this person's home.
+    if (!window.location.hash || !sectionsFor(w).includes(section)) {
+      const home = homeOf(w, viewer);
+      window.history.replaceState(null, "", `#${home}`);
+      setSection(home);
     }
   }, [viewer, workspace, section]);
 
   function onWorkspace(next: Workspace) {
     rememberWorkspace(next);
     setWorkspace(next);
-    onSection(homeOf(next));
+    onSection(homeOf(next, viewer ?? undefined));
   }
 
   async function onLogin(event: FormEvent) {

@@ -253,7 +253,7 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
       <header className="page-head">
         <div style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "baseline", gap: "10px 16px" }}>
           <p className="kicker">Fleet</p>
-          <h1 className="page-title">Fleet</h1>
+          <h1 className="page-title">Airframes</h1>
           <p className="lede">Every airframe, why it can or can't fly, and the factory record behind that call.</p>
           <p className="meta">{accessLine(viewer)}</p>
         </div>

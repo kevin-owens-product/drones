@@ -48,7 +48,7 @@ export function createPlans({ serials, mixed, customers }) {
     if (allows(org, feature)) return null;
     const t = tierOf(org);
     const n = needs(feature);
-    return { status: 403, body: { detail: `${FEATURE_LABEL[feature] ?? feature} is part of ${n.name}; your plan is ${t.name}. Ask Neros to add it from Quote and order.`, gated: { feature, tier: t.id, needs: n.id } } };
+    return { status: 403, body: { detail: `${FEATURE_LABEL[feature] ?? feature} is part of ${n.name}; your plan is ${t.name}. Ask Neros to add it from Order.`, gated: { feature, tier: t.id, needs: n.id } } };
   }
 
   function mine(org) {

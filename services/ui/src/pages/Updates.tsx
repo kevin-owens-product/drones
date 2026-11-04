@@ -49,7 +49,7 @@ export function UpdatesPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
     <section className="page ins-page co-page ops-page" data-testid="updates">
       <PageHead
         kicker={isNeros ? "Neros operations" : "Your fleet"}
-        title="Updates"
+        title="Software updates"
         lede="Firmware and frequency profiles reach drones only after the customer approves them, flies them on a canary of two drones in each unit, and rolls them out unit by unit. A canary whose link or hardware faults rise is halted automatically. Disconnected units carry a signed bundle to the ground station."
       />
       <p className="ins-source">{d.source}</p>

@@ -63,7 +63,7 @@ export function ConfigurePage({ onBanner }: { viewer: Viewer; onBanner: (banner:
       <header className="page-head">
         <div>
           <p className="kicker">Plan</p>
-          <h1 className="page-title">Configure</h1>
+          <h1 className="page-title">Loadout planner</h1>
           <p className="lede">Which airframe variant, battery and radio band to send on a mission, given its range, wind, temperature and expected jamming, with the margins left over.</p>
         </div>
         <span className="pill pill-warn" title={r?.source}>

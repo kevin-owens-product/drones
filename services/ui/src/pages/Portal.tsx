@@ -103,7 +103,7 @@ export function PortalPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ba
       <header className="page-head">
         <div>
           <p className="kicker">{d.org.name.replace(" (SIM)", "")}</p>
-          <h1 className="page-title">Supply and support</h1>
+          <h1 className="page-title">Requests to Neros</h1>
           <p className="lede">Your units, what is on order and on the way, and what you need from Neros: replacements, spares, training or a repair. Requests go straight to Neros operations.</p>
         </div>
         <span className="pill pill-warn" title="Simulated demo data">SIM</span>
