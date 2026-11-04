@@ -18,6 +18,10 @@ The map draws the operating picture from the demo scenario, each overlay labelle
 
 ![The Operate map with terrain, survey coverage, the jamming zone, link quality and task allocation](docs/media/operating-picture.png)
 
+### Product site, help and developers
+
+The hosted build also publishes a product site at `/product/`, a help center at `/help/` and a developer site at `/developers/` (sources in `services/ui/product`, `help`, `developers` and `site`). They run the same scenario engine as the console in the page, so the hero's fleet picture, the per-serial walk-through and the developer API explorer are live demo data, not mock-ups. A first visit to the bare domain lands on `/product/`; deep links such as `/#operate` open the console.
+
 ### Hosted demo
 
 `npm run build:static` builds a version with no server: the same scenario code (`demo/scenario.mjs`) answers the console's API calls in the browser. `render.yaml` (a Render Blueprint) builds and publishes it at drones.productexec.co. Add `?fleet=300` to the URL for the fleet-scale view.

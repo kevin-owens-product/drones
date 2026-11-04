@@ -1,5 +1,5 @@
-# Render Blueprint for the hosted demo of the operator console at
-# drones.productexec.co. Static build: the scripted sortie runs in the browser
+# Render Blueprint for the hosted demo at drones.productexec.co: the product site
+# (/product/, /help/, /developers/) and the operator console (/#operate). Static build: the scripted sortie runs in the browser
 # (services/ui/src/staticDemo.ts), so there is no API, database or server behind
 # it, and every page says DEMO DATA.
 services:
@@ -15,7 +15,27 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
+    # The public site (product, help, developers) is static pages beside the console.
+    # Bare "/" lands on /product/ for first-time visitors (src/main.tsx); deep links like /#operate open the console.
     routes:
+      - type: redirect
+        source: /product
+        destination: /product/
+      - type: redirect
+        source: /help
+        destination: /help/
+      - type: redirect
+        source: /developers
+        destination: /developers/
+      - type: rewrite
+        source: /product/*
+        destination: /product/index.html
+      - type: rewrite
+        source: /help/*
+        destination: /help/index.html
+      - type: rewrite
+        source: /developers/*
+        destination: /developers/index.html
       - type: rewrite
         source: /*
         destination: /index.html

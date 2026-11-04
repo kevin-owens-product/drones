@@ -44,6 +44,11 @@ function signedIn(): string | null {
   }
 }
 
+/** True while a hosted-demo sign-in is live. The bare root sends everyone else to the product site. */
+export function hasDemoSession(): boolean {
+  return signedIn() !== null;
+}
+
 function setSession(username: string | null): void {
   try {
     if (username) localStorage.setItem(SESSION_KEY, JSON.stringify({ u: username, exp: Date.now() + SESSION_MS }));

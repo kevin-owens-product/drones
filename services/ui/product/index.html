@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>A2E Mission Cloud · The record and the sale around every drone</title>
+    <meta name="description" content="One operating record for every drone you build, sell and fly: a supervisory console for one operator and many drones, a per-serial record from factory bench to field loss, and the quote, bid and surge tools that sell the next lot." />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta property="og:title" content="A2E Mission Cloud" />
+    <meta property="og:description" content="The record and the sale around every drone, whoever made it. Simulated demo data, clearly labelled." />
+    <meta name="theme-color" content="#07090d" />
+  </head>
+  <body>
+    <header data-site-nav></header>
+
+    <main>
+      <section class="hero">
+        <div class="wrap hero-grid">
+          <div>
+            <p class="kicker">Fleet operations · Digital thread · Commercial</p>
+            <h1>Every drone you build, sell and fly, on <em>one record</em>.</h1>
+            <p class="lede">A2E Mission Cloud gives a drone maker and the units that fly its drones one shared operating record. One operator supervises dozens of vehicles. Every serial carries its factory birth record into the field and its field losses back to the factory. The same record prices the next quote, answers the next bid and plans the next surge.</p>
+            <div class="hero-ctas">
+              <a class="btn btn-primary btn-lg" href="/#operate">Open the live console →</a>
+              <a class="btn btn-lg" href="#platform">See the platform</a>
+            </div>
+            <p class="hero-note">The fleet picture is live: it runs the console's own scenario engine in this page. Every number on this site says where it was measured.</p>
+          </div>
+          <div class="scope" id="scope" aria-label="Live simulated operating picture">
+            <div class="scope-hud">
+              <span class="live"><i class="dot"></i>LIVE · SIM · CENTRAL COAST RANGE</span>
+              <span class="live" id="clock">--:--:--Z</span>
+            </div>
+            <div class="scope-feed" id="feed" aria-live="polite"></div>
+            <div class="scope-stats">
+              <div class="stat"><b id="s-air">0</b><span>airborne, one operator</span></div>
+              <div class="stat warn"><b id="s-vio">0</b><span>on VIO in jamming</span></div>
+              <div class="stat danger"><b id="s-att">0</b><span>need the operator</span></div>
+              <div class="stat"><b id="s-rep">0</b><span>task re-plans</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="strip">
+        <div class="wrap strip-in reveal">
+          <div><b>Drone makers</b><span>Build, ship, sustain and improve the fleet from one work queue.</span></div>
+          <div><b>Unit commanders</b><span>Run a mixed-vendor fleet: readiness, receiving, training, requests.</span></div>
+          <div><b>Allied programmes</b><span>Their own tenant, with releasability enforced on every response.</span></div>
+          <div><b>Integrators</b><span>Telemetry in from any autopilot; CoT and entity feeds out. Interfaces are free.</span></div>
+        </div>
+      </section>
+
+      <section class="section" id="why">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <p class="kicker">Why now</p>
+            <h2>The control screen is becoming government-furnished. The record is not.</h2>
+            <p class="lede">Programmes now ask for open architectures and furnish their own control software. Units buy small drones from marketplaces, by the package, from several vendors. Airframes are reconfigured in the field. Whoever owns the ground station no longer owns the customer.</p>
+          </div>
+          <div class="thesis">
+            <div class="card reveal"><span class="num">01</span><h3>Fleets are mixed</h3><p>A brigade flies three vendors' airframes on the same day. Readiness, spares and training have to roll up across all of them, with each vendor's limits stated plainly.</p></div>
+            <div class="card reveal"><span class="num">02</span><h3>Buying is a storefront</h3><p>A quote has to price the airframe, the record, the training and the spares in one package, with a delivery date the factory can actually make.</p></div>
+            <div class="card reveal"><span class="num">03</span><h3>As-built goes stale</h3><p>Field swaps and conversions change what each serial is. Without a live configuration record, the next loss autopsy is guessing.</p></div>
+          </div>
+          <p class="so reveal">So A2E owns the part that stays valuable: <b>the record and the sale around every drone, whoever made it</b>, on any screen the unit already runs.</p>
+        </div>
+      </section>
+
+      <section class="section" id="platform">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <p class="kicker">The platform</p>
+            <h2>Operate, keep the record, sell the next lot.</h2>
+            <p class="lede">Three products on one record. Every page ends in an action with an owner, scoped to the tenant that owns the data.</p>
+          </div>
+          <div class="tabs" role="tablist" aria-label="Platform areas">
+            <button class="tab" role="tab" aria-selected="true" data-tab="operate">Operate</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="record">Record</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="sell">Sell</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="sovereign">Allied and sovereign</button>
+          </div>
+
+          <div class="pillar" data-pane="operate">
+            <div>
+              <h3>One operator, many drones, and the console says who needs you.</h3>
+              <p>Vehicles that need the operator sort to the top with the reason. The map works air-gapped on baked terrain. Brief turns intent into a plan a human approves.</p>
+              <ul class="ticks">
+                <li>Exceptions first<span>Link lost, GNSS rejected by the spoof gate, low battery. J/K to walk them, ⌘K to jump anywhere.</span></li>
+                <li>Contested by default<span>The jamming zone, each VIO error circle and the CBBA task re-plan when a vehicle drops.</span></li>
+                <li>Launch readiness<span>Go or no-go for every airframe on the pad, with the first failing check and the power-on-to-ready time.</span></li>
+                <li>Brief, approve, debrief<span>Plain intent becomes a plan; a second person approves; the replay is deterministic.</span></li>
+              </ul>
+            </div>
+            <div class="shots" data-gallery>
+              <figure class="shot"><img src="/site-media/operate.webp" alt="The Operate screen" loading="lazy" /><figcaption><span>Operate: the fleet over real terrain, the jamming zone and task lines</span><span class="tag tag-sim">SIM</span></figcaption></figure>
+              <div class="shot-thumbs">
+                <button class="thumb" aria-pressed="true" data-src="/site-media/operate.webp" data-cap="Operate: the fleet over real terrain, the jamming zone and task lines"><img src="/site-media/operate.webp" alt="" loading="lazy" /></button>
+                <button class="thumb" aria-pressed="false" data-src="/site-media/relief.webp" data-cap="3D: each vehicle at its height above ground, the jamming zone as a dome"><img src="/site-media/relief.webp" alt="" loading="lazy" /></button>
+                <button class="thumb" aria-pressed="false" data-src="/site-media/brief.webp" data-cap="Brief: intent to plan, waiting on a second approver"><img src="/site-media/brief.webp" alt="" loading="lazy" /></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="pillar" data-pane="record" hidden>
+            <div>
+              <h3>A per-serial record from the factory bench to the field loss, and back.</h3>
+              <p>Each airframe is born on the end-of-line bench with its lots, calibrations and firmware hash. Field sorties, swaps and losses attach to that serial, so a bad lot is found in days.</p>
+              <ul class="ticks">
+                <li>Birth record at the bench<span>Read-only MAVLink at end of line; a failed hover test grounds the serial before it ships.</span></li>
+                <li>Attrition autopsy<span>Ranks lots by loss ratio and puts a quality hold on the tails that carry them.</span></li>
+                <li>Fix loop<span>A corrective change closes only when the treated unit beats the control units by a measured margin.</span></li>
+                <li>Stockpile health<span>Over-age packs hold their airframe from ready until they are rotated.</span></li>
+              </ul>
+            </div>
+            <div class="shots" data-gallery>
+              <figure class="shot"><img src="/site-media/attrition.webp" alt="Attrition" loading="lazy" /><figcaption><span>Attrition: a lot losing airframes at 2.14× the expected rate</span><span class="tag tag-sim">SIM</span></figcaption></figure>
+              <div class="shot-thumbs">
+                <button class="thumb" aria-pressed="true" data-src="/site-media/attrition.webp" data-cap="Attrition: a lot losing airframes at 2.14× the expected rate"><img src="/site-media/attrition.webp" alt="" loading="lazy" /></button>
+                <button class="thumb" aria-pressed="false" data-src="/site-media/fix-loop.webp" data-cap="Fix loop: a change closes only on a measured effect against control units"><img src="/site-media/fix-loop.webp" alt="" loading="lazy" /></button>
+                <button class="thumb" aria-pressed="false" data-src="/site-media/readiness.webp" data-cap="Readiness: operators current, simulator qualification, refreshers due"><img src="/site-media/readiness.webp" alt="" loading="lazy" /></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="pillar" data-pane="sell" hidden>
+            <div>
+              <h3>Quote, bid and surge from the same record the fleet runs on.</h3>
+              <p>Sales stops guessing. Sortie cost comes from end-of-flight records, delivery dates from the factory's real capacity, and bid answers link to records that exist.</p>
+              <ul class="ticks">
+                <li>Listing and quote<span>Price equals its lines, and nobody can commit a date faster than the factory can build.</span></li>
+                <li>Bid desk<span>Each "met" requirement links to its evidence; out-of-scope rows say so instead of overclaiming.</span></li>
+                <li>Surge planner<span>The plain date never beats the slowest part. Expediting and a second shift show their cost.</span></li>
+                <li>All vendors<span>Readiness across every vendor's tails; imports check every row and say what they could not verify.</span></li>
+              </ul>
+            </div>
+            <div class="shots" data-gallery>
+              <figure class="shot"><img src="/site-media/quote.webp" alt="Quote and order" loading="lazy" /><figcaption><span>Quote and order: a 120-airframe package with training and the record</span><span class="tag tag-sim">SIM</span></figcaption></figure>
+              <div class="shot-thumbs">
+                <button class="thumb" aria-pressed="true" data-src="/site-media/quote.webp" data-cap="Quote and order: a 120-airframe package with training and the record"><img src="/site-media/quote.webp" alt="" loading="lazy" /></button>
+                <button class="thumb" aria-pressed="false" data-src="/site-media/bid-desk.webp" data-cap="Bid desk: every requirement answered from the record, with evidence links"><img src="/site-media/bid-desk.webp" alt="" loading="lazy" /></button>
+                <button class="thumb" aria-pressed="false" data-src="/site-media/mixed-fleet.webp" data-cap="All vendors: one readiness picture across a mixed fleet"><img src="/site-media/mixed-fleet.webp" alt="" loading="lazy" /></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="pillar" data-pane="sovereign" hidden>
+            <div>
+              <h3>Allied buyers get their own tenant. Releasability is enforced at the API.</h3>
+              <p>An allied session never receives a field its rules withhold, at any depth of any response. The page shows what was withheld and why, so nobody mistakes a gap for missing data.</p>
+              <ul class="ticks">
+                <li>Tenant hierarchy and sharing<span>Customers see their own fleet and nothing of other customers or the maker's internals.</span></li>
+                <li>Two-person sharing<span>Loss data flows to the maker only while the customer shares it, and they can turn it off.</span></li>
+                <li>Hash-chained audit<span>Every allow and deny, with the reason, in a tamper-evident log.</span></li>
+                <li>Air-gap ready<span>No runtime SaaS, baked terrain, FIPS crypto and signed behaviour packages.</span></li>
+              </ul>
+            </div>
+            <div class="shots" data-gallery>
+              <figure class="shot"><img src="/site-media/allied.webp" alt="Allied tenant view" loading="lazy" /><figcaption><span>Allied tenant: withheld fields named, with the rule that withheld them</span><span class="tag tag-sim">SIM</span></figcaption></figure>
+              <div class="shot-thumbs">
+                <button class="thumb" aria-pressed="true" data-src="/site-media/allied.webp" data-cap="Allied tenant: withheld fields named, with the rule that withheld them"><img src="/site-media/allied.webp" alt="" loading="lazy" /></button>
+                <button class="thumb" aria-pressed="false" data-src="/site-media/supply.webp" data-cap="Supply and support: the customer's portal to the maker"><img src="/site-media/supply.webp" alt="" loading="lazy" /></button>
+                <button class="thumb" aria-pressed="false" data-src="/site-media/denial.webp" data-cap="GNSS denial map: where the spoof gate rejected GNSS, built from field passes"><img src="/site-media/denial.webp" alt="" loading="lazy" /></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="loop">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <p class="kicker">Factory to field</p>
+            <h2>The loop that makes the next airframe better than the last.</h2>
+            <p class="lede">The record is one loop, not six systems. Here is a real serial from the demo, read live from the same API the console uses.</p>
+          </div>
+          <div class="loop-wrap">
+            <div class="loop reveal" aria-hidden="true">
+              <svg viewBox="0 0 640 440">
+                <defs>
+                  <linearGradient id="flowgrad" x1="0" x2="1"><stop offset="0" stop-color="#5cc8ff" stop-opacity="0" /><stop offset="1" stop-color="#8be0c4" /></linearGradient>
+                </defs>
+                <ellipse class="ring" cx="320" cy="220" rx="250" ry="160" />
+                <ellipse class="flow" cx="320" cy="220" rx="250" ry="160" />
+                <g class="node on" transform="translate(255 32)"><rect width="130" height="52" rx="10" /><text x="14" y="23">Bench</text><text class="sub" x="14" y="40">birth record</text></g>
+                <g class="node" transform="translate(470 110)"><rect width="140" height="52" rx="10" /><text x="14" y="23">Ship and receive</text><text class="sub" x="14" y="40">custody, packets</text></g>
+                <g class="node" transform="translate(470 270)"><rect width="140" height="52" rx="10" /><text x="14" y="23">Fly</text><text class="sub" x="14" y="40">readiness, telemetry</text></g>
+                <g class="node" transform="translate(255 352)"><rect width="130" height="52" rx="10" /><text x="14" y="23">Field record</text><text class="sub" x="14" y="40">end-of-flight, losses</text></g>
+                <g class="node" transform="translate(30 270)"><rect width="140" height="52" rx="10" /><text x="14" y="23">Autopsy</text><text class="sub" x="14" y="40">lot ratio, hold</text></g>
+                <g class="node" transform="translate(30 110)"><rect width="140" height="52" rx="10" /><text x="14" y="23">Fix loop</text><text class="sub" x="14" y="40">measured change</text></g>
+                <text x="320" y="214" text-anchor="middle" fill="#e7ecf2" font-size="20" font-weight="700">One serial</text>
+                <text x="320" y="238" text-anchor="middle" fill="#93a0ae" font-size="13">every event attaches to it</text>
+              </svg>
+            </div>
+            <div class="serial reveal" id="serial">
+              <div class="serial-head"><b>Loading…</b><span class="tag tag-sim">SIM · live API</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="workspaces">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <p class="kicker">Two sides, one platform</p>
+            <h2>The maker runs its operations. Customers run their fleets. The record connects them.</h2>
+          </div>
+          <div class="two reveal">
+            <div class="ws">
+              <span class="tag">Manufacturer workspace</span>
+              <h3>Operations work queue</h3>
+              <p>Every item carries the action that clears it.</p>
+              <ul class="ticks">
+                <li>Pick, pack and ship requests from units</li>
+                <li>Build orders against real capacity</li>
+                <li>Lot holds, engineering change, releases</li>
+                <li>Quotes, bids and surge plans</li>
+              </ul>
+            </div>
+            <div class="bridge">
+              <div class="pipe back"><b>Requests</b>airframes, spares, training, repair</div>
+              <div class="pipe"><b>Shipments</b>with birth records and packets</div>
+              <div class="pipe back"><b>Loss data</b>only while the customer shares it</div>
+            </div>
+            <div class="ws">
+              <span class="tag">Customer workspace</span>
+              <h3>Fleet and Supply and support</h3>
+              <p>Their own fleet, people and orders, and nothing else.</p>
+              <ul class="ticks">
+                <li>Operate, Brief, Missions, Debrief</li>
+                <li>Receiving, accountability, readiness</li>
+                <li>Mixed-vendor fleet and configuration</li>
+                <li>Ask the maker; track every request</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="evidence">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <p class="kicker">Evidence, labelled</p>
+            <h2>Measured, and honest about where.</h2>
+            <p class="lede">Green is closed-loop in PX4 SITL. Blue is an onboard unit check. Amber is the demo simulation. Nothing here is a field result yet.</p>
+          </div>
+          <div class="evidence">
+            <div class="metric reveal"><span class="tag tag-sitl">PX4 SITL</span><span class="from">374.9 m</span><div class="big">3.4 <small>m</small></div><p>Position error after 120 s without GNSS, with VIO and the spoof gate, against 374.9 m on GNSS alone.</p><div class="bar"><i style="--w: 99%"></i></div></div>
+            <div class="metric reveal"><span class="tag tag-unit">Unit check</span><span class="from">67.1%</span><div class="big">100 <small>%</small></div><p>Fleet sorties completed under a jammer with the mesh and lost-link policy, against 67.1% with the default failsafe.</p><div class="bar"><i style="--w: 100%"></i></div></div>
+            <div class="metric reveal"><span class="tag tag-sitl">PX4 SITL</span><span class="from">18.0%</span><div class="big">98.4 <small>%</small></div><p>Frames on target with tracker v2, median run, operator-designated object in simulation. v1 was 18%.</p><div class="bar"><i style="--w: 98.4%"></i></div></div>
+            <div class="metric reveal"><span class="tag tag-sitl">PX4 SITL</span><div class="big">0.54 <small>s</small></div><p>Worst-run time to catch a spoofed 50 m GNSS step. Zero GNSS drops in clean or multipath flight.</p><div class="bar"><i style="--w: 92%"></i></div></div>
+            <div class="metric reveal"><span class="tag tag-unit">Unit check</span><div class="big">0 <small>of 500</small></div><p>Tasks held by two vehicles across 500 lossy CBBA runs. Re-plan after a vehicle loss takes 1.3 s at 10 Hz.</p><div class="bar"><i style="--w: 100%"></i></div></div>
+            <div class="metric reveal"><span class="tag tag-sim">SIM</span><div class="big">~30 <small>per operator</small></div><p>Where mission success falls off in the supervision sweep. A kinematic sim with assumed rates, so it sets the next test, not a claim.</p><div class="bar"><i style="--w: 60%"></i></div></div>
+          </div>
+          <div class="honest reveal">
+            <span class="tag tag-open">Open problems</span>
+            <div>
+              <h3>What is not proven yet</h3>
+              <ul>
+                <li>Tracker v2 holds the target in 3 of 5 SITL runs; in the other 2 it swaps to a parked look-alike.</li>
+                <li>The end-of-line bench has run only against a loopback emulator. It needs a real PX4 board, and its limits are placeholders.</li>
+                <li>Prices, orders, customers and loss data are simulated. The adapter conformance test has not met a real non-PX4 vehicle.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="guardrails">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <p class="kicker">Guardrails</p>
+            <h2>Built to be bought by people who have to sign for it.</h2>
+          </div>
+          <div class="rails">
+            <div class="rail reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg><h3>No weapons in the domain</h3><p>No weapon, payload-release or fire-control type exists in the data model. Strike airframes appear only as catalogue items (ADR 0016).</p></div>
+            <div class="rail reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M14 14.5c3 0 7 1.5 7 5.5"/></svg><h3>Humans approve tasking</h3><p>The console monitors and advises. Plans need a second approver, and GO at launch is advice; nothing arms or launches.</p></div>
+            <div class="rail reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12h12M12 6l6 6-6 6"/><path d="M20 4v16"/></svg><h3>Outbound only</h3><p>CoT for TAK and entity feeds go out. Inbound commands are refused and written to the audit log.</p></div>
+            <div class="rail reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg><h3>Releasability at the API</h3><p>Allied tenants never receive withheld fields. Classification banners and portion marks on every page.</p></div>
+            <div class="rail reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 4h10v4H7zM7 10h10v4H7zM7 16h10v4H7z"/><path d="M12 8v2M12 14v2"/></svg><h3>Hash-chained audit</h3><p>Every allow and deny, with its reason codes, in a tamper-evident chain an assessor can verify.</p></div>
+            <div class="rail reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12a9 9 0 0118 0"/><path d="M3 12h18"/><path d="M4 4l16 16"/></svg><h3>Air-gap ready</h3><p>No runtime SaaS, terrain baked offline, FIPS crypto, signed behaviour packages and an air-gap install bundle.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="pricing">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <p class="kicker">Pricing</p>
+            <h2>Priced into the drone, not per seat.</h2>
+            <p class="lede">The record travels with the airframe, so it is priced with the airframe. Fleets pay per formation, so adding drones never adds friction.</p>
+          </div>
+          <div class="prices">
+            <div class="price reveal"><span class="tag">Record</span><h3>Every airframe</h3><div class="amt">≈2% of unit price<small>built into each drone</small></div><ul><li>Birth record and serial history</li><li>Readiness and launch checks</li><li>Supply and support portal</li></ul></div>
+            <div class="price hot reveal"><span class="tag tag-unit">Fleet</span><h3>Per formation, per year</h3><div class="amt">One price per unit<small>not per tail or seat</small></div><ul><li>Everything in Record</li><li>All vendors and field configuration</li><li>Stockpile health, training readiness</li></ul></div>
+            <div class="price reveal"><span class="tag">Program</span><h3>Programmes and allies</h3><div class="amt">Enterprise<small>sovereign and allied tenants</small></div><ul><li>Everything in Fleet</li><li>Allied tenants and releasability</li><li>Fix loop, bid desk, surge planning</li></ul></div>
+            <div class="price reveal"><span class="tag tag-sitl">Interfaces</span><h3>Integrators</h3><div class="amt">Free<small>always</small></div><ul><li>a2e/v1 telemetry ingest</li><li>CoT and entity feeds out</li><li>Adapter conformance suite</li></ul></div>
+          </div>
+          <p class="fine">These are planning assumptions to test with buyers, shown in the demo's Plans page. They are not a price list and not anyone's published prices.</p>
+        </div>
+      </section>
+
+      <section class="cta">
+        <div class="wrap">
+          <h2>See it run.</h2>
+          <p class="lede" style="max-width:620px;margin:0 auto">Sign in as a manufacturer ops lead, a unit commander, an operator, a maintainer or an allied commander, and watch the same record from each side.</p>
+          <div class="hero-ctas">
+            <a class="btn btn-primary btn-lg" href="/#operate">Open the live console →</a>
+            <a class="btn btn-lg" href="/help/#accounts">Which account should I use?</a>
+            <a class="btn btn-lg" href="/developers/">Build on it</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer data-site-foot></footer>
+    <script type="module" src="/site/product.ts"></script>
+  </body>
+</html>

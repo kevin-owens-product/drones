@@ -16,5 +16,5 @@
     "exactOptionalPropertyTypes": true,
     "resolveJsonModule": true,
   },
-  "include": ["src"]
+  "include": ["src", "site"]
 }
