@@ -23,6 +23,9 @@ export type Section =
   | "quote"
   | "mixed"
   | "config"
+  | "surge"
+  | "bid"
+  | "cases"
   | "access"
   | "audit";
 

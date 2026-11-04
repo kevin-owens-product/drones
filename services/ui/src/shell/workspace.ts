@@ -32,7 +32,10 @@ export const NAV: readonly { id: Section; label: string; in: readonly Workspace[
   { id: "compliance", label: "Compliance", in: ["neros", "all"] },
   // Commercial: what Neros sells, can promise and bids.
   { id: "quote", label: "Quotes", in: ["neros"], group: "Commercial" },
+  { id: "surge", label: "Surge planner", in: ["neros", "all"], group: "Commercial" },
+  { id: "bid", label: "Bid desk", in: ["neros", "all"], group: "Commercial" },
   // Analysis: studies and models rather than daily work.
+  { id: "cases", label: "Fix loop", in: ["neros", "all"], group: "Analysis" },
   { id: "eval", label: "Eval", in: ["neros", "all"], group: "Analysis" },
   { id: "attrition", label: "Attrition", in: ["neros", "customer", "all"], group: "Analysis" },
   { id: "reports", label: "Reports", in: ["neros", "customer", "all"], group: "Analysis" },
