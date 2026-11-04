@@ -331,7 +331,7 @@
   display: none;
 }
 
-/* Narrow screens: the rail is a drawer over the page, opened from the menu button. */
+/* Narrow screens, and Operate below 1600 px: the rail is a drawer over the page, opened from the menu button. */
 @media (max-width: 900px) {
   .shell-body,
   .side-hidden .shell-body {
@@ -363,6 +363,34 @@
 
   .crumb span {
     display: none;
+  }
+}
+
+@media (max-width: 1599px) {
+  .side-float .shell-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .side-float .side {
+    display: none;
+  }
+
+  .side-float.side-drawer .side {
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 70;
+    display: flex;
+    width: min(280px, 85vw);
+    box-shadow: 16px 0 40px rgba(0, 0, 0, 0.5);
+    background: var(--surface);
+  }
+
+  .side-float.side-drawer .side-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 65;
+    display: block;
+    background: rgba(0, 0, 0, 0.45);
   }
 }
 
