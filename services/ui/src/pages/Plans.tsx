@@ -24,7 +24,7 @@ export function PlansPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
     <section className="page ins-page co-page ops-page" data-testid="plans">
       <PageHead
         kicker="Neros commercial"
-        title="Plans"
+        title="Pricing plans"
         lede="If the government furnishes the control software, Neros earns on the record and the fleet software around every drone. Record is priced into each drone; Fleet is priced per formation, because drones are expended and formations are not. A plan gates pages at the API, and usage is counted from the same records the pages show."
       />
       <p className="ins-source">{d.source}</p>

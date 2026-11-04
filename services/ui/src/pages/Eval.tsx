@@ -58,7 +58,7 @@ export function EvalPage({ onBanner }: { viewer: Viewer; onBanner: (banner: stri
       <header className="page-head">
         <div>
           <p className="kicker">Plan</p>
-          <h1 className="page-title">Eval</h1>
+          <h1 className="page-title">Evidence</h1>
           <p className="lede">Every number the platform claims, and where it was measured. Unit checks run a module open loop on a synthetic or recorded stream; PX4 SITL rows fly PX4 in SIH with its own EKF2 and close the loop through MAVLink. None of these are field results.</p>
         </div>
       </header>

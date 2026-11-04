@@ -9,54 +9,106 @@ import type { Section, Viewer } from "./types";
  */
 export type Workspace = "neros" | "customer" | "all";
 
-export const NAV: readonly { id: Section; label: string; in: readonly Workspace[]; group?: string }[] = [
-  { id: "ops", label: "Work queue", in: ["neros", "all"] },
-  { id: "operate", label: "Operate", in: ["customer", "all"] },
-  { id: "brief", label: "Brief", in: ["customer", "all"] },
-  { id: "missions", label: "Missions", in: ["customer", "all"] },
-  { id: "debrief", label: "Debrief", in: ["customer", "all"] },
-  // Fleet: every airframe the unit holds, from any vendor, as it is now.
-  { id: "fleet", label: "Airframes", in: ["customer", "all"], group: "Fleet" },
-  { id: "mixed", label: "All vendors", in: ["customer", "all"], group: "Fleet" },
-  { id: "config", label: "Configuration", in: ["neros", "customer", "all"], group: "Fleet" },
-  { id: "stockpile", label: "Stockpile health", in: ["customer", "all"], group: "Fleet" },
-  { id: "readiness", label: "Readiness", in: ["customer", "all"], group: "Fleet" },
-  // Sustain: what arrives, what is spent, what to ask for, what to install.
-  { id: "receiving", label: "Receiving", in: ["customer", "all"], group: "Sustain" },
-  { id: "accountability", label: "Accountability", in: ["customer", "all"], group: "Sustain" },
-  { id: "supply", label: "Supply & support", in: ["customer", "all"], group: "Sustain" },
-  { id: "updates", label: "Updates", in: ["neros", "customer", "all"], group: "Sustain" },
-  { id: "quote", label: "Quote and order", in: ["customer", "all"], group: "Sustain" },
-  { id: "company", label: "Company", in: ["neros", "all"] },
-  { id: "program", label: "Program", in: ["neros", "all"] },
-  { id: "quality", label: "Quality", in: ["neros", "all"] },
-  { id: "compliance", label: "Compliance", in: ["neros", "all"] },
-  // Commercial: what Neros sells, can promise and bids.
-  { id: "quote", label: "Quotes", in: ["neros"], group: "Commercial" },
-  { id: "surge", label: "Surge planner", in: ["neros", "all"], group: "Commercial" },
-  { id: "bid", label: "Bid desk", in: ["neros", "all"], group: "Commercial" },
-  { id: "plans", label: "Plans", in: ["neros", "all"], group: "Commercial" },
-  { id: "release", label: "Releasability", in: ["neros", "all"], group: "Commercial" },
-  // Analysis: studies and models rather than daily work.
-  { id: "cases", label: "Fix loop", in: ["neros", "all"], group: "Analysis" },
-  { id: "eval", label: "Eval", in: ["neros", "all"], group: "Analysis" },
-  { id: "attrition", label: "Attrition", in: ["neros", "customer", "all"], group: "Analysis" },
-  { id: "reports", label: "Reports", in: ["neros", "customer", "all"], group: "Analysis" },
-  { id: "denial", label: "Denial map", in: ["customer", "all"], group: "Analysis" },
-  { id: "configure", label: "Configure", in: ["neros", "customer", "all"], group: "Analysis" },
+/**
+ * Who a page is for in the rail. "lead" is anyone who plans, approves or runs the unit (commander, planner, admin,
+ * analyst, auditor); operators fly; maintainers keep airframes ready. A page left out of a role's rail is still one
+ * Cmd-K away, and its route still works: the rail is a working list, not a permission.
+ */
+export type Profile = "lead" | "operator" | "maintainer";
+const ALL: readonly Profile[] = ["lead", "operator", "maintainer"];
+
+export type NavItem = { id: Section; label: string; group: string; for: readonly Profile[] };
+const item = (id: Section, label: string, group: string, who: readonly Profile[] = ALL): NavItem => ({ id, label, group, for: who });
+
+/** A customer runs its own fleet: fly it, keep it ready, keep it supplied, learn from it. */
+export const CUSTOMER_NAV: readonly NavItem[] = [
+  item("operate", "Operate", "Fly"),
+  item("brief", "Brief", "Fly", ["lead"]),
+  item("missions", "Missions", "Fly", ["lead", "operator"]),
+  item("debrief", "Debrief", "Fly"),
+  item("configure", "Loadout planner", "Fly", ["lead", "operator"]),
+  item("denial", "GNSS denial map", "Fly", ["lead", "operator"]),
+  item("fleet", "Airframes", "Fleet"),
+  item("mixed", "All vendors", "Fleet", ["lead", "maintainer"]),
+  item("config", "Configuration", "Fleet", ["lead", "maintainer"]),
+  item("stockpile", "Stockpile health", "Fleet", ["lead", "maintainer"]),
+  item("readiness", "Crew readiness", "Fleet", ["lead", "operator"]),
+  item("receiving", "Receiving", "Supply", ["lead", "maintainer"]),
+  item("accountability", "Accountability", "Supply", ["lead", "maintainer"]),
+  item("supply", "Requests to Neros", "Supply", ["lead", "maintainer"]),
+  item("quote", "Order", "Supply", ["lead"]),
+  item("updates", "Software updates", "Supply", ["lead", "maintainer"]),
+  item("attrition", "Attrition", "Learn", ["lead", "maintainer"]),
+  item("reports", "Field reports", "Learn"),
 ];
 
-/** The top bar: plain tabs, and a menu for each group with more than one page in this workspace. */
-export type NavEntry = { kind: "tab"; id: Section; label: string } | { kind: "menu"; label: string; items: { id: Section; label: string }[] };
-export function navEntries(w: Workspace): NavEntry[] {
-  const items = NAV.filter((n) => n.in.includes(w));
-  const size = (g: string) => items.filter((n) => n.group === g).length;
-  const out: NavEntry[] = [];
-  for (const n of items) {
-    if (!n.group || size(n.group) === 1) out.push({ kind: "tab", id: n.id, label: n.label });
-    else if (!out.some((e) => e.kind === "menu" && e.label === n.group)) out.push({ kind: "menu", label: n.group, items: items.filter((m) => m.group === n.group).map((m) => ({ id: m.id, label: m.label })) });
-  }
+/** Neros runs its own operations: the work queue first, then delivering, making, selling and learning. */
+export const NEROS_NAV: readonly NavItem[] = [
+  item("ops", "Work queue", ""),
+  item("company", "Contract to field", "Deliver"),
+  item("program", "Program", "Deliver"),
+  item("quality", "Quality", "Make"),
+  item("compliance", "Compliance", "Make"),
+  item("config", "Configuration", "Make"),
+  item("updates", "Software updates", "Make"),
+  item("quote", "Quotes", "Sell"),
+  item("surge", "Surge planner", "Sell"),
+  item("bid", "Bid desk", "Sell"),
+  item("plans", "Pricing plans", "Sell"),
+  item("release", "Releasability", "Sell"),
+  item("cases", "Field fixes", "Learn"),
+  item("attrition", "Attrition", "Learn"),
+  item("reports", "Field reports", "Learn"),
+  item("eval", "Evidence", "Learn"),
+  item("configure", "Loadout planner", "Learn"),
+];
+
+/** Every page a workspace has, whether or not this role's rail shows it. */
+export function navFor(w: Workspace): readonly NavItem[] {
+  if (w === "neros") return NEROS_NAV;
+  if (w === "customer") return CUSTOMER_NAV;
+  // No organisation (the local demo server): every page, the work queue first, each page once.
+  const out: NavItem[] = [NEROS_NAV[0]!];
+  for (const n of [...CUSTOMER_NAV, ...NEROS_NAV.slice(1)]) if (!out.some((m) => m.id === n.id)) out.push(n);
   return out;
+}
+
+const LEAD_ROLES = ["admin", "mission_commander", "planner", "ops_lead", "analyst", "auditor"];
+export function profilesOf(viewer: Pick<Viewer, "roles">): Profile[] {
+  const out: Profile[] = [];
+  if (viewer.roles.some((r) => LEAD_ROLES.includes(r))) out.push("lead");
+  if (viewer.roles.includes("operator")) out.push("operator");
+  if (viewer.roles.includes("maintainer")) out.push("maintainer");
+  return out.length ? out : ["lead"];
+}
+
+/** A maintainer's day starts with airframes, so their rail does too. */
+function onlyMaintainer(viewer: Pick<Viewer, "roles">): boolean {
+  const p = profilesOf(viewer);
+  return p.length === 1 && p[0] === "maintainer";
+}
+
+export type RailGroup = { label: string; items: NavItem[] };
+/** The rail for this person in this workspace: their pages, grouped, in the order their work runs. */
+export function railFor(w: Workspace, viewer: Pick<Viewer, "roles">): RailGroup[] {
+  const mine = profilesOf(viewer);
+  const items = navFor(w).filter((n) => n.for.some((p) => mine.includes(p)));
+  const groups: RailGroup[] = [];
+  for (const n of items) {
+    const g = groups.find((x) => x.label === n.group);
+    if (g) g.items.push(n);
+    else groups.push({ label: n.group, items: [n] });
+  }
+  if (w === "customer" && onlyMaintainer(viewer)) {
+    const order = ["Fleet", "Supply", "Fly", "Learn"];
+    groups.sort((a, b) => order.indexOf(a.label) - order.indexOf(b.label));
+  }
+  return groups;
+}
+
+/** How many of this workspace's pages the rail leaves out for this person (they stay in Cmd-K). */
+export function hiddenCount(w: Workspace, viewer: Pick<Viewer, "roles">): number {
+  return navFor(w).length - railFor(w, viewer).reduce((n, g) => n + g.items.length, 0);
 }
 
 const KEY = "a2e-workspace";
@@ -84,11 +136,14 @@ export function rememberWorkspace(w: Workspace): void {
 }
 
 export function sectionsFor(w: Workspace): Section[] {
-  return [...NAV.filter((n) => n.in.includes(w)).map((n) => n.id), "access", "integrations", "audit"];
+  return [...navFor(w).map((n) => n.id), "access", "integrations", "audit"];
 }
 
-export function homeOf(w: Workspace): Section {
-  return w === "neros" ? "ops" : "operate";
+/** Where each person lands: Neros on its work queue, a maintainer on airframes, everyone else on the live map. */
+export function homeOf(w: Workspace, viewer?: Pick<Viewer, "roles">): Section {
+  if (w === "neros") return "ops";
+  if (w === "customer" && viewer && onlyMaintainer(viewer)) return "fleet";
+  return "operate";
 }
 
 /** The demo role matrix (demo/ledger.mjs, mirrored from policies/role_matrix): drives which buttons are live. */

@@ -102,7 +102,7 @@ export function createConfig({ serials }) {
 
   function take(unit, pn) {
     const have = spares[unit]?.[pn] ?? 0;
-    if (have < 4) return { error: `${unit} has ${have} ${pn} in spares; a swap takes a set of 4. Request spares through Supply & support.`, status: 409 };
+    if (have < 4) return { error: `${unit} has ${have} ${pn} in spares; a swap takes a set of 4. Request spares through Requests to Neros.`, status: 409 };
     spares[unit][pn] = have - 4;
     return { ok: true, lot: LOT[pn] ?? "unknown lot" };
   }
@@ -137,7 +137,7 @@ export function createConfig({ serials }) {
       const want = SIZES[size];
       if (!want) return { error: "size must be 5, 8 or 10", status: 400 };
       if (check(c).size === size) return { error: `${s.serial} is already ${size}-inch`, status: 409 };
-      for (const k of PART_KEYS) if ((spares[s.unit]?.[want[k]] ?? 0) < 4) return { error: `${s.unit} has ${spares[s.unit]?.[want[k]] ?? 0} ${want[k]} in spares; a ${size}-inch conversion takes 4. Request spares through Supply & support.`, status: 409 };
+      for (const k of PART_KEYS) if ((spares[s.unit]?.[want[k]] ?? 0) < 4) return { error: `${s.unit} has ${spares[s.unit]?.[want[k]] ?? 0} ${want[k]} in spares; a ${size}-inch conversion takes 4. Request spares through Requests to Neros.`, status: 409 };
       const lots = PART_KEYS.map((k) => `${want[k]} lot ${take(s.unit, want[k]).lot}`);
       c.history.push({ day: TODAY, change: `Reconfigured to ${size}-inch: ${lots.join(", ")}`, by: actor });
       Object.assign(c, { arm: want.arm, motor: want.motor, prop: want.prop, params: want.params, params_loaded: false });

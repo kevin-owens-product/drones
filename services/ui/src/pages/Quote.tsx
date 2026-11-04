@@ -62,7 +62,7 @@ export function QuotePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
     <section className="page ins-page co-page ops-page" data-testid="quote">
       <PageHead
         kicker={neros ? "Neros sales" : "Buy"}
-        title={neros ? "Quotes" : "Quote and order"}
+        title={neros ? "Quotes" : "Order"}
         lede={neros
           ? "Quotes customers request from the listing. Price each one and commit a date the factory can keep: the surge planner refuses a promise the line cannot make."
           : "Configure a kit the way the Army UAS Marketplace builds a package: airframe, sensor pack, training and fleet software. See what a completed sortie costs from your own records, and when it can arrive."}

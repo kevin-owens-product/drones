@@ -94,7 +94,7 @@ export function createBidDesk({ company, thread, mixed, surge, cases = () => nul
     signed_updates() {
       const v = updates.view("CUS-A", true);
       const n = v.releases.filter((r) => r.status === "published" && r.signature).length;
-      return { status: n ? "met" : "gap", value: `${n} signed releases published, each staged by canary with a halt rule`, evidence: { page: "updates", label: "Updates", count: n } };
+      return { status: n ? "met" : "gap", value: `${n} signed releases published, each staged by canary with a halt rule`, evidence: { page: "updates", label: "Software updates", count: n } };
     },
     acceptance() {
       const a = serials.acceptanceStats();
@@ -114,7 +114,7 @@ export function createBidDesk({ company, thread, mixed, surge, cases = () => nul
     fix_loop() {
       const c = cases();
       const n = c ? c.cases.filter((x) => x.status === "closed" && x.measured).length : 0;
-      return { status: n ? "met" : "partial", value: n ? `${n} field cases closed with a measured cohort-against-control effect; median ${c.stats.median_days ?? "?"} days from report to measured fix` : "No case has closed with a measured effect yet", evidence: { page: "cases", label: "Fix loop", count: n } };
+      return { status: n ? "met" : "partial", value: n ? `${n} field cases closed with a measured cohort-against-control effect; median ${c.stats.median_days ?? "?"} days from report to measured fix` : "No case has closed with a measured effect yet", evidence: { page: "cases", label: "Field fixes", count: n } };
     },
     config() {
       return { status: "met", value: "5, 8 and 10-inch conversions checked against the rules and held until parameters load", evidence: { page: "config", label: "Configuration", count: serials.serials.size } };

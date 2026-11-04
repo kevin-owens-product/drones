@@ -51,7 +51,7 @@
           <a href="#mixed">All vendors</a>
           <a href="#stockpile">Stockpile health</a>
           <a href="#training">Training readiness</a>
-          <a href="#supply">Supply and support</a>
+          <a href="#supply">Requests to Neros</a>
           <h4>Run operations</h4>
           <a href="#queue">The work queue</a>
           <a href="#quote">Quotes and orders</a>
@@ -102,11 +102,11 @@
           <article class="article" id="workspaces" data-tags="workspace tenant manufacturer customer neros switch scope">
             <div class="meta"><span class="tag">Start here</span></div>
             <h2>The two workspaces</h2>
-            <p>Your organisation decides your workspace. The navigation changes with it.</p>
+            <p>Your organisation decides your workspace, and your role shapes the menu on the left: each role lands on its own home and sees the pages it works in, in the order its work runs. Every other page in the workspace is still one <kbd>⌘K</kbd> away. A red count beside a page means something there is waiting on you.</p>
             <h3>Manufacturer workspace</h3>
-            <p>Work queue, Company, Program, Quality, Compliance, Updates, Quotes, Surge planner, Bid desk, Plans, Releasability, Fix loop, Eval, Attrition, Reports and Configure. The manufacturer never sees a customer's people or another customer's fleet, and sees loss data only while that customer shares it.</p>
+            <p>Work queue, then Deliver (Contract to field, Program), Make (Quality, Compliance, Configuration, Software updates), Sell (Quotes, Surge planner, Bid desk, Pricing plans, Releasability) and Learn (Field fixes, Attrition, Field reports, Evidence, Loadout planner). The manufacturer never sees a customer's people or another customer's fleet, and sees loss data only while that customer shares it.</p>
             <h3>Customer workspace</h3>
-            <p>Operate, Brief, Missions, Debrief, then Fleet (Airframes, All vendors, Configuration, Stockpile health, Readiness) and Sustain (Receiving, Accountability, Supply &amp; support, Updates, Quote and order). The manufacturer's internals return a refusal, not an empty page.</p>
+            <p>Fly (Operate, Brief, Missions, Debrief, Loadout planner, GNSS denial map), Fleet (Airframes, All vendors, Configuration, Stockpile health, Crew readiness), Supply (Receiving, Accountability, Requests to Neros, Order, Software updates) and Learn (Attrition, Field reports). Operators see the flying pages; maintainers start on Airframes and see the fleet and supply pages first. The manufacturer's internals return a refusal, not an empty page.</p>
             <h3>What flows between them</h3>
             <ul>
               <li><b>Requests</b> from the customer: airframes, spares, training and repairs.</li>
@@ -256,9 +256,9 @@
 
           <article class="article" id="supply" data-tags="supply support request spares airframes repair training portal receiving accountability ship">
             <div class="meta"><span class="tag">Record</span><span class="tag">Customer</span></div>
-            <h2>Supply and support</h2>
+            <h2>Requests to Neros</h2>
             <p>The customer's portal to the maker. Request airframes, spares, training or a repair, and follow each request to delivery. When a shipment arrives, sign for it on <b>Receiving</b>; custody moves to your unit and the airframe joins your fleet. Operators can view requests but not raise them.</p>
-            <a class="btn btn-sm go" href="/#supply">Open Supply and support →</a>
+            <a class="btn btn-sm go" href="/#supply">Open Requests to Neros →</a>
           </article>
 
           <article class="article" id="queue" data-tags="work queue ops manufacturer operations ship build po supply action">
@@ -272,7 +272,7 @@
             <div class="meta"><span class="tag">Operations</span><span class="tag">Commander</span></div>
             <h2>Quotes and orders</h2>
             <p>Configure a package: airframes, sensor pack, quantity, course seats and the fleet subscription. The total always equals its lines. Cost per completed sortie comes from end-of-flight records, and the earliest delivery date comes from the factory's capacity, so nobody can promise a date the factory cannot make.</p>
-            <a class="btn btn-sm go" href="/#quote">Open Quote and order →</a>
+            <a class="btn btn-sm go" href="/#quote">Open Order →</a>
           </article>
 
           <article class="article" id="bid" data-tags="bid desk rfp requirements evidence surge planner capacity shift expedite">
@@ -287,8 +287,8 @@
             <div class="meta"><span class="tag">Operations</span><span class="tag tag-sim">SIM</span></div>
             <h2>Attrition and the fix loop</h2>
             <p><b>Attrition</b> ranks lots by their loss rate against the fleet baseline and proposes a quality hold on the tails that carry a flagged lot. In the demo, ESC lot ESC-2611 loses airframes at 2.14× the expected rate.</p>
-            <p><b>Fix loop</b> tracks the corrective change. A case closes only when the treated unit improves against the control units by a measured margin (a difference in differences with z ≤ −1.28 and at least 40 sorties a side). A change that does nothing never closes.</p>
-            <a class="btn btn-sm go" href="/#cases">Open the Fix loop →</a>
+            <p><b>Field fixes</b> tracks the corrective change. A case closes only when the treated unit improves against the control units by a measured margin (a difference in differences with z ≤ −1.28 and at least 40 sorties a side). A change that does nothing never closes.</p>
+            <a class="btn btn-sm go" href="/#cases">Open Field fixes →</a>
           </article>
 
           <article class="article" id="release" data-tags="allied releasability withheld fields export foreign marking tenant">

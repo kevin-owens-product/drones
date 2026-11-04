@@ -521,7 +521,7 @@ export function createMissions(o) {
     if (stats.link_lost_s > 0)
       findings.push({ title: `${Math.round(stats.link_lost_s / 60)} min with a vehicle off the link`, detail: "The vehicle kept flying its last plan and CBBA re-assigned its task to a connected neighbour. Nobody had to re-task by hand.", link: "#operate", cta: "Operate" });
     if (aborted)
-      findings.push({ title: `${aborted} early return${aborted > 1 ? "s" : ""}`, detail: "Battery reserve tripped before the plan finished. Check the configuration margin for the temperature flown.", link: "#configure", cta: "Configure" });
+      findings.push({ title: `${aborted} early return${aborted > 1 ? "s" : ""}`, detail: "Battery reserve tripped before the plan finished. Check the configuration margin for the temperature flown.", link: "#configure", cta: "Loadout planner" });
     if (lost)
       findings.push({ title: `${lost} airframe lost`, detail: "Fed to the attrition autopsy with its part lots. Hold the lot there if the signal holds.", link: "#attrition", cta: "Attrition" });
     if (tracks.some((t) => inc[t.tail]?.hardLanding))

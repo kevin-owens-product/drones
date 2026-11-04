@@ -33,7 +33,7 @@ export function ReadinessPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
     <section className="page ins-page co-page ops-page" data-testid="readiness">
       <PageHead
         kicker="Your fleet"
-        title="Readiness"
+        title="Crew readiness"
         lede="Each operator's training record joined to how their sorties ended: who is current, who needs a refresher, and whether the training sessions bundled with each order changed results."
       />
       <p className="ins-source">{d.source}</p>

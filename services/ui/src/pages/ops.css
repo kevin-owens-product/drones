@@ -233,30 +233,6 @@
   font-size: 13px;
 }
 
-/* Workspace switch in the top bar, for Neros staff. */
-.ws-switch {
-  display: inline-flex;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  overflow: hidden;
-  flex: none;
-}
-
-.ws-switch button {
-  padding: 4px 10px;
-  border: 0;
-  background: none;
-  color: var(--muted);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.ws-switch button.is-on {
-  background: var(--accent-soft);
-  color: var(--text);
-}
-
 @media (max-width: 900px) {
   .ops-layout,
   .ops-two,
@@ -272,7 +248,6 @@
   font-size: 13px;
 }
 
-/* The workspace switch takes room from the search box, not from the nav. */
 .search-trigger {
   min-width: 0;
 }
@@ -283,7 +258,7 @@
   text-overflow: ellipsis;
 }
 
-@media (max-width: 1560px) {
+@media (max-width: 1100px) {
   .search-trigger span {
     display: none;
   }
