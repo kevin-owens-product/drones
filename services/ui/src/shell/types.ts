@@ -15,6 +15,8 @@ export type Section =
   | "receiving"
   | "accountability"
   | "quality"
+  | "compliance"
+  | "readiness"
   | "access"
   | "audit";
 

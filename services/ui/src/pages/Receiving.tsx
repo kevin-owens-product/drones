@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { Viewer } from "../shell/types";
-import { Loading, Note, PageHead, pct, SerialDrawer, Stat, useCustomerOrg, usePageData } from "./thread";
+import { Loading, Note, PacketDrawer, PageHead, pct, SerialDrawer, Stat, useCustomerOrg, usePageData } from "./thread";
 
 interface Check { level: "fail" | "warn"; code: string; text: string }
 interface LotSummary {
@@ -33,6 +33,7 @@ export function ReceivingPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
   const page = usePageData<Receiving>(`/v1/thread/receiving${query}`, onBanner);
   const [open, setOpen] = useState<string | null>(null);
   const [serial, setSerial] = useState<string | null>(null);
+  const [packet, setPacket] = useState<string | null>(null);
   if (!page.data) return <Loading fault={page.fault} />;
   const d = page.data;
   const canAct = canReceive(viewer);
@@ -77,6 +78,7 @@ export function ReceivingPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
                 <button type="button" className="btn btn-primary" onClick={() => setOpen(open === l.id ? null : l.id)}>
                   {open === l.id ? "Close the package" : "Open the package"}
                 </button>
+                <button type="button" className="btn btn-quiet" onClick={() => setPacket(l.id)}>Provenance packet</button>
               </div>
               {open === l.id ? (
                 <PackageView
@@ -108,6 +110,7 @@ export function ReceivingPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
                 <th>Decided</th>
                 <th>Days</th>
                 <th>Rejected</th>
+                <th>Provenance</th>
               </tr>
             </thead>
             <tbody>
@@ -129,12 +132,18 @@ export function ReceivingPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
                       </span>
                     ))}
                   </td>
+                  <td>
+                    <button type="button" className="th-link" onClick={() => setPacket(l.id)}>
+                      {l.compliance ? (l.compliance.status === "complete" ? "Complete" : `${l.compliance.status}, ${l.compliance.gaps} open`) : "Packet"}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </section>
+      {packet ? <PacketDrawer lot={packet} onClose={() => setPacket(null)} /> : null}
       {serial ? <SerialDrawer serial={serial} onClose={() => setSerial(null)} /> : null}
     </section>
   );

@@ -8,20 +8,24 @@
 // refusals included. Pure JavaScript.
 
 import { createSerials } from "./serials.mjs";
+import { createCompliance } from "./compliance.mjs";
+import { createReadiness } from "./readiness.mjs";
 
 const NEROS = "neros";
 const NEROS_ROLES = ["admin", "ops_lead"];
 const CUSTOMER_ROLES = ["admin", "mission_commander", "maintainer"];
 
 /** Actions by side. Names are what the console posts to /v1/thread/act (and /v1/ops/act as "thread.<name>"). */
-export const THREAD_CUSTOMER_ACTIONS = ["delivery.accept", "issue", "sync"];
-export const THREAD_NEROS_ACTIONS = ["rejects.replace", "quality.action", "quality.hold", "quality.close"];
+export const THREAD_CUSTOMER_ACTIONS = ["delivery.accept", "issue", "sync", "readiness.refresher"];
+export const THREAD_NEROS_ACTIONS = ["rejects.replace", "quality.action", "quality.hold", "quality.close", "compliance.request", "compliance.record"];
 
 /**
  * @param {{ births: object[], sharing: Record<string, boolean>, holds: object[], audit: { append: (e: object) => void } }} deps
  */
 export function createThread({ births, sharing, holds, audit }) {
   const serials = createSerials({ births, sharing, holds });
+  const compliance = createCompliance({ serials });
+  const readiness = createReadiness({ serials, sharing });
 
   function orgFor(viewer, url) {
     if (viewer && viewer.org && viewer.org !== NEROS) return viewer.org;
@@ -55,6 +59,9 @@ export function createThread({ births, sharing, holds, audit }) {
       case "quality.action": out = serials.openAction(a, actor); break;
       case "quality.hold": out = serials.holdLot(a, actor); break;
       case "quality.close": out = serials.closeAction(a); break;
+      case "compliance.request": out = compliance.request(a, actor); break;
+      case "compliance.record": out = compliance.record(a, actor); break;
+      case "readiness.refresher": out = readiness.refresher(org, a, actor); break;
       default: out = { error: "unknown action", status: 400 };
     }
     if (out.error) return { status: out.status ?? 400, body: { detail: out.error } };
@@ -76,7 +83,26 @@ export function createThread({ births, sharing, holds, audit }) {
     }
     if (method !== "GET") return { status: 405, body: { detail: "method" } };
     const org = orgFor(viewer, url);
-    if (path === "/v1/thread/receiving") return { status: 200, body: serials.receiving(org) };
+    if (path === "/v1/thread/receiving") {
+      const body = serials.receiving(org);
+      for (const l of [...body.waiting, ...body.history]) l.compliance = compliance.summaryFor(l.id);
+      return { status: 200, body };
+    }
+    if (path === "/v1/thread/compliance") {
+      if (customer) return { status: 403, body: { detail: "Supplier evidence is Neros's own workspace; your packets are on Receiving." } };
+      return { status: 200, body: compliance.view() };
+    }
+    if (path === "/v1/thread/packet") {
+      const id = String(url.searchParams.get("lot") ?? "");
+      const d = serials.deliveries.find((x) => x.id === id && (!customer || x.org === viewer.org));
+      const out = d ? compliance.packet(id, !customer) : null;
+      return out ? { status: 200, body: out } : { status: 404, body: { detail: "no such delivery lot" } };
+    }
+    if (path === "/v1/thread/readiness") return { status: 200, body: readiness.view(org) };
+    if (path === "/v1/thread/training-effect") {
+      if (customer) return { status: 403, body: { detail: "Neros's own workspace." } };
+      return { status: 200, body: readiness.nerosView() };
+    }
     if (path === "/v1/thread/lot") {
       const out = serials.lotPackage(String(url.searchParams.get("id") ?? ""), customer ? viewer.org : null);
       return out ? { status: 200, body: out } : { status: 404, body: { detail: "no such delivery lot" } };
@@ -93,5 +119,5 @@ export function createThread({ births, sharing, holds, audit }) {
     return { status: 404, body: { detail: "unknown" } };
   }
 
-  return { handle, act, queueItems: () => serials.queueItems(), serials };
+  return { handle, act, queueItems: () => [...serials.queueItems(), ...compliance.queueItems()], serials, compliance, readiness };
 }

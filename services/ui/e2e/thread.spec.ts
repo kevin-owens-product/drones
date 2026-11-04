@@ -28,3 +28,18 @@ test("quality flags the ESC lot from shared field records", async ({ page }) => 
   await expect(page.getByTestId("quality-lots").locator("tr", { hasText: "ESC-2611" })).toContainText("out of family");
   await expect(page.getByTestId("sampling")).toContainText("Sample 1 in 5");
 });
+
+test("compliance shows provenance gaps and a delivery lot's packet", async ({ page }) => {
+  await page.goto("/#compliance");
+  await expect(page.getByTestId("compliance-lots").locator("tr", { hasText: "CM-0318" })).toContainText("Gap");
+  await page.getByRole("button", { name: "DL-2618" }).click();
+  await expect(page.getByTestId("packet-drawer")).toContainText("fcc_exemption_ends");
+});
+
+test("readiness joins training to sorties and books a refresher", async ({ page }) => {
+  await page.goto("/#readiness");
+  await expect(page.getByTestId("training-effect")).toContainText("6 of 6 sessions");
+  const row = page.getByTestId("readiness-operators").locator("tr", { hasText: "Simulator qualification not passed" }).first();
+  await row.getByRole("button", { name: "Book requalification" }).click();
+  await expect(page.locator(".ops-note")).toContainText("simulator qualification booked");
+});

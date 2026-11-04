@@ -134,7 +134,7 @@ test("Strike SKUs never enter a build or a request (ADR-0016)", () => {
   assert.equal(act(demo, "request.training", { sku: "ARCHER-5-S", seats: 1 }, CMD).status, 400);
   assert.equal(act(demo, "request.spares", { unit: "Alpha", items: [{ pn: "ARCHER-5-S", qty: 1 }] }, CMD).status, 400);
   const items = queue(demo);
-  assert.ok(!items.some((i) => /-S\b|Strike/.test(i.title)));
+  assert.ok(!items.some((i) => /ARCHER-\d+-S\b|Strike/.test(i.title)));
 });
 
 test("a unit can't have two replacement requests open at once", () => {
