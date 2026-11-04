@@ -15,17 +15,23 @@ export const NAV: readonly { id: Section; label: string; in: readonly Workspace[
   { id: "brief", label: "Brief", in: ["customer", "all"] },
   { id: "missions", label: "Missions", in: ["customer", "all"] },
   { id: "debrief", label: "Debrief", in: ["customer", "all"] },
-  { id: "fleet", label: "Fleet", in: ["customer", "all"] },
-  { id: "readiness", label: "Readiness", in: ["customer", "all"] },
+  // Fleet: every airframe the unit holds, from any vendor, as it is now.
+  { id: "fleet", label: "Airframes", in: ["customer", "all"], group: "Fleet" },
+  { id: "mixed", label: "All vendors", in: ["customer", "all"], group: "Fleet" },
+  { id: "config", label: "Configuration", in: ["neros", "customer", "all"], group: "Fleet" },
+  { id: "readiness", label: "Readiness", in: ["customer", "all"], group: "Fleet" },
   // Sustain: what arrives, what is spent, what to ask for, what to install.
   { id: "receiving", label: "Receiving", in: ["customer", "all"], group: "Sustain" },
   { id: "accountability", label: "Accountability", in: ["customer", "all"], group: "Sustain" },
   { id: "supply", label: "Supply & support", in: ["customer", "all"], group: "Sustain" },
   { id: "updates", label: "Updates", in: ["neros", "customer", "all"], group: "Sustain" },
+  { id: "quote", label: "Quote and order", in: ["customer", "all"], group: "Sustain" },
   { id: "company", label: "Company", in: ["neros", "all"] },
   { id: "program", label: "Program", in: ["neros", "all"] },
   { id: "quality", label: "Quality", in: ["neros", "all"] },
   { id: "compliance", label: "Compliance", in: ["neros", "all"] },
+  // Commercial: what Neros sells, can promise and bids.
+  { id: "quote", label: "Quotes", in: ["neros"], group: "Commercial" },
   // Analysis: studies and models rather than daily work.
   { id: "eval", label: "Eval", in: ["neros", "all"], group: "Analysis" },
   { id: "attrition", label: "Attrition", in: ["neros", "customer", "all"], group: "Analysis" },

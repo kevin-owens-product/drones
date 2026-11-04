@@ -16,6 +16,7 @@ import { acknowledge, RESPONSES, scorecard, startSession, visible } from "./trai
 import { createThread } from "./thread.mjs";
 import { createInterop } from "./interop.mjs";
 import { createProgram } from "./program.mjs";
+import { createMarket } from "./market.mjs";
 
 export const BANNER = "UNCLASSIFIED // DEMO DATA";
 
@@ -748,6 +749,8 @@ export function createDemo(opts = {}) {
   const interop = createInterop({ live: () => ROUTES["/v1/telemetry/live"]().items, platforms: PLATFORMS });
   // The program cockpit (demo/program.mjs): Neros against Drone Dominance.
   const program = createProgram({ company, ops, thread });
+  // Round two (demo/market.mjs): quotes, mixed fleets, field configuration, surge and the rest.
+  const market = createMarket({ company, thread, audit, holds });
   const CUSTOMER_STAFF = ["admin", "mission_commander", "maintainer"];
   function interopRoute(method, url, raw) {
     const viewer = caller ? { ...caller, org: caller.org ?? NEROS.id } : null;
@@ -790,7 +793,7 @@ export function createDemo(opts = {}) {
       if (viewer && viewer.org !== NEROS.id) return { status: 403, body: { detail: "The operations queue is Neros's own workspace." } };
       const q = ops.queue(ctx);
       const SEV = { high: 0, medium: 1, low: 2 };
-      const items = [...q.items, ...thread.queueItems()].sort((a, b) => SEV[a.severity] - SEV[b.severity]);
+      const items = [...q.items, ...thread.queueItems(), ...market.queueItems()].sort((a, b) => SEV[a.severity] - SEV[b.severity]);
       const areas = [...new Set(items.map((i) => i.area))].map((area) => ({ area, count: items.filter((i) => i.area === area).length }));
       return { status: 200, body: { ...q, items, areas } };
     }
@@ -810,6 +813,7 @@ export function createDemo(opts = {}) {
       }
       const action = String(msg.action ?? "");
       if (action.startsWith("thread.")) return thread.act(viewer, action.slice("thread.".length), msg.args ?? {});
+      if (action.startsWith("market.")) return market.act(viewer, action.slice("market.".length), msg.args ?? {});
       return ops.act(viewer, action, msg.args ?? {}, ctx);
     }
     return { status: 404, body: { error: "unknown" } };
@@ -832,6 +836,7 @@ export function createDemo(opts = {}) {
       if (url.pathname === "/v1/field-reports") return fieldReports(method, raw);
       if (url.pathname.startsWith("/v1/company")) return companyRoute(method, url, raw);
       if (url.pathname.startsWith("/v1/ops/")) return opsRoute(method, url, raw);
+      if (market.owns(url.pathname)) return market.handle(method, url, raw, caller ? { ...caller, org: caller.org ?? NEROS.id } : null);
       if (url.pathname.startsWith("/v1/thread/")) return thread.handle(method, url, raw, caller ? { ...caller, org: caller.org ?? NEROS.id } : null);
       if (url.pathname.startsWith("/v1/platforms/")) return platformRoute(method, url, raw);
       if (url.pathname.startsWith("/v1/interop")) return interopRoute(method, url, raw);

@@ -20,6 +20,9 @@ export type Section =
   | "program"
   | "updates"
   | "integrations"
+  | "quote"
+  | "mixed"
+  | "config"
   | "access"
   | "audit";
 

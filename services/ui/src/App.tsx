@@ -23,6 +23,9 @@ import { ReadinessPage } from "./pages/Readiness";
 import { ProgramPage } from "./pages/Program";
 import { UpdatesPage } from "./pages/Updates";
 import { IntegrationsPage } from "./pages/Integrations";
+import { QuotePage } from "./pages/Quote";
+import { MixedFleetPage } from "./pages/MixedFleet";
+import { ConfigurationPage } from "./pages/Configuration";
 import { Login } from "./shell/Login";
 import { Shell } from "./shell/Shell";
 import type { Section, Viewer } from "./shell/types";
@@ -50,6 +53,9 @@ const SECTIONS: readonly Section[] = [
   "program",
   "updates",
   "integrations",
+  "quote",
+  "mixed",
+  "config",
   "access",
   "audit",
 ];
@@ -203,6 +209,9 @@ export function App() {
       {section === "program" ? <ProgramPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "updates" ? <UpdatesPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "integrations" ? <IntegrationsPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "quote" ? <QuotePage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "mixed" ? <MixedFleetPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "config" ? <ConfigurationPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "access" ? <AccessPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "audit" ? <AuditPage viewer={viewer} onBanner={setBanner} /> : null}
     </Shell>
