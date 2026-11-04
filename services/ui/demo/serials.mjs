@@ -185,7 +185,7 @@ export function createSerials({ births = [], sharing = { "CUS-A": true }, holds 
       delivery_lot: d.id,
       org: d.org,
       built: d.built,
-      parts: { frame: FRAME[d.sku], esc, motor: motors[i % motors.length], fc: d.fc, battery: BATTERY[d.sku], camera: "CM-0318", radio: "RF-0712", vtx: "VT-0440" },
+      parts: { frame: FRAME[d.sku], esc, motor: motors[i % motors.length], fc: d.fc, battery: BATTERY[d.sku], camera: d.built < "2026-10-10" ? "CM-0302" : "CM-0318", radio: "RF-0712", vtx: "VT-0440" },
       firmware: flaw === "firmware_unreleased" ? { version: "1.15.4-dev", sha256: DEV_BUILD, released: false } : { version: fw.version, sha256: fw.sha256, released: true },
       bench: flaw === "bench_missing" ? null : { station: `EOL-${1 + (i % 4)}`, imu, vibration_g: Number((0.4 + ((i * 3) % 7) / 10).toFixed(1)), hover_s: 30, passed: imu <= BENCH_LIMITS.imu },
       state: "packed", // packed -> shipped -> accepted | rejected -> issued -> ended

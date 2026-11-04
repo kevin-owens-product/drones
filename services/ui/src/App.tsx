@@ -18,6 +18,8 @@ import { PortalPage } from "./pages/Portal";
 import { QualityPage } from "./pages/Quality";
 import { ReceivingPage } from "./pages/Receiving";
 import { AccountabilityPage } from "./pages/Accountability";
+import { CompliancePage } from "./pages/Compliance";
+import { ReadinessPage } from "./pages/Readiness";
 import { Login } from "./shell/Login";
 import { Shell } from "./shell/Shell";
 import type { Section, Viewer } from "./shell/types";
@@ -40,6 +42,8 @@ const SECTIONS: readonly Section[] = [
   "receiving",
   "accountability",
   "quality",
+  "compliance",
+  "readiness",
   "access",
   "audit",
 ];
@@ -188,6 +192,8 @@ export function App() {
       {section === "receiving" ? <ReceivingPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "accountability" ? <AccountabilityPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "quality" ? <QualityPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "compliance" ? <CompliancePage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "readiness" ? <ReadinessPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "access" ? <AccessPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "audit" ? <AuditPage viewer={viewer} onBanner={setBanner} /> : null}
     </Shell>

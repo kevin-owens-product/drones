@@ -62,3 +62,13 @@ in the sim so the loop has something to find. `demo/thread.mjs` routes
 The real API needs the same five tables with row-level security by tenant and
 the gateway writing the end-of-flight record when a vehicle's session closes.
 Wave 2 adds the compliance ledger and operator readiness on top of this record.
+
+## Wave 2: provenance packets and operator readiness
+
+**Compliance (Neros).** From Drone Dominance Phase II no covered-country content is allowed at any tier, from Phase III firmware may not be hosted in a covered country, and the FCC's Blue List and domestic-product exemptions end on 1 January 2027. Compliance becomes evidence per lot. `demo/compliance.mjs` keeps sub-component origins by tier for each component lot the serial record uses, rolls them up into a packet per delivery lot, and shows what is missing before the deadline. Neros requests evidence from a supplier (EVR request, due in 10 days) and records the document; recording a covered country is refused and points to a Quality hold. Open gaps go to the work queue.
+
+**Packets (customer).** Receiving shows each delivery lot's packet status, and the packet downloads as JSON. Customers get it without supplier names; another customer's lot is a 404.
+
+**Readiness (customer).** `demo/readiness.mjs` joins each operator's training record (course, bundled sessions out of six, the Operate simulator qualification) to the outcomes of their sorties in the last 28 days. It flags who is not current, who has not passed qualification, and who has unused bundled sessions, and books a refresher. The page also shows completed-sortie rate by sessions taken and by simulator pass. Operators are designators, never names.
+
+**What Neros sees.** `/v1/thread/training-effect` returns only aggregates, and only from customers that share. Everything here is simulated (SIM).

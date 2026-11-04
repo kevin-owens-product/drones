@@ -158,3 +158,49 @@ export function SerialDrawer({ serial, onClose }: { serial: string; onClose: () 
     </div>
   );
 }
+
+/** The provenance packet for one delivery lot, as JSON the customer can file or forward. */
+export function PacketDrawer({ lot, onClose }: { lot: string; onClose: () => void }) {
+  const [text, setText] = useState("");
+  const [status, setStatus] = useState("");
+  const [fault, setFault] = useState("");
+  useEffect(() => {
+    void api<{ status: string }>(`/v1/thread/packet?lot=${encodeURIComponent(lot)}`)
+      .then((r) => {
+        setText(JSON.stringify(r.body, null, 2));
+        setStatus(r.body.status);
+      })
+      .catch((e: unknown) => setFault(e instanceof Error ? e.message : "Could not load the packet."));
+  }, [lot]);
+  function download() {
+    const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${lot}-provenance.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  return (
+    <div className="th-drawer" role="dialog" aria-label={`Provenance packet ${lot}`} data-testid="packet-drawer">
+      <div className="th-drawer-head">
+        <div>
+          <p className="kicker">Provenance packet</p>
+          <h2 className="mono">{lot}</h2>
+        </div>
+        <button type="button" className="btn btn-quiet" onClick={onClose}>Close</button>
+      </div>
+      {fault ? <p className="fault">{fault}</p> : null}
+      {text ? (
+        <>
+          <p className="meta">
+            Status: <span className={status === "complete" ? "pill pill-ok" : "pill pill-warn"}>{status}</span> Every component lot the serials carry, with sub-component origins by tier, Blue List and FCC exemption basis, and where the firmware is hosted.
+          </p>
+          <div className="ops-actions">
+            <button type="button" className="btn btn-primary" onClick={download}>Download JSON</button>
+          </div>
+          <pre className="th-code">{text}</pre>
+        </>
+      ) : null}
+    </div>
+  );
+}
