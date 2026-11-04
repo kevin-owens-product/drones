@@ -159,7 +159,7 @@ export function Shell(props: {
             <path d="M12 2 21 7v10l-9 5-9-5V7z" fill="none" stroke="currentColor" strokeWidth="1.6" />
             <path d="M12 7v10M7.5 9.5l9 5M16.5 9.5l-9 5" stroke="currentColor" strokeWidth="1.2" />
           </svg>
-          <span>A2E</span>
+          <span>Drone</span>
         </div>
         {switchable ? (
           <div className="ws-switch" role="group" aria-label="Workspace">
