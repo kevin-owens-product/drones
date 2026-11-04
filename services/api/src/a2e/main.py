@@ -65,7 +65,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     current = settings or get_settings()
     docs = "/docs" if current.env == "development" else None
     app = FastAPI(
-        title="A2E Mission Cloud",
+        title="Drone Mission Cloud",
         version=__version__,
         docs_url=docs,
         redoc_url=None,

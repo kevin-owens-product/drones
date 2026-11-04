@@ -18,7 +18,7 @@ export function Login(props: {
       <div className="gate-stage">
         <section className="gate-copy">
           <div className="brand">
-            A2E
+            Drone
             <span className="kicker">Mission Cloud</span>
           </div>
           <h1>

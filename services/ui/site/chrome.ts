@@ -20,7 +20,7 @@ export function mountChrome(current: "product" | "help" | "developers"): void {
     nav.innerHTML = `
       <div class="marking">UNCLASSIFIED // DEMO DATA</div>
       <div class="wrap nav-in">
-        <a class="logo" href="/product/">${LOGO}<span>A2E <small>Mission Cloud</small></span></a>
+        <a class="logo" href="/product/">${LOGO}<span>Drone <small>Mission Cloud</small></span></a>
         <nav class="nav-links" aria-label="Site">
           ${LINKS.map(([href, label]) => `<a href="${href}"${href.startsWith(`/${current}/`) && href.endsWith("/") ? ' aria-current="page"' : ""}>${label}</a>`).join("")}
         </nav>
@@ -44,7 +44,7 @@ export function mountChrome(current: "product" | "help" | "developers"): void {
       <div class="wrap">
         <div class="foot-grid">
           <div>
-            <a class="logo" href="/product/">${LOGO}<span>A2E <small>Mission Cloud</small></span></a>
+            <a class="logo" href="/product/">${LOGO}<span>Drone <small>Mission Cloud</small></span></a>
             <p style="margin-top:14px;max-width:340px">The operating record and the sale around every drone: built at the factory, flown by the unit, improved from the field.</p>
           </div>
           <div><h4>Product</h4><ul>
@@ -69,7 +69,7 @@ export function mountChrome(current: "product" | "help" | "developers"): void {
             <li><a href="https://github.com/kevin-owens-product/drones">Source on GitHub</a></li>
           </ul></div>
         </div>
-        <p class="disclaimer">A2E Mission Cloud is an independent concept product built by Kevin Owens. It is not affiliated with, endorsed by or a product of Neros Technologies or any vendor named in the demo. Manufacturer catalogue items appear as published; every fleet, order, price, customer and flight on this site is simulated demo data, and every metric says where it was measured. The domain has no weapon, payload-release or fire-control type (ADR 0016).</p>
+        <p class="disclaimer">Drone Mission Cloud is an independent concept product built by Kevin Owens. It is not affiliated with, endorsed by or a product of Neros Technologies or any vendor named in the demo. Manufacturer catalogue items appear as published; every fleet, order, price, customer and flight on this site is simulated demo data, and every metric says where it was measured. The domain has no weapon, payload-release or fire-control type (ADR 0016).</p>
       </div>`;
   }
 
