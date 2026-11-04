@@ -110,7 +110,7 @@ jobs:
         run: |
           node demo/server.mjs &
           for i in $(seq 1 20); do curl -fsS http://localhost:4173/ >/dev/null && break; sleep 0.5; done
-          npx playwright test e2e/operate.spec.ts e2e/attrition.spec.ts e2e/field-reports.spec.ts e2e/denial-map.spec.ts e2e/configure.spec.ts e2e/brief.spec.ts e2e/admin.spec.ts e2e/plan.spec.ts e2e/thread.spec.ts
+          npx playwright test e2e/operate.spec.ts e2e/attrition.spec.ts e2e/field-reports.spec.ts e2e/denial-map.spec.ts e2e/configure.spec.ts e2e/brief.spec.ts e2e/admin.spec.ts e2e/plan.spec.ts e2e/thread.spec.ts e2e/market.spec.ts
 
   gateway:
     runs-on: ubuntu-latest
