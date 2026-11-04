@@ -71,3 +71,24 @@ test("fix loop refuses to close without data, then closes on a measured effect",
   await expect(page.locator(".ops-note")).toContainText("closed");
   await expect(esc.locator(".th-check")).toHaveText("closed");
 });
+
+test("stockpile holds an over-age pack and rotating it brings the airframe back", async ({ page }) => {
+  await page.goto("/#stockpile");
+  const held = page.getByTestId("stock-rows").locator("tr.th-row-fail").first();
+  const serial = (await held.locator("td").first().textContent())?.trim() ?? "";
+  await held.getByRole("button", { name: "Rotate pack" }).click();
+  await expect(page.locator(".ops-note")).toContainText(`${serial}: `);
+  await expect(page.locator(".ops-note")).toContainText("Back to ready");
+});
+
+test("plans list each customer's usage and a customer can ask for more", async ({ page }) => {
+  await page.goto("/#plans");
+  await expect(page.getByTestId("plan-rows")).toContainText("Customer B");
+  await page.getByTestId("plan-rows").locator("tr", { hasText: "Customer B" }).getByRole("button", { name: "Fleet" }).click();
+  await expect(page.locator(".ops-note")).toContainText("CUS-B is now on Fleet");
+  await page.goto("/#release");
+  await expect(page.getByTestId("release-rules")).toContainText("sha256");
+  await expect(page.getByTestId("release-tenants")).toContainText("REL TO");
+  await page.goto("/#quote");
+  await expect(page.getByTestId("your-plan")).toContainText("Your plan: Fleet");
+});

@@ -55,6 +55,8 @@ test("mixed fleet: one picture across vendors; imports check every row; no birth
   const tail = get(demo, "/v1/mixed/tail?tail=SRQ-101", CMD).body;
   assert.equal(tail.genealogy, null);
   assert.match(tail.why, /no birth record/);
+  assert.equal(get(demo, "/v1/mixed/tail?tail=SRQ-101", CMD_B).status, 403, "Customer B's plan (Record) does not include All vendors");
+  act(demo, "plans.set", { org: "CUS-B", tier: "fleet" }, OPS);
   assert.equal(get(demo, "/v1/mixed/tail?tail=SRQ-101", CMD_B).status, 404, "another customer's tail is not found");
   assert.equal(act(demo, "mixed.ngc2", { tail: "SBS-0031" }, CMD).status, 409, "manual entry cannot publish to NGC2");
 });
@@ -68,15 +70,16 @@ test("configuration: invalid swaps are refused, a conversion holds the airframe 
   const bad = act(demo, "config.swap", { serial, part: "arm", to: "ARM-10" }, CMD);
   assert.equal(bad.status, 409);
   assert.match(bad.body.detail, /10-inch arms need MOT-L/);
+  const heldBefore = get(demo, "/v1/mixed", CMD).body.units.find((u) => u.unit === "Alpha").held;
   const conv = act(demo, "config.reconfigure", { serial, size: 8 }, CMD);
   assert.equal(conv.status, 200);
   const row = get(demo, "/v1/config?unit=Alpha", CMD).body.rows.find((r) => r.serial === serial);
   assert.equal(row.ready, false);
   assert.equal(row.size, 8);
   const held = get(demo, "/v1/mixed", CMD).body.units.find((u) => u.unit === "Alpha");
-  assert.equal(held.held, 1, "All vendors counts the held airframe as not ready");
+  assert.equal(held.held, heldBefore + 1, "All vendors counts the held airframe as not ready");
   assert.equal(act(demo, "config.params", { serial }, CMD).status, 200);
-  assert.equal(get(demo, "/v1/mixed", CMD).body.units.find((u) => u.unit === "Alpha").held, 0);
+  assert.equal(get(demo, "/v1/mixed", CMD).body.units.find((u) => u.unit === "Alpha").held, heldBefore);
   // Bravo has no 10-inch spares: the conversion is refused before anything changes.
   const b = get(demo, "/v1/config?unit=Bravo", CMD).body.rows[0].serial;
   assert.match(act(demo, "config.reconfigure", { serial: b, size: 10 }, CMD).body.detail, /Bravo has 0 ARM-10/);

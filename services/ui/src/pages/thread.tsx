@@ -98,6 +98,18 @@ export function useCustomerOrg(viewer: Viewer) {
   return { org, query: neros ? `?org=${org}` : "", picker, neros };
 }
 
+/** What an allied session's releasability rules removed from this page's data, and why. The server strips it; this only says so. */
+export function Withheld({ data }: { data: unknown }) {
+  const d = data as { _withheld?: { field: string; label: string; reason: string }[]; _marking?: string } | null;
+  if (!d?._withheld?.length && !d?._marking) return null;
+  return (
+    <div className="th-callout mk-withheld" data-testid="withheld">
+      {d._marking ? <strong>{d._marking}. </strong> : null}
+      {d._withheld?.length ? <>Withheld for releasability: {d._withheld.map((w) => `${w.label} (${w.reason})`).join("; ")}</> : "Nothing on this page is withheld."}
+    </div>
+  );
+}
+
 export const pct = (x: number | null | undefined, digits = 0) => (x == null ? "—" : `${(x * 100).toFixed(digits)}%`);
 
 interface SerialEvent { seq: number; day: string; kind: string; text: string; owner: string; hash: string; prev_hash: string }

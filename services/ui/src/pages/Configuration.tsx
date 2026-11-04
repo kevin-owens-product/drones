@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { Viewer } from "../shell/types";
-import { Loading, Note, PageHead, pct, Stat, useCustomerOrg, usePageData } from "./thread";
+import { Loading, Note, PageHead, pct, Stat, useCustomerOrg, usePageData, Withheld } from "./thread";
 import "./market.css";
 
 interface Row {
@@ -49,6 +49,7 @@ export function ConfigurationPage({ viewer, onBanner }: { viewer: Viewer; onBann
       <p className="ins-source">{d.source}</p>
       {picker}
       <Note note={page.note} />
+      <Withheld data={d} />
 
       <div className="th-stats">
         <Stat label="Airframes issued" value={String(d.units.reduce((n, u) => n + u.issued, 0))} />

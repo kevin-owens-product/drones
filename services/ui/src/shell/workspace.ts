@@ -19,6 +19,7 @@ export const NAV: readonly { id: Section; label: string; in: readonly Workspace[
   { id: "fleet", label: "Airframes", in: ["customer", "all"], group: "Fleet" },
   { id: "mixed", label: "All vendors", in: ["customer", "all"], group: "Fleet" },
   { id: "config", label: "Configuration", in: ["neros", "customer", "all"], group: "Fleet" },
+  { id: "stockpile", label: "Stockpile health", in: ["customer", "all"], group: "Fleet" },
   { id: "readiness", label: "Readiness", in: ["customer", "all"], group: "Fleet" },
   // Sustain: what arrives, what is spent, what to ask for, what to install.
   { id: "receiving", label: "Receiving", in: ["customer", "all"], group: "Sustain" },
@@ -34,6 +35,8 @@ export const NAV: readonly { id: Section; label: string; in: readonly Workspace[
   { id: "quote", label: "Quotes", in: ["neros"], group: "Commercial" },
   { id: "surge", label: "Surge planner", in: ["neros", "all"], group: "Commercial" },
   { id: "bid", label: "Bid desk", in: ["neros", "all"], group: "Commercial" },
+  { id: "plans", label: "Plans", in: ["neros", "all"], group: "Commercial" },
+  { id: "release", label: "Releasability", in: ["neros", "all"], group: "Commercial" },
   // Analysis: studies and models rather than daily work.
   { id: "cases", label: "Fix loop", in: ["neros", "all"], group: "Analysis" },
   { id: "eval", label: "Eval", in: ["neros", "all"], group: "Analysis" },

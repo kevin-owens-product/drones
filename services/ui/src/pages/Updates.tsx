@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { api } from "../api";
 import type { Viewer } from "../shell/types";
-import { Loading, Note, PageHead, Stat, useCustomerOrg, usePageData } from "./thread";
+import { Loading, Note, PageHead, Stat, useCustomerOrg, usePageData, Withheld } from "./thread";
 
 interface Result { unit: string; sku: string; serials: string[]; sorties: number; faults: number; lost_links: number; rate: number; baseline: number; pass: boolean }
 interface Rollout { status: string; approved_by?: string; approved?: string; units: Record<string, string>; results?: Result[]; halt?: string | null; canary?: string[] }
@@ -55,6 +55,7 @@ export function UpdatesPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
       <p className="ins-source">{d.source}</p>
       {picker}
       <Note note={page.note} />
+      <Withheld data={d} />
       {fault ? <p className="ops-note is-bad">{fault}</p> : null}
 
       <div className="th-stats">
@@ -77,7 +78,7 @@ export function UpdatesPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
                 <p className="ops-title">
                   {r.id}: {r.kind} {r.version} for the {r.component.charAt(0).toLowerCase() + r.component.slice(1)} <span className={r.status === "published" ? "pill pill-ok" : "pill pill-warn"}>{r.status}</span>
                 </p>
-                <p className="ops-detail">{r.notes}. {r.size_mb} MB · signed by {r.signer} · <span className="mono" title={r.sha256}>sha256 {r.sha256.slice(0, 12)}…</span></p>
+                <p className="ops-detail">{r.notes}. {r.size_mb} MB · signed by {r.signer} · {r.sha256 ? <span className="mono" title={r.sha256}>sha256 {r.sha256.slice(0, 12)}…</span> : <span className="meta">hash withheld</span>}</p>
                 <div className="th-stage">
                   <span className={ro.status !== "awaiting approval" ? "is-done" : undefined}>Approved{ro.approved_by ? ` by ${ro.approved_by}` : ""}</span>
                   <span className={ro.status === "halted" ? "is-bad" : ro.results?.length ? "is-done" : undefined}>Canary</span>

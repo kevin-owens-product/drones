@@ -1,13 +1,13 @@
 import { useState } from "react";
 import type { Viewer } from "../shell/types";
-import { Loading, Note, PageHead, pct, Stat, usePageData } from "./thread";
+import { Loading, Note, PageHead, pct, Stat, usePageData, Withheld } from "./thread";
 import "./market.css";
 
 interface Line { item: string; qty: number; each: number; usd: number; included?: boolean }
 interface Preview {
   sku: string; sensor: string; qty: number; seats: number; fleet: string; unit_usd: number; lines: Line[]; total_usd: number;
   sortie: { usd: number | null; drones_per_completed?: number; completion?: number; basis: string; sorties?: number };
-  program_price: { label: string; usd: number; source: string };
+  program_price?: { label: string; usd: number; source: string };
   delivery: { date: string; fastest: string; binding: string };
   evidence: { label: string; value: string; detail: string }[];
 }
@@ -21,7 +21,28 @@ interface QuoteView {
   preview: Preview; quotes: QuoteRow[];
 }
 
+interface MyPlan { tier: string; name: string; price: string; missing: { feature: string; label: string; needs: string }[]; usage: { drones: number; formations: number; annual_usd: number }; requests: { id: string; to: string; status: string }[] }
+
 const usd = (n: number | null | undefined) => (n == null ? "—" : `$${n.toLocaleString("en-US")}`);
+
+/** The customer's plan: what it includes, what it uses, and a way to ask for more. */
+function YourPlan({ canAsk, onBanner }: { canAsk: boolean; onBanner: (banner: string) => void }) {
+  const page = usePageData<MyPlan>("/v1/plans?org=CUS-A", onBanner);
+  const d = page.data;
+  if (!d) return null;
+  const next = d.missing[0]?.needs;
+  const asked = d.requests.find((r) => r.status === "requested");
+  return (
+    <section className="panel" data-testid="your-plan">
+      <div className="panel-head"><h2>Your plan: {d.name}</h2></div>
+      <Note note={page.note} />
+      <p className="meta">{d.price}. {d.usage.drones} drones under the record, {d.usage.formations} formations; about {usd(d.usage.annual_usd)} a year (SIM).</p>
+      {d.missing.length ? <p className="meta">Not in your plan: {d.missing.map((m) => `${m.label} (${m.needs})`).join(", ")}.</p> : <p className="meta">Every feature is in your plan.</p>}
+      {next && !asked ? <button type="button" className="btn btn-quiet" disabled={!canAsk || page.busy} onClick={() => void page.post("/v1/market/act", "plans.request", { tier: next.toLowerCase() })}>Ask Neros for {next}</button> : null}
+      {asked ? <p className="meta">{asked.id}: your request is with Neros.</p> : null}
+    </section>
+  );
+}
 
 /** The storefront listing: configure a kit, see what it costs per completed sortie and when it can arrive, and ask Neros to commit. */
 export function QuotePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (banner: string) => void }) {
@@ -48,6 +69,7 @@ export function QuotePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
       />
       <p className="ins-source">{d.source}</p>
       <Note note={page.note} />
+      <Withheld data={d} />
 
       <section className="panel">
         <div className="panel-head"><h2>{neros ? "The listing as customers see it" : "Configure"}</h2></div>
@@ -82,7 +104,7 @@ export function QuotePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
         <Stat label="Total" value={usd(p.total_usd)} hint={`${usd(p.unit_usd)} a drone`} />
         <Stat label="Cost per completed sortie" value={usd(p.sortie.usd)} hint={p.sortie.usd ? `${p.sortie.drones_per_completed} drones per completed sortie, from ${p.sortie.basis}` : p.sortie.basis} />
         <Stat label="Earliest delivery" value={p.delivery.date} hint={`Fastest with expediting ${p.delivery.fastest}. Limit: ${p.delivery.binding}`} />
-        <Stat label="Program reference" value={usd(p.program_price.usd)} hint={`${p.program_price.label}, ${p.program_price.source}`} />
+        {p.program_price ? <Stat label="Program reference" value={usd(p.program_price.usd)} hint={`${p.program_price.label}, ${p.program_price.source}`} /> : null}
       </div>
 
       <div className="ops-two">
@@ -114,6 +136,8 @@ export function QuotePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
           <p className="meta">The serial record is priced into every drone ({pct(0.02)} of the unit price, a planning assumption). Fleet software is priced per formation, not per drone, because drones are expended and formations are not.</p>
         </section>
       </div>
+
+      {!neros ? <YourPlan canAsk={buyer} onBanner={onBanner} /> : null}
 
       <section className="panel">
         <div className="panel-head"><h2>{neros ? "Requests from customers" : "Your quotes"}</h2></div>

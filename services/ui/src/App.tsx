@@ -27,6 +27,9 @@ import { QuotePage } from "./pages/Quote";
 import { SurgePage } from "./pages/Surge";
 import { BidDeskPage } from "./pages/BidDesk";
 import { CasesPage } from "./pages/Cases";
+import { StockpilePage } from "./pages/Stockpile";
+import { PlansPage } from "./pages/Plans";
+import { ReleasabilityPage } from "./pages/Releasability";
 import { MixedFleetPage } from "./pages/MixedFleet";
 import { ConfigurationPage } from "./pages/Configuration";
 import { Login } from "./shell/Login";
@@ -60,6 +63,9 @@ const SECTIONS: readonly Section[] = [
   "surge",
   "bid",
   "cases",
+  "stockpile",
+  "plans",
+  "release",
   "mixed",
   "config",
   "access",
@@ -219,6 +225,9 @@ export function App() {
       {section === "surge" ? <SurgePage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "bid" ? <BidDeskPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "cases" ? <CasesPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "stockpile" ? <StockpilePage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "plans" ? <PlansPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "release" ? <ReleasabilityPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "mixed" ? <MixedFleetPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "config" ? <ConfigurationPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "access" ? <AccessPage viewer={viewer} onBanner={setBanner} /> : null}

@@ -26,6 +26,9 @@ export type Section =
   | "surge"
   | "bid"
   | "cases"
+  | "stockpile"
+  | "plans"
+  | "release"
   | "access"
   | "audit";
 
