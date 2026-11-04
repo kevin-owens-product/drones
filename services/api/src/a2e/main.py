@@ -46,7 +46,7 @@ class SessionMiddleware(BaseHTTPMiddleware):
             except Exception:
                 await session.rollback()
                 raise
-            response.headers["X-A2E-Banner"] = getattr(request.state, "banner", settings.system_high)
+            response.headers["X-Classification-Banner"] = getattr(request.state, "banner", settings.system_high)
             for key, value in SECURITY_HEADERS.items():
                 response.headers.setdefault(key, value)
             log.info(

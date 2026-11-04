@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <title>Why I Built This</title>
+    <meta name="description" content="A note from Kevin Owens: why he built Drone Mission Cloud for Neros, the product calls behind it, what is not proven yet, and his first 90 days as Director of Product." />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#07090d" />
+    <meta property="og:title" content="Drone Mission Cloud · A note from Kevin Owens" />
+    <meta property="og:description" content="Why I built this for Neros, the product calls behind it, and my first 90 days." />
+    <meta property="og:image" content="https://drones.productexec.co/og.png" />
+    <meta property="og:type" content="article" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <header data-site-nav></header>
+    <main class="why">
+      <section class="docs-hero">
+        <div class="wrap why-narrow">
+          <p class="kicker">A note from Kevin Owens</p>
+          <h1>I built this to show how I'd work as Neros's first Director of Product.</h1>
+          <p class="lede">Not a pitch for software to buy. It's a working answer to the question I'd be hired to own: what product, around the drone, makes every Archer that leaves Torrance more valuable in the field and better in the next lot?</p>
+          <div class="why-cta">
+            <a class="btn btn-primary btn-lg" href="#tour">Take the five-minute tour</a>
+            <a class="btn btn-lg" href="#contact">Get in touch</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="why-sec">
+        <div class="wrap why-narrow">
+          <p class="kicker">What I saw</p>
+          <h2>Neros is going from prototype to volume, and the product around the drone has to keep up.</h2>
+          <p>Your open roles tell the story: supply planning, MES with serialization and genealogy, supplier quality, lithium logistics, a ground station for many vehicles, autonomy evaluation. That is a company building at volume for units that lose airframes every day.</p>
+          <p>At the same time, programs are asking for open architectures and furnishing their own control software, units buy by the package from a marketplace, and airframes are reconfigured in the field. Whoever owns the ground screen no longer owns the customer. What stays valuable is the record of each serial, from the bench to its last sortie, and the sale that the record makes easier.</p>
+        </div>
+      </section>
+
+      <section class="why-sec">
+        <div class="wrap why-narrow">
+          <p class="kicker">The product calls</p>
+          <h2>Six decisions, and why I made them.</h2>
+          <ol class="why-list">
+            <li><b>One record per serial, not six systems.</b> The bench, shipping, flight, loss autopsy and the lot hold all attach to the same airframe, so a 2× loss rate on one ESC lot turns into a hold and a measured fix, not a spreadsheet hunt.</li>
+            <li><b>Two sides on one platform.</b> Neros works a queue that ends in actions; each customer sees its own fleet and nothing else. Field data flows back only while the customer shares it, because that is the only way units will agree to share it.</li>
+            <li><b>Exceptions first, humans approve.</b> One operator watching dozens of drones needs the ones that need them, with the reason. Plans need a second approver. The console advises and never arms or fires: targeting and fire control stay on the airframe.</li>
+            <li><b>Evidence labeled by where it was measured.</b> PX4 SITL, unit check or simulation, on every number. Nothing here is presented as a field result, and the open problems are on the front page.</li>
+            <li><b>Priced into the drone.</b> The record travels with the airframe, so it is priced with it. Fleets pay per formation, so more drones never means more friction. These are assumptions to test with buyers, not a price list.</li>
+            <li><b>Allies on the same platform.</b> An allied tenant gets its own workspace, and withheld fields are removed at the API, not hidden on the screen.</li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="why-sec" id="tour">
+        <div class="wrap why-narrow">
+          <p class="kicker">The five-minute tour</p>
+          <h2>Follow one problem from the field to the factory and back.</h2>
+          <p>The invite link signs you in as an admin who can switch between Neros operations and a customer. Everything is simulated and resets when you reload.</p>
+          <ol class="why-tour">
+            <li><span>1</span><div><b>Start where Neros starts: the work queue.</b> Every open item, from a late PO to a customer about to run out of airframes, with the action that clears it. <a href="/#ops">Open the work queue →</a></div></li>
+            <li><span>2</span><div><b>Find the bad lot.</b> Attrition compares loss rates by part lot across the fleet and flags ESC-2611. <a href="/#attrition">Open Attrition →</a></div></li>
+            <li><span>3</span><div><b>Follow one serial.</b> Contract to field shows NX-05 from its bench birth record to the customer who flies it. <a href="/#company">Open Contract to field →</a></div></li>
+            <li><span>4</span><div><b>Close the loop.</b> Field fixes measures whether the change actually lowered losses before the hold lifts. <a href="/#cases">Open Field fixes →</a></div></li>
+            <li><span>5</span><div><b>Now see it from the customer's side.</b> Use the workspace switch at the top of the left rail. Operate shows nine drones, one operator, and the three that need attention. <a href="/#operate">Open Operate →</a></div></li>
+          </ol>
+          <p class="why-note">No invite link? <a href="#contact">Ask me for one</a>, or read the <a href="/help/#start">getting started guide</a>.</p>
+        </div>
+      </section>
+
+      <section class="why-sec">
+        <div class="wrap why-narrow">
+          <p class="kicker">What I'd do first</p>
+          <h2>My first 90 days.</h2>
+          <div class="why-days">
+            <div class="card"><span class="num">DAYS 1–30</span><h3>Listen where the drones are</h3><p>Ride along with operators and trainers, walk the line in Torrance and Tennessee, and map where today's record breaks between the bench, the shipment and the field.</p></div>
+            <div class="card"><span class="num">DAYS 31–60</span><h3>Pick one loop and ship it</h3><p>Choose the loop with the most money in it, probably field losses back to a lot hold, and get it running with one unit and one production line.</p></div>
+            <div class="card"><span class="num">DAYS 61–90</span><h3>A roadmap tied to programs</h3><p>A roadmap the program leads can sell from, one north-star metric (effective sorties per operator-hour), and the demo configurations for the next fly-off.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="why-sec">
+        <div class="wrap why-narrow">
+          <p class="kicker">How it was built</p>
+          <h2>Built in days, with the decisions in the open.</h2>
+          <p>I built this in a few days with AI coding agents doing most of the typing, while I made the product calls: what to build, what to cut, and what to say honestly about. The source, the architecture decision records and every pull request are <a href="https://github.com/kevin-owens-product/drones">public on GitHub</a>. Neros has not seen or endorsed any of it, and none of its data is in it: the catalog items are as Neros publishes them, and everything else is simulated.</p>
+        </div>
+      </section>
+
+      <section class="why-sec" id="contact">
+        <div class="wrap why-narrow why-contact">
+          <h2>I'd like to talk about building this for real.</h2>
+          <p class="lede">Kevin Owens</p>
+          <div class="why-cta">
+            <a class="btn btn-primary btn-lg" href="mailto:kevin.a.owens@gmail.com?subject=Drone%20Mission%20Cloud">kevin.a.owens@gmail.com</a>
+            <a class="btn btn-lg" href="/product/">See the product</a>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer data-site-foot></footer>
+    <script type="module" src="/site/why.ts"></script>
+  </body>
+</html>

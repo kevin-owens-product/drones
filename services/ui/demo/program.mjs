@@ -7,7 +7,7 @@
 // against the program, delivery against orders, the demand that expenditure
 // creates, and whether training moves results.
 //
-// Program figures are as reported by secondary trackers (labelled on each row;
+// Program figures are as reported by secondary trackers (labeled on each row;
 // Phase III is conflicting). Costs, orders, sorties and rates are simulated
 // (SIM). Prices are for the airframe alone; nothing here covers munitions or
 // what a sortie did, only whether it completed (ADR-0016). Pure JavaScript.

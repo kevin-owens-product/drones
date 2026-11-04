@@ -86,7 +86,7 @@ const SEED = [
   [0, 8, "NX-08", "Delta", "Heading jumped 15 degrees on takeoff, settled after a minute."],
 ];
 
-/** Seeded reports, timed relative to `now`, labelled simulated. */
+/** Seeded reports, timed relative to `now`, labeled simulated. */
 export function seedReports(now = Date.now()) {
   return SEED.map(([days, hours, tail, , text], i) => {
     const unit = TAIL_UNIT[tail] ?? "Alpha";

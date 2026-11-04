@@ -4,7 +4,7 @@ This is an engineering starter for an SSP, not an authorization to operate. Syst
 
 ## System
 
-A2E Mission Cloud plans, monitors, simulates, and debriefs Group 1–3 uncrewed aircraft. It does not employ weapons or release effects. Tracking is ISR sensor custody.
+Drone Mission Cloud plans, monitors, simulates, and debriefs Group 1–3 uncrewed aircraft. It does not employ weapons or release effects. Tracking is ISR sensor custody.
 
 ## Boundaries
 

@@ -56,7 +56,7 @@ test("launch view gives each vehicle on the ground a go or no-go and times power
   await expect(page.locator(".timeline-list")).toContainText(/Ready to launch, \d+ s from power-on/);
 });
 
-test("operating picture draws labelled sim overlays that the operator can switch off", async ({ page }) => {
+test("operating picture draws labeled sim overlays that the operator can switch off", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("map-legend")).toContainText("SIM");
   await expect(page.locator(".tac-zone-label")).toHaveText("GNSS jamming (sim)");

@@ -24,7 +24,7 @@ const DEMO_USERS: Record<string, DemoUser> = {
   // An allied tenant: every response passes through its releasability rules (demo/release.mjs).
   allied: { hash: "51c4f22372e7dd37a22b614e69f894e82062dfb17c5d77e77c3b1132f62def54", display_name: "Allied Mission Commander", roles: ["mission_commander", "planner"], org: "CUS-C", citizenship: "Allied (SIM)" },
 };
-const ORG_NAMES: Record<string, string> = { neros: "Neros Technologies (operations)", "CUS-A": "Customer A: Army brigade programme (SIM)", "CUS-C": "Customer C: allied partner (SIM)" };
+const ORG_NAMES: Record<string, string> = { neros: "Neros Technologies (operations)", "CUS-A": "Customer A: Army brigade program (SIM)", "CUS-C": "Customer C: allied partner (SIM)" };
 const SESSION_KEY = "a2e-demo-session";
 const SESSION_MS = 12 * 60 * 60_000;
 
@@ -110,7 +110,7 @@ export function installStaticDemo(): void {
       const out = (await gate(method, url, raw)) ?? demo.handle(method, url, raw, who ? (DEMO_USERS[who] ?? null) : null);
       return new Response(JSON.stringify(out.body), {
         status: out.status,
-        headers: { "content-type": "application/json", "X-A2E-Banner": BANNER },
+        headers: { "content-type": "application/json", "X-Classification-Banner": BANNER },
       });
     }
     return real(input, init);

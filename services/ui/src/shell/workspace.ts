@@ -67,7 +67,7 @@ export const NEROS_NAV: readonly NavItem[] = [
 export function navFor(w: Workspace): readonly NavItem[] {
   if (w === "neros") return NEROS_NAV;
   if (w === "customer") return CUSTOMER_NAV;
-  // No organisation (the local demo server): every page, the work queue first, each page once.
+  // No organization (the local demo server): every page, the work queue first, each page once.
   const out: NavItem[] = [NEROS_NAV[0]!];
   for (const n of [...CUSTOMER_NAV, ...NEROS_NAV.slice(1)]) if (!out.some((m) => m.id === n.id)) out.push(n);
   return out;

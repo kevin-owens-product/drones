@@ -4,7 +4,7 @@ import react from "@vitejs/plugin-react";
 import cesium from "vite-plugin-cesium";
 
 // Cesium injects its script and stylesheet into every HTML page. Only the console needs it,
-// so the public pages (product, help, developers) are left alone.
+// so the public pages (product, help, developers, why) are left alone.
 function consoleOnly(plugins: Plugin | Plugin[]): Plugin[] {
   return (Array.isArray(plugins) ? plugins : [plugins]).map((p) => {
     const hook = p.transformIndexHtml;
@@ -29,6 +29,7 @@ export default defineConfig({
         product: resolve(__dirname, "product/index.html"),
         help: resolve(__dirname, "help/index.html"),
         developers: resolve(__dirname, "developers/index.html"),
+        why: resolve(__dirname, "why/index.html"),
       },
     },
   },

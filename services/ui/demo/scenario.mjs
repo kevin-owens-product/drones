@@ -1,7 +1,7 @@
 // The demo scenario behind the console: a scripted sortie, its operating
 // picture, and training sessions. Pure JavaScript with no Node imports, so the
 // same code runs behind demo/server.mjs and, for the hosted static demo, inside
-// the browser (src/staticDemo.ts). All data is synthetic and labelled so.
+// the browser (src/staticDemo.ts). All data is synthetic and labeled so.
 import { createCompany } from "./company.mjs";
 import { createOps, NEROS } from "./ops.mjs";
 import { plan as planConfig } from "./configure.mjs";
@@ -394,7 +394,7 @@ export function createDemo(opts = {}) {
       links,
       tasks,
       notes: {
-        allocation: "CBBA's converged assignment (sequential greedy, onboard/alloc score), from orbit centres. Re-plans when a vehicle leaves the network.",
+        allocation: "CBBA's converged assignment (sequential greedy, onboard/alloc score), from orbit centers. Re-plans when a vehicle leaves the network.",
         drift: "VIO error assumed to grow 1% of distance flown.",
       },
     };

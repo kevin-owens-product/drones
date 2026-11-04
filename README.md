@@ -121,7 +121,7 @@ Each row says where it was measured. **Unit check** rows come from the onboard C
 | Dense crossing geofence breaches | 0 events | Unit check | Phase 4 |
 | Lock retention | 50 of 50 runs | Unit check | Phase 3 |
 | Reacquisition | 0.00 frames | Unit check | Phase 3 |
-| Mean pixel error | 0.000 px | Unit check | Phase 3 |
+| Mean pixel error, synthetic checkerboard shifts (sanity check; real imagery is the SITL rows below) | 0.000 px | Unit check | Phase 3 |
 | Frames on target, tracker v1, median run | 0.180 fraction | PX4 SITL | Phase 3 |
 | Frames on target, tracker v2, median run | 0.984 fraction | PX4 SITL | Phase 3 |
 | Runs that held the target, tracker v1 | 0 of 5 runs | PX4 SITL | Phase 3 |

@@ -35,7 +35,7 @@ test("customers cannot see the Neros queue or Company view, and cannot run Neros
   assert.ok(audit.some((e) => e.action === "ops.po.raise" && e.decision === "deny"));
 });
 
-test("a customer's portal shows only its own organisation", () => {
+test("a customer's portal shows only its own organization", () => {
   const demo = createDemo({ attrition });
   const mine = portal(demo, CMD, "?org=CUS-B");
   assert.equal(mine.org.id, "CUS-A");

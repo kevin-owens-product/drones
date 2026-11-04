@@ -53,7 +53,7 @@ const SOLICITATIONS = [
       { id: "rel", req: "Releasability: no US-only data in the allied tenant", check: "releasability" },
       { id: "sov", req: "Sovereign or air-gapped hosting option", check: "sovereign" },
       { id: "local", req: "Local build partner for final assembly", check: "not_built", note: "Commercial question for Neros leadership; no build partner is on record." },
-      { id: "export", req: "Export licence in place before delivery", check: "export" },
+      { id: "export", req: "Export license in place before delivery", check: "export" },
     ],
   },
 ];
@@ -132,7 +132,7 @@ export function createBidDesk({ company, thread, mixed, surge, cases = () => nul
     export() {
       const o = company.orders.find((x) => x.customer === "CUS-C");
       const st = o?.export?.status ?? "none";
-      return { status: st === "approved" ? "met" : "partial", value: o ? `${o.id}: ${o.export?.licence ?? "licence"} ${st}` : "No allied order", evidence: { page: "program", label: "Program", count: o ? 1 : 0 } };
+      return { status: st === "approved" ? "met" : "partial", value: o ? `${o.id}: ${o.export?.license ?? "license"} ${st}` : "No allied order", evidence: { page: "program", label: "Program", count: o ? 1 : 0 } };
     },
     not_built: () => ({ status: "gap", value: "", evidence: null }),
     adr0016: () => ({ status: "out_of_scope", value: OUT_OF_SCOPE, evidence: null }),

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createDemo } from "./scenario.mjs";
-import { RULES } from "./release.mjs";
+import { ALIASES, RULES } from "./release.mjs";
 
 const attrition = JSON.parse(readFileSync(new URL("./assets/attrition.json", import.meta.url), "utf8"));
 const OPS = { display_name: "Demo Ops Lead (Neros)", roles: ["ops_lead"], org: "neros" };
@@ -19,11 +19,11 @@ function keys(v, out = new Set()) {
 }
 
 const PATHS = ["/v1/quote", "/v1/mixed", "/v1/mixed/tail?tail=ALQ-11", "/v1/config", "/v1/stockpile", "/v1/plans", "/v1/release",
-  "/v1/thread/updates", "/v1/thread/accountability", "/v1/thread/receiving", "/v1/thread/readiness", "/v1/field-reports", "/v1/fleet", "/v1/missions", "/v1/attrition"];
+  "/v1/thread/updates", "/v1/thread/accountability", "/v1/thread/receiving", "/v1/thread/readiness", "/v1/field-reports", "/v1/fleet", "/v1/missions", "/v1/attrition", "/v1/birth-records"];
 
 test("allied tenants: an allied session never receives a field its releasability rules withhold", () => {
   const demo = createDemo({ attrition });
-  const withheld = RULES.map((r) => r.field);
+  const withheld = [...RULES.map((r) => r.field), ...Object.keys(ALIASES)];
   let saw = 0;
   for (const p of PATHS) {
     const r = get(demo, p, ALLY);
@@ -32,6 +32,12 @@ test("allied tenants: an allied session never receives a field its releasability
     if (r.body && r.body._withheld) saw += r.body._withheld.length;
   }
   assert.ok(saw > 0, "pages say what they withheld");
+  // Birth records keep the serial and verdict but lose the hash and bench readings, under the rule's name.
+  const births = get(demo, "/v1/birth-records", ALLY).body;
+  assert.ok(births.items.length > 0 && births.items.every((b) => b.serial && b.verdict));
+  assert.ok(!JSON.stringify(births).includes("firmware_sha256"));
+  assert.deepEqual(births._withheld.map((w) => w.field).sort(), ["bench", "sha256"]);
+  assert.ok(keys(get(demo, "/v1/birth-records", CMD).body).has("firmware_sha256"), "US customers keep the hash");
   // A quote request from the allied tenant still works, and its response is filtered too.
   const q = act(demo, "quote.request", { sku: "ARCHER-8", qty: 20 }, ALLY);
   assert.equal(q.status, 200);

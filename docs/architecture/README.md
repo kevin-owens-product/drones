@@ -1,6 +1,6 @@
-# A2E Mission Cloud — architecture
+# Drone Mission Cloud — architecture
 
-Working name **A2E Mission Cloud**. A multi-tenant mission system for Group 1–3 uncrewed aircraft: plan, monitor, simulate, and debrief. Humans approve every mission plan and every change to vehicle tasking.
+**Drone Mission Cloud** (internal package and chart names still say `a2e`). A multi-tenant mission system for Group 1–3 uncrewed aircraft: plan, monitor, simulate, and debrief. Humans approve every mission plan and every change to vehicle tasking.
 
 This build does not employ weapons, release effects, or task a vehicle to do either. Tracking means ISR sensor custody only.
 

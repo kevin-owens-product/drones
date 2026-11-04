@@ -4,7 +4,7 @@
 // of orders, the line, suppliers, lots, purchase orders, work orders and
 // customer requests, where every item carries the action that clears it.
 //
-// Customers run their own fleets here: a portal scoped to their organisation
+// Customers run their own fleets here: a portal scoped to their organization
 // that shows their units, forecast, orders and shipments, and lets them ask
 // Neros for replacements, spares, training or a repair. Their requests land in
 // the Neros queue; Neros shipments land in their fleet when they sign for them.
@@ -21,7 +21,7 @@ export const NEROS = { id: "neros", name: "Neros Technologies (operations)" };
 /** Which actions belong to which side. Neros actions need org "neros"; customer actions need the request's org. */
 export const NEROS_ACTIONS = [
   "request.approve", "request.decline", "request.fulfil", "request.propose",
-  "order.ship", "licence.record", "build.run",
+  "order.ship", "license.record", "build.run",
   "po.raise", "po.expedite", "po.receive",
   "lot.accept", "lot.reject", "lot.disposition", "scar.close",
   "eco.approve", "wo.close",
@@ -102,7 +102,7 @@ export function createOps({ company, audit, platforms }) {
         ],
       });
     }
-    for (const r of requests.filter((x) => x.status === "approved" || x.status === "authorised")) {
+    for (const r of requests.filter((x) => x.status === "approved" || x.status === "authorized")) {
       const need = r.kind === "spares" ? null : r.qty;
       const fg = need ? supply.finished[r.sku] ?? 0 : null;
       const ready = r.kind === "spares" ? true : fg >= need;
@@ -139,14 +139,14 @@ export function createOps({ company, audit, platforms }) {
       });
     }
 
-    // Orders: lines that can ship from stock now, and export lines waiting on a licence.
+    // Orders: lines that can ship from stock now, and export lines waiting on a license.
     for (const o of p.orders) {
       if (o.export && o.export.status !== "approved") {
         add({
           id: `q-lic-${o.id}`, area: "Logistics", severity: "medium", org: o.customer,
-          title: `${o.id}: ${o.left} ${o.name} for ${short(o.customer)} wait on export licence ${o.export.licence}`,
+          title: `${o.id}: ${o.left} ${o.name} for ${short(o.customer)} wait on export license ${o.export.license}`,
           detail: "Record the government's decision when it arrives. The platform records it; it does not grant it.",
-          actions: [{ label: "Record licence approval", action: "licence.record", args: { id: o.id } }],
+          actions: [{ label: "Record license approval", action: "license.record", args: { id: o.id } }],
         });
         continue;
       }
@@ -298,7 +298,7 @@ export function createOps({ company, audit, platforms }) {
     const orders = p.orders.filter((o) => o.customer === org).map((o) => ({
       id: o.id, sku: o.sku, name: o.name, qty: o.qty, delivered: o.delivered, shipped: o.shipped, left: o.left, due: o.due, projected: o.projected, at_risk: o.at_risk,
       // Customers see why a date moved, not Neros's supplier names or stock.
-      why: o.export && o.export.status !== "approved" ? `Export licence (${o.export.licence}) pending with the government` : o.why.includes("short of") ? "Waiting on a component; the date includes the supplier's" : o.why ? "Factory capacity" : "",
+      why: o.export && o.export.status !== "approved" ? `Export license (${o.export.license}) pending with the government` : o.why.includes("short of") ? "Waiting on a component; the date includes the supplier's" : o.why ? "Factory capacity" : "",
     }));
     // Orders fully delivered stay visible as history.
     for (const o of company.orders.filter((x) => x.customer === org && x.qty <= x.delivered + x.shipped)) {
@@ -355,9 +355,9 @@ export function createOps({ company, audit, platforms }) {
           return { ok: true, message: `${c.id} booked: ${req.seats} seats on ${nameOf(req.sku)} from ${c.start}` };
         }
         if (req.kind === "rma") {
-          req.status = "authorised";
+          req.status = "authorized";
           req.rma = `RMA-${(rmaSeq += 1)}`;
-          return { ok: true, message: `${req.rma} authorised for ${req.tail}; an advance replacement ships from stock` };
+          return { ok: true, message: `${req.rma} authorized for ${req.tail}; an advance replacement ships from stock` };
         }
         req.status = "approved";
         return { ok: true, message: `${req.id} approved; it is in the shipping queue` };
@@ -380,7 +380,7 @@ export function createOps({ company, audit, platforms }) {
         return { ok: true, message: `${r.id} proposed to ${short(org)}: ${describe(r)}. They decide in their portal.` };
       }
       case "request.fulfil": {
-        if (!req || !["approved", "authorised"].includes(req.status)) return { error: "request is not approved", status: 409 };
+        if (!req || !["approved", "authorized"].includes(req.status)) return { error: "request is not approved", status: 409 };
         const n = req.kind === "rma" ? 1 : req.qty;
         if (n > 0 && !supply.pick(req.sku, n)) return { error: `Only ${supply.finished[req.sku] ?? 0} ${nameOf(req.sku)} in finished goods; build first`, status: 409 };
         let issued = [];
@@ -406,8 +406,8 @@ export function createOps({ company, audit, platforms }) {
         const out = company.shipOrder(String(a.id), a.qty, actor);
         return out;
       }
-      case "licence.record":
-        return company.recordLicence(String(a.id));
+      case "license.record":
+        return company.recordLicense(String(a.id));
       case "build.run": {
         if (!BOMS[a.sku]) return { error: "this SKU has no build plan here", status: 400 };
         return supply.build(String(a.sku), a.qty, holds);
@@ -562,7 +562,7 @@ export function createOps({ company, audit, platforms }) {
     if (viewer) {
       const roles = viewer.roles ?? [];
       if (neros && (viewer.org !== NEROS.id || !roles.some((r) => NEROS_ROLES.includes(r)))) return deny("Only Neros operations can do this.");
-      if (cust && viewer.org !== NEROS.id && viewer.org !== org) return deny("That belongs to another organisation.");
+      if (cust && viewer.org !== NEROS.id && viewer.org !== org) return deny("That belongs to another organization.");
       if (cust && !roles.some((r) => CUSTOMER_ROLES.includes(r))) return deny("Requests and receipts need the mission commander or maintainer role; operators can view.");
     }
     const out = neros ? nerosAct(action, a, ctx, actor) : customerAct(org, action, a, actor);

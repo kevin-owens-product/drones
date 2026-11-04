@@ -5,9 +5,9 @@
 //    press releases. Each entry carries the source URL. Where Neros has not
 //    published a figure the entry says "not published"; nothing is filled in.
 //  - SIM: everything about stock, lots, suppliers, costs, lead times, units and
-//    work orders. Made up for the demo and labelled so on every screen.
+//    work orders. Made up for the demo and labeled so on every screen.
 //
-// ADR-0016 (no weapons in the domain): the Strike variants appear as catalogue
+// ADR-0016 (no weapons in the domain): the Strike variants appear as catalog
 // and inventory SKUs only. They have no BOM here, cannot be built, kitted or
 // planned by this platform, and nothing models a payload, targeting or release.
 //
@@ -23,7 +23,7 @@ export const SOURCES = {
 
 const NP = "not published";
 
-// ---- Catalogue (PUBLISHED) --------------------------------------------------
+// ---- Catalog (PUBLISHED) --------------------------------------------------
 // `family` drives grouping on the page. `restricted` marks ADR-0016 SKUs.
 export const CATALOG = [
   {
@@ -84,7 +84,7 @@ export const CATALOG = [
     family: "autonomy",
     role: "Autonomy software",
     summary: "Neros lists GPS-denied position hold and terminal guidance. Only position hold is modelled here; terminal guidance stays out under ADR-0016.",
-    specs: [["GPS-denied position hold", "Listed"], ["Licence model", NP]],
+    specs: [["GPS-denied position hold", "Listed"], ["License model", NP]],
     source: SOURCES.site,
   },
   {
@@ -158,7 +158,7 @@ export const CATALOG = [
   },
   // MISSION Success training. Durations and seat caps are as published.
   { sku: "TRN-ADO", name: "New Equipment Training / Attack Drone Operator (AD-O)", family: "training", role: "Operator", summary: "No prior FPV experience needed.", specs: [["Length", "5 days, about 40 contact hours"], ["Class size", "Up to 10"]], source: SOURCES.training },
-  { sku: "TRN-ADI", name: "Train-the-Trainer / Attack Drone Instructor (AD-I)", family: "training", role: "Instructor", summary: "Certifies AD-O graduates to teach and sustain the programme.", specs: [["Length", "5 days, about 40 contact hours"], ["Class size", "Up to 10"], ["Prerequisite", "AD-O graduate, O-6 memo"]], source: SOURCES.training },
+  { sku: "TRN-ADI", name: "Train-the-Trainer / Attack Drone Instructor (AD-I)", family: "training", role: "Instructor", summary: "Certifies AD-O graduates to teach and sustain the program.", specs: [["Length", "5 days, about 40 contact hours"], ["Class size", "Up to 10"], ["Prerequisite", "AD-O graduate, O-6 memo"]], source: SOURCES.training },
   { sku: "TRN-CQB", name: "Assault Support / Urban / CQB", family: "training", role: "Advanced", summary: "Urban and close-quarters support, day and night.", specs: [["Length", "10 days, about 80 contact hours"], ["Prerequisite", "AD-O graduate"]], source: SOURCES.training },
   { sku: "TRN-LR", name: "Long-Range course", family: "training", role: "Advanced", summary: "RF and endurance planning, repeater and fibre operations, degraded comms.", specs: [["Length", "10 days, about 80 contact hours"], ["Prerequisite", "AD-O graduate, O-6 memo"]], source: SOURCES.training },
 ];
@@ -478,7 +478,7 @@ export function createSupply({ births = [] } = {}) {
     const stock = usable(holds);
     const build = ["ARCHER-5", "ARCHER-8", "ARCHER-10"].map((sku) => ({ ...buildable(sku, stock), name: nameOf(sku), bom_usd: bom(sku).usd }));
     return {
-      source: "Catalogue: as published by Neros (links on each item). Stock, lots, suppliers, costs, units and work orders: simulated demo data.",
+      source: "Catalog: as published by Neros (links on each item). Stock, lots, suppliers, costs, units and work orders: simulated demo data.",
       catalog: CATALOG.map((c) => ({ ...c, bom: c.restricted ? null : BOMS[c.sku] ? bom(c.sku) : null, on_hand: finished[c.sku] ?? null })),
       families: FAMILIES,
       parts: PARTS.map((p) => ({ ...p, on_hand: stock[p.pn] ?? 0, reorder_point: REORDER[p.pn] ?? null })),

@@ -129,7 +129,7 @@ func subscribeMQTT(pipe *pipeline.Latest, publish func(sample.Sample)) {
 			client := mqtt.NewClient(opts)
 			token := client.Connect()
 			if token.WaitTimeout(10*time.Second) && token.Error() == nil {
-				sub := client.Subscribe("a2e/v1/+/+/telemetry", 0, func(_ mqtt.Client, msg mqtt.Message) {
+				sub := client.Subscribe("dmc/v1/+/+/telemetry", 0, func(_ mqtt.Client, msg mqtt.Message) {
 					var item sample.Sample
 					if err := json.Unmarshal(msg.Payload(), &item); err != nil {
 						return

@@ -190,7 +190,9 @@ export function Shell(props: {
             <path d="M12 2 21 7v10l-9 5-9-5V7z" fill="none" stroke="currentColor" strokeWidth="1.6" />
             <path d="M12 7v10M7.5 9.5l9 5M16.5 9.5l-9 5" stroke="currentColor" strokeWidth="1.2" />
           </svg>
-          <span>Drone</span>
+          <span>
+            Drone <span className="brand-sub">Mission Cloud</span>
+          </span>
         </div>
         <div className="crumb" aria-label="You are here">
           {hereGroup ? <span>{hereGroup}</span> : null}

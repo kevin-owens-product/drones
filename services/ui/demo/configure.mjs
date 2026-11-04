@@ -111,7 +111,7 @@ export function plan(m) {
 /** One sentence for the operator: what to take and why. */
 export function explain(result) {
   const b = result.best;
-  if (!b) return "No configuration in the catalogue flies this mission with the 20% reserve. Shorten the range, cut the loiter, or wait for the wind to drop.";
+  if (!b) return "No configuration in the catalog flies this mission with the 20% reserve. Shorten the range, cut the loiter, or wait for the wind to drop.";
   const v = VARIANTS.find((x) => x.id === b.variant);
   const bat = BATTERIES.find((x) => x.id === b.battery);
   const band = BANDS.find((x) => x.id === b.band);

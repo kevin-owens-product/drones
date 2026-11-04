@@ -132,7 +132,7 @@ export function birthRecord(tail, index, grounded) {
   const failed = Boolean(grounded);
   const accel = failed ? 0.42 : 0.04 + ((index * 7) % 9) / 100;
   return {
-    serial: `A2E-${tail.replace("NX-", "")}${String(1000 + index * 37).slice(-3)}`,
+    serial: `SN-${tail.replace("NX-", "")}${String(1000 + index * 37).slice(-3)}`,
     tail_number: tail,
     parts: [
       { part: "frame", lot: pick(LOTS.frame, 0) },

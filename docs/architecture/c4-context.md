@@ -2,7 +2,7 @@
 
 ```mermaid
 C4Context
-  title A2E Mission Cloud — system context
+  title Drone Mission Cloud — system context
 
   Person(commander, "Mission commander", "Approves plans and tasking changes. Two-person actions where required.")
   Person(planner, "Planner", "Drafts missions, areas, and routes.")
@@ -12,7 +12,7 @@ C4Context
   Person(auditor, "Auditor", "Reads the hash-chained audit log. No mission edit.")
   Person(admin, "Tenant admin", "Memberships and org nodes inside one branch hierarchy.")
 
-  System(a2e, "A2E Mission Cloud", "Plans, monitors, simulates, and debriefs Group 1–3 missions. Sensor custody and navigation only.")
+  System(a2e, "Drone Mission Cloud", "Plans, monitors, simulates, and debriefs Group 1–3 missions. Sensor custody and navigation only.")
 
   System_Ext(idp, "Enterprise IdP", "CAC/PIV in production. Keycloak stands in for it in development. The platform trusts the IdP for identity only, not for clearance.")
   System_Ext(aircraft, "Group 1–3 aircraft and radios", "MQTT telemetry and RTSP/SRT video. No weapons interface on this link.")

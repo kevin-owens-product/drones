@@ -33,7 +33,7 @@ The API role cannot `SET` its way past RLS into another tenant's rows without al
 
 ## Telemetry gateway (Phase 2)
 
-- MQTT subscriber per vehicle tenant topic `a2e/v1/{tenant}/{tail}/telemetry`.
+- MQTT subscriber per vehicle tenant topic `dmc/v1/{tenant}/{tail}/telemetry`.
 - JSON Schema validation. Unknown fields dropped, invalid samples rejected and counted.
 - Per-tail rate limit at 5 Hz sustained, burst 10. Over-rate samples are counted and discarded, not queued without bound.
 - JetStream publish with tenant and tail headers.

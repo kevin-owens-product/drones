@@ -225,6 +225,19 @@ export function mountScope(host: HTMLElement, onStats: (s: { air: number; vio: n
     }
 
     const now = Date.now();
+    // Vehicle labels: first spot beside the marker that overlaps no earlier label and stays on the canvas.
+    const placed: Array<[number, number, number, number]> = [];
+    ctx.font = "600 10px 'JetBrains Mono Variable', monospace";
+    const labelAt = (text: string, x: number, y: number): [number, number] => {
+      const lw = ctx.measureText(text).width;
+      const spots: Array<[number, number]> = [[x + 9, y - 7], [x + 9, y + 14], [x - 9 - lw, y - 7], [x - 9 - lw, y + 14], [x - lw / 2, y - 14], [x - lw / 2, y + 22]];
+      const fits = ([lx, ly]: [number, number]) =>
+        lx >= 2 && lx + lw <= w - 2 && ly - 10 >= 2 && ly <= h - 2 &&
+        !placed.some(([ax, ay, bw, bh]) => lx < ax + bw + 3 && lx + lw + 3 > ax && ly - 10 < ay + bh && ly > ay);
+      const at = spots.find(fits) ?? spots[0]!;
+      placed.push([at[0], at[1] - 10, lw, 12]);
+      return at;
+    };
     for (const [tail, p] of pos) {
       const s = p.s;
       const trail = trails.get(tail) ?? [];
@@ -265,7 +278,8 @@ export function mountScope(host: HTMLElement, onStats: (s: { air: number; vio: n
       ctx.restore();
       ctx.fillStyle = "rgba(231,236,242,0.85)";
       ctx.font = "600 10px 'JetBrains Mono Variable', monospace";
-      ctx.fillText(tail, p.x + 9, p.y - 7);
+      const [lx, ly] = labelAt(tail, p.x, p.y);
+      ctx.fillText(tail, lx, ly);
     }
 
     // Scale bar.

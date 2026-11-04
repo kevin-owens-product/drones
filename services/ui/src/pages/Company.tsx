@@ -8,7 +8,7 @@ type Spec = [string, string];
 interface BomRow { pn: string; name: string; qty: number; usd: number; ext_usd: number; supplier: string; swap?: boolean; dg?: boolean }
 interface CatalogItem { sku: string; name: string; family: string; role: string; summary: string; specs: Spec[]; source: string; restricted?: boolean; bom: { rows: BomRow[]; usd: number } | null; on_hand: number | null }
 interface Kpi { id: string; label: string; value: number | string; warn?: boolean }
-interface OrderRow { id: string; customer_name: string; sku: string; name: string; qty: number; delivered: number; left: number; from_stock: number; to_build: number; due: string; projected: string | null; at_risk: boolean; why: string; dpas: string | null; export: { licence: string; status: string } | null }
+interface OrderRow { id: string; customer_name: string; sku: string; name: string; qty: number; delivered: number; left: number; from_stock: number; to_build: number; due: string; projected: string | null; at_risk: boolean; why: string; dpas: string | null; export: { license: string; status: string } | null }
 interface SopRow { sku: string; name: string; backlog: number; attrition: number; finished: number; buildable: number | null; limit: string | null; rate: number; days_to_clear: number; wip: { step: string; qty: number }[] | null }
 interface Part { pn: string; name: string; supplier: string; usd: number; lead_days: number; on_hand: number; reorder_point: number | null; swap?: boolean; dg?: boolean }
 interface Lot { lot: string; pn: string; name: string; supplier: string; received: string; qty: number; on_hand: number; status: string; where_used: { tail: string; serial: string }[] }
@@ -286,7 +286,7 @@ export function CompanyPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
               </div>
               <p>{selected.summary}</p>
               {selected.restricted ? (
-                <p className="co-adr">Catalogue and inventory record only. Under ADR-0016 this platform holds no bill of materials, build plan, payload, targeting or release function for Strike variants.</p>
+                <p className="co-adr">Catalog and inventory record only. Under ADR-0016 this platform holds no bill of materials, build plan, payload, targeting or release function for Strike variants.</p>
               ) : null}
               {selected.specs.length ? (
                 <table className="co-specs">
@@ -670,7 +670,7 @@ export function CompanyPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
                 </tbody>
               </table>
             </div>
-            <p className="meta">Export orders wait for their licence before anything is packed (see ORD-C1 under Orders and plan).</p>
+            <p className="meta">Export orders wait for their license before anything is packed (see ORD-C1 under Orders and plan).</p>
           </section>
         </>
       ) : null}

@@ -13,7 +13,7 @@ const LINKS: Array<[string, string]> = [
   ["/developers/", "Developers"],
 ];
 
-export function mountChrome(current: "product" | "help" | "developers"): void {
+export function mountChrome(current: "product" | "help" | "developers" | "why"): void {
   const nav = document.querySelector<HTMLElement>("[data-site-nav]");
   if (nav) {
     nav.className = "nav";
@@ -25,7 +25,7 @@ export function mountChrome(current: "product" | "help" | "developers"): void {
           ${LINKS.map(([href, label]) => `<a href="${href}"${href.startsWith(`/${current}/`) && href.endsWith("/") ? ' aria-current="page"' : ""}>${label}</a>`).join("")}
         </nav>
         <div class="nav-cta">
-          <a class="btn btn-sm" href="/help/#accounts">Get demo access</a>
+          <a class="btn btn-sm" href="/why/">Why I built this</a>
           <a class="btn btn-sm btn-primary" href="/#operate">Open the console →</a>
         </div>
         <button class="nav-toggle" aria-expanded="false" aria-label="Menu">Menu</button>
@@ -53,6 +53,7 @@ export function mountChrome(current: "product" | "help" | "developers"): void {
             <li><a href="/product/#evidence">Evidence</a></li>
             <li><a href="/product/#pricing">Pricing</a></li>
             <li><a href="/#operate">Live console</a></li>
+            <li><a href="/why/">Why I built this</a></li>
           </ul></div>
           <div><h4>Help</h4><ul>
             <li><a href="/help/#start">Getting started</a></li>
@@ -69,7 +70,7 @@ export function mountChrome(current: "product" | "help" | "developers"): void {
             <li><a href="https://github.com/kevin-owens-product/drones">Source on GitHub</a></li>
           </ul></div>
         </div>
-        <p class="disclaimer">Drone Mission Cloud is an independent concept product built by Kevin Owens. It is not affiliated with, endorsed by or a product of Neros Technologies or any vendor named in the demo. Manufacturer catalogue items appear as published; every fleet, order, price, customer and flight on this site is simulated demo data, and every metric says where it was measured. The domain has no weapon, payload-release or fire-control type (ADR 0016).</p>
+        <p class="disclaimer">Drone Mission Cloud is an independent concept product built by Kevin Owens. It is not affiliated with, endorsed by or a product of Neros Technologies or any vendor named in the demo. Manufacturer catalog items appear as published; every fleet, order, price, customer and flight on this site is simulated demo data, and every metric says where it was measured. The console monitors and advises; it never arms or fires, and fire control stays on the airframe (ADR 0016). Questions or an invite link: <a href="mailto:kevin.a.owens@gmail.com">kevin.a.owens@gmail.com</a>.</p>
       </div>`;
   }
 

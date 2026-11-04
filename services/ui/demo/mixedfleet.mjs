@@ -134,7 +134,7 @@ export function createMixedFleet({ serials, notReady = () => ({}) }) {
       if (!Number.isFinite(min) || min <= 0 || min > 300) why.push("minutes must be 1 to 300");
       if (!OUTCOMES.includes(row.outcome)) why.push(`outcome must be one of ${OUTCOMES.join(", ")}`);
       const existing = tails.get(row.tail);
-      if (existing && existing.org !== org) why.push("tail belongs to another organisation");
+      if (existing && existing.org !== org) why.push("tail belongs to another organization");
       if (why.length) {
         rejected.push({ line: i + 2, tail: row.tail, why });
         continue;

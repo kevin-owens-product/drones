@@ -84,5 +84,5 @@ Controls not listed (CP, IR, MA, MP, PE, PL, PS, RA, SA program controls, and th
 4. An unknown caveat hides the row.
 5. A sharing agreement does not cross tenants until it is `active`, unexpired, two-person approved, and the category matches.
 6. `allow_noforn = false` hides `NOFORN` rows from the consumer even when the consumer is a US citizen.
-7. The `X-A2E-Banner` header is at least the system high, and it includes `NOFORN` if any returned row carries `NOFORN`.
+7. The `X-Classification-Banner` header is at least the system high, and it includes `NOFORN` if any returned row carries `NOFORN`.
 8. Export of a row the caller cannot read is a 404, and an audit row exists either way.
