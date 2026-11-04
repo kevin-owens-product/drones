@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Viewer } from "../shell/types";
 import { Loading, Note, PageHead, pct, SerialDrawer, Stat, usePageData } from "./thread";
+import { Scatter, type Dot } from "../viz/viz";
 
 interface Signal { part: string; lot: string; pn: string; supplier: string | null; sorties: number; faults: number; rate: number; baseline: number; ratio: number; p_value: number; flagged: boolean; held: boolean; action: string | null }
 interface Supplier { id: string; name: string; commodity: string; incoming_ppm: number; on_time: number; ndaa: string; field_sorties: number; field_faults: number; per_1000: number | null; worst_lot: { lot: string; ratio: number; flagged: boolean } | null; open_actions: string[]; tracked: boolean }
@@ -21,12 +22,27 @@ export function QualityPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
   const page = usePageData<Quality>("/v1/thread/quality", onBanner);
   const [all, setAll] = useState(false);
   const [serial, setSerial] = useState<string | null>(null);
+  const [lotPick, setLotPick] = useState<string | null>(null);
   if (!page.data) return <Loading fault={page.fault} />;
   const d = page.data;
   const canAct = viewer.roles.some((r) => r === "admin" || r === "ops_lead");
   const disabled = !canAct || page.busy;
   const rows = all ? d.signals : d.signals.filter((s) => s.faults > 0).slice(0, 10);
   const go = (action: string, args: Record<string, unknown>) => void page.post("/v1/thread/act", action, args);
+  const key = (x: Signal) => `${x.part}-${x.lot}`;
+  const dots: Dot[] = d.signals.map((x) => ({
+    id: key(x),
+    x: x.sorties,
+    y: x.ratio,
+    size: 4 + 2.2 * Math.sqrt(x.faults),
+    tone: x.flagged ? (x.held ? "warn" : "bad") : x.ratio >= 1.5 ? "warn" : x.faults ? "accent" : "muted",
+    label: x.lot,
+    ring: x.flagged && !x.held,
+    title: `${x.lot} · ${PART[x.part] ?? x.part} · ${x.faults} faults in ${x.sorties} sorties (${pct(x.rate, 1)}) vs ${pct(x.baseline, 1)} for the other lots · ${x.ratio}x · p ${x.p_value < 0.001 ? "<0.001" : x.p_value.toFixed(3)}${x.held ? " · held" : ""}`,
+  }));
+  const picked = d.signals.find((x) => key(x) === lotPick) ?? d.signals.find((x) => x.flagged && !x.held) ?? null;
+  const yTop = Math.max(3, ...d.signals.map((x) => x.ratio));
+  const yTicks = [0, 1, 1.5, 3, 6, 12, 24].filter((v) => v <= yTop * 1.05 || v <= 3);
 
   return (
     <section className="page ins-page co-page ops-page" data-testid="quality">
@@ -68,6 +84,44 @@ export function QualityPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
           <p className="meta">A serial that fails a check here was missed at the factory. Each one is a finding against the line, not just a replacement.</p>
         </section>
       ) : null}
+
+      <section className="panel" data-testid="quality-scatter">
+        <div className="panel-head">
+          <h2>Which lots are out of family</h2>
+          <span className="meta">{d.signals.length} lots · {d.signals.filter((x) => x.flagged).length} out of family</span>
+        </div>
+        <div className="q-scatter">
+          <Scatter
+            label="Field fault rate against the other lots of the same part, by evidence"
+            dots={dots}
+            yTicks={yTicks}
+            threshold={{ y: 1.5, label: "1.5x: out of family once p < 0.01 and 5+ faults" }}
+            xLabel="Shared field sorties flown on the lot (more evidence to the right)"
+            yLabel="Fault rate vs other lots"
+            picked={picked ? key(picked) : null}
+            onPick={setLotPick}
+          />
+          {picked ? (
+            <div className={`q-pick${picked.flagged ? " is-bad" : ""}`} data-testid="quality-pick">
+              <p className="kicker">{PART[picked.part] ?? picked.part} lot</p>
+              <p className="q-pick-lot mono">{picked.lot}</p>
+              <p className="q-pick-ratio">
+                <strong className="mono">{picked.ratio}x</strong> the other lots
+              </p>
+              <p className="meta">
+                {picked.faults} faults in {picked.sorties} sorties ({pct(picked.rate, 1)} vs {pct(picked.baseline, 1)}), p {picked.p_value < 0.001 ? "<0.001" : picked.p_value.toFixed(3)}. {d.suppliers.find((x) => x.id === picked.supplier)?.name.split(" (")[0] ?? ""}
+              </p>
+              <span className="th-inline">
+                {picked.held ? <span className="pill">Held</span> : null}
+                {picked.action ? <span className="pill">{picked.action}</span> : null}
+                {picked.flagged && !picked.action ? <button type="button" className="btn btn-primary" disabled={disabled} onClick={() => go("quality.action", { lot: picked.lot })}>Open supplier action</button> : null}
+                {picked.flagged && !picked.held ? <button type="button" className="btn btn-quiet" disabled={disabled} onClick={() => go("quality.hold", { lot: picked.lot })}>Hold the lot</button> : null}
+                {!picked.flagged ? <span className="meta">In family: nothing to do.</span> : null}
+              </span>
+            </div>
+          ) : null}
+        </div>
+      </section>
 
       <section className="panel">
         <div className="panel-head">

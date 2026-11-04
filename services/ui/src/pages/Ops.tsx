@@ -4,6 +4,7 @@ import type { Viewer } from "../shell/types";
 import "./insights.css";
 import "./company.css";
 import "./ops.css";
+import { FlowRail, type Stage } from "../viz/viz";
 
 interface Action { label: string; action: string; args: Record<string, unknown>; primary?: boolean }
 interface Item { id: string; area: string; severity: "high" | "medium" | "low"; title: string; detail: string; org?: string; actions: Action[] }
@@ -17,6 +18,13 @@ interface Queue {
 interface Done { at: string; text: string; ok: boolean }
 
 const SEVERITY_LABEL = { high: "Now", medium: "Today", low: "This week" } as const;
+/** Factory to field, in the order material and airframes move. Engineering is the loop back. */
+const FLOW = ["Bids", "Supply", "Production", "Quality", "Compliance", "Logistics", "Customers", "Sustainment"];
+
+function stageOf(items: Item[], key: string): Stage {
+  const mine = items.filter((i) => i.area === key);
+  return { key, label: key, high: mine.filter((i) => i.severity === "high").length, medium: mine.filter((i) => i.severity === "medium").length, low: mine.filter((i) => i.severity === "low").length };
+}
 
 /** Neros's own operations: one queue of work drawn from orders, the line, suppliers, quality and customers. */
 export function OpsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (banner: string) => void }) {
@@ -72,6 +80,14 @@ export function OpsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (banne
       <p className="ins-source">{data.source}</p>
       {fault ? <p className="fault" role="alert">{fault}</p> : null}
       {!canAct ? <p className="meta">You can see the queue; acting on it needs the Neros ops lead or admin role.</p> : null}
+
+      <section className="panel ops-flowpanel" data-testid="ops-flow">
+        <div className="panel-head">
+          <h2>Where today's work sits, factory to field</h2>
+          <span className="meta">{data.items.length} open · {now} now</span>
+        </div>
+        <FlowRail stages={FLOW.map((k) => stageOf(data.items, k))} loop={stageOf(data.items, "Engineering")} active={area} onPick={setArea} />
+      </section>
 
       <div className="ops-layout">
         <div className="ops-main">

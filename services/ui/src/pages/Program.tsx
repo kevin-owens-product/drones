@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Viewer } from "../shell/types";
 import { Loading, PageHead, pct, Stat, usePageData } from "./thread";
+import { LineChart, TimelineRows } from "../viz/viz";
 
 interface Rung { phase: string; drones: number; price_usd: number; note: string; source: string }
 interface SkuRow { sku: string; name: string; bom_usd: number; sorties: number; rate: number | null }
@@ -32,6 +33,10 @@ export function ProgramPage({ onBanner }: { viewer: Viewer; onBanner: (banner: s
   const perSortie = rate > 0 ? price / rate : null;
   const maxPrice = Math.max(...d.ladder.map((r) => r.price_usd));
   const spendWeek = d.expenditure.reduce((n, e) => n + e.per_week, 0);
+  const trainedRate = Math.min(0.99, base + lift / 2);
+  const prices = Array.from({ length: 36 }, (_, i) => 1500 + i * 100);
+  const curve = (r: number) => prices.map((p): [number, number] => [p, r > 0 ? p / r : 0]);
+  const roman = (phase: string) => /Phase (\w+)/.exec(phase)?.[1] ?? phase;
 
   return (
     <section className="page ins-page co-page ops-page" data-testid="program">
@@ -86,6 +91,25 @@ export function ProgramPage({ onBanner }: { viewer: Viewer; onBanner: (banner: s
             <span className="stat-value mono">{perSortie == null ? "—" : usd(perSortie)}</span> per completed sortie at {pct(rate)} completed
             <span className="meta"> · margin over bill of materials {usd(price - row.bom_usd)}</span>
           </p>
+          {base > 0 ? (
+            <LineChart
+              height={230}
+              series={[
+                { label: "At today's completion", tone: "accent", points: curve(base) },
+                ...(lift > 0 ? [{ label: "With all six sessions", tone: "ok" as const, points: curve(trainedRate), dashed: true }] : []),
+              ]}
+              rules={[...d.ladder.map((r) => ({ x: r.price_usd, label: roman(r.phase), tone: "muted" as const })), { x: d.price_goal, label: "Goal", tone: "warn" as const }]}
+              markers={perSortie == null ? [] : [{ x: price, y: perSortie, label: usd(perSortie), tone: trained ? "ok" : "accent" }]}
+              xFmt={(n) => `$${(n / 1000).toFixed(1)}k`}
+              yFmt={(n) => `$${Number((n / 1000).toFixed(1))}k`}
+              xLabel="Price per drone (phase prices I to IV, and the program goal)"
+              yLabel="Cost per completed sortie"
+            />
+          ) : null}
+          <p className="viz-legend">
+            <span><i className="tone-accent" /> At today's completion ({pct(base)})</span>
+            {lift > 0 ? <span><i className="tone-ok" /> If every operator takes all six sessions ({pct(trainedRate)})</span> : null}
+          </p>
           <p className="meta">
             Completion from {row.sorties} shared end-of-flight records for {row.name} (SIM). The training lever adds half the gap between operators with six sessions ({pct(d.training.full?.rate)}) and three or fewer ({pct(d.training.few?.rate)}), a conservative read of an observational difference. A 10% price cut and a 10% rise in completion lower cost per sortie by about the same amount.
           </p>
@@ -96,33 +120,15 @@ export function ProgramPage({ onBanner }: { viewer: Viewer; onBanner: (banner: s
         <div className="panel-head">
           <h2>Delivery against orders</h2>
         </div>
-        <div className="table-wrap">
-          <table data-testid="program-orders">
-            <thead>
-              <tr>
-                <th>Order</th>
-                <th>Customer</th>
-                <th>Model</th>
-                <th>Delivered</th>
-                <th>Due</th>
-                <th>Projected</th>
-                <th>Risk</th>
-              </tr>
-            </thead>
-            <tbody>
-              {d.orders.map((o) => (
-                <tr key={o.id} className={o.at_risk ? "th-row-fail" : undefined}>
-                  <td className="mono">{o.id}</td>
-                  <td>{o.customer.replace("CUS-", "Customer ")}</td>
-                  <td>{o.name}</td>
-                  <td className="mono">{o.delivered} of {o.qty}</td>
-                  <td className="mono">{o.due}</td>
-                  <td className="mono">{o.projected ?? "—"}</td>
-                  <td>{o.at_risk ? <span className="th-check is-fail">{o.why}</span> : <span className="th-check is-ok">On time</span>}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div data-testid="program-orders">
+        <TimelineRows
+          today={d.today}
+          lanes={d.orders.map((o) => ({ id: o.id, label: o.customer.replace("CUS-", "Customer "), sub: o.name, due: o.due, projected: o.projected, done: o.delivered, total: o.qty, risk: o.at_risk, why: o.why }))}
+        />
+        <p className="meta viz-foot">
+          Bars run from today to the projected ship date; the dashed flag is the due date and hatching is the slip. {d.orders.filter((o) => o.at_risk).length} of {d.orders.length} lines at risk.{" "}
+          <a className="th-link" href="#ops">Late lines are in the Work queue with the action that clears them.</a>
+        </p>
         </div>
       </section>
 

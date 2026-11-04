@@ -299,3 +299,6 @@
   font-size: 13px;
   line-height: 1.4;
 }
+
+.page.ops-page > .panel.ops-flowpanel:first-of-type { flex: none; margin-bottom: 4px; }
+.ops-flowpanel .viz-flow { padding: 8px 18px 14px; }
