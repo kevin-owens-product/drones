@@ -1,8 +1,10 @@
+import { invited, notify } from "../src/notify";
 import { esc, mountChrome } from "./chrome";
 import { ATTRITION, call } from "./live";
 import { mountScope, type ScopeEvent } from "./scope";
 
 mountChrome("product");
+if (invited()) notify("Product page opened", "An invited visitor opened the product page.", "product-open");
 
 // Live hero picture.
 const scope = document.getElementById("scope");

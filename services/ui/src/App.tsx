@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { invited, markInvited, notify } from "./notify";
 import { api, sessionLost, type SessionConfig } from "./api";
 import { AccessPage } from "./pages/Access";
 import { AttritionPage } from "./pages/Attrition";
@@ -35,7 +36,7 @@ import { ConfigurationPage } from "./pages/Configuration";
 import { Login } from "./shell/Login";
 import { Shell } from "./shell/Shell";
 import type { Section, Viewer } from "./shell/types";
-import { homeOf, rememberWorkspace, sectionsFor, workspaceOf, type Workspace } from "./shell/workspace";
+import { homeOf, navFor, rememberWorkspace, sectionsFor, workspaceOf, type Workspace } from "./shell/workspace";
 
 const SECTIONS: readonly Section[] = [
   "operate",
@@ -122,6 +123,8 @@ async function signInFromInvite(): Promise<void> {
       method: "POST",
       body: JSON.stringify({ username: plain.slice(0, at), password: plain.slice(at + 1) }),
     });
+    markInvited();
+    notify("Invite link opened", `Signed in as ${plain.slice(0, at)} from the invite link.`, `invite-${plain.slice(0, at)}`);
   } catch {
     /* a stale or mistyped link falls back to the sign-in form */
   }
@@ -196,6 +199,13 @@ export function App() {
       setSection(home);
     }
   }, [viewer, workspace, section]);
+
+  // Visit alerts: which console pages an invited visitor opens, each once per tab.
+  useEffect(() => {
+    if (!viewer || !invited() || !sectionsFor(workspace).includes(section) || window.location.hash !== `#${section}`) return;
+    const label = [...navFor("neros"), ...navFor("customer")].find((n) => n.id === section)?.label ?? section;
+    notify(`Viewed ${label}`, `Opened ${label} in the console as ${viewer.display_name}.`, `page-${section}`);
+  }, [viewer, section, workspace]);
 
   function onWorkspace(next: Workspace) {
     rememberWorkspace(next);

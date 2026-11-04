@@ -15,6 +15,9 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
+      # Visit alerts (src/notify.ts). Set the value in the Render dashboard; it is a secret ntfy topic.
+      - key: VITE_NTFY_TOPIC
+        sync: false
     # The public site (product, help, developers) is static pages beside the console.
     # Bare "/" lands on /product/ for first-time visitors (src/main.tsx); deep links like /#operate open the console.
     routes:
