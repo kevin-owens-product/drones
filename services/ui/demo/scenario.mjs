@@ -14,6 +14,8 @@ import { FLEET_SHARE, fileReport, seedReports, triage } from "./fieldvoice.mjs";
 import { ACCOUNTS, birthRecord, birthVerdict, can, createLedger } from "./ledger.mjs";
 import { acknowledge, RESPONSES, scorecard, startSession, visible } from "./training.mjs";
 import { createThread } from "./thread.mjs";
+import { createInterop } from "./interop.mjs";
+import { createProgram } from "./program.mjs";
 
 export const BANNER = "UNCLASSIFIED // DEMO DATA";
 
@@ -742,6 +744,45 @@ export function createDemo(opts = {}) {
   const thread = createThread({ births: BIRTH, sharing: ops.sharing, holds, audit });
   // Supply & support counts airframes from the same record.
   for (const [unit, stock] of Object.entries(company.supply.unitStock)) stock.airframes = thread.serials.onHand(unit);
+  // Interop (demo/interop.mjs): the customer's own drones out to TAK and Lattice; nothing comes back in.
+  const interop = createInterop({ live: () => ROUTES["/v1/telemetry/live"]().items, platforms: PLATFORMS });
+  // The program cockpit (demo/program.mjs): Neros against Drone Dominance.
+  const program = createProgram({ company, ops, thread });
+  const CUSTOMER_STAFF = ["admin", "mission_commander", "maintainer"];
+  function interopRoute(method, url, raw) {
+    const viewer = caller ? { ...caller, org: caller.org ?? NEROS.id } : null;
+    const actor = viewer?.display_name ?? "operator";
+    const own = viewer && viewer.org !== NEROS.id;
+    const org = own ? viewer.org : url.searchParams.get("org") ?? "CUS-A";
+    if (url.pathname === "/v1/interop/inbound") {
+      // ADR-0016: no external system commands this console or a vehicle through it.
+      audit.append({ actor: String(url.searchParams.get("from") ?? "external system"), action: "interop.inbound", resource_type: "integration", resource_id: org, decision: "deny", reason_codes: ["adr_0016"], detail: "Inbound command refused: the console accepts none" });
+      return { status: 403, body: { detail: "This console accepts no commands from external systems. Feeds are outbound only (ADR-0016)." } };
+    }
+    if (method === "POST" && url.pathname === "/v1/interop/act") {
+      let msg = {};
+      try {
+        msg = JSON.parse(raw);
+      } catch {
+        return { status: 400, body: { detail: "json" } };
+      }
+      const a = msg.args ?? {};
+      const target = own ? viewer.org : String(a.org ?? "CUS-A");
+      if (viewer && !(viewer.roles ?? []).some((r) => CUSTOMER_STAFF.includes(r))) {
+        audit.append({ actor, action: "interop.feed", resource_type: "integration", resource_id: String(a.id ?? ""), decision: "deny", reason_codes: ["role_denied"] });
+        return { status: 403, body: { detail: "Turning a feed on or off needs the admin, mission commander or maintainer role." } };
+      }
+      if (caller?.org === NEROS.id) return { status: 403, body: { detail: "Feeds are the customer's to turn on or off; Neros can see them." } };
+      const out = interop.setFeed(target, a, actor);
+      if (out.error) return { status: out.status, body: { detail: out.error } };
+      audit.append({ actor, action: "interop.feed", resource_type: "integration", resource_id: `${target}/${a.id}`, detail: out.message });
+      return { status: 200, body: { ok: true, message: out.message } };
+    }
+    if (url.pathname === "/v1/interop") return { status: 200, body: interop.view(org) };
+    if (url.pathname === "/v1/interop/cot") return { status: 200, body: interop.cot(org) };
+    if (url.pathname === "/v1/interop/entities") return { status: 200, body: interop.entities(org) };
+    return { status: 404, body: { detail: "unknown" } };
+  }
   function opsRoute(method, url, raw) {
     const ctx = { holds, demand: opts.attrition?.demand ?? null, platforms: PLATFORMS };
     const viewer = caller ? { ...caller, org: caller.org ?? NEROS.id } : null;
@@ -793,6 +834,11 @@ export function createDemo(opts = {}) {
       if (url.pathname.startsWith("/v1/ops/")) return opsRoute(method, url, raw);
       if (url.pathname.startsWith("/v1/thread/")) return thread.handle(method, url, raw, caller ? { ...caller, org: caller.org ?? NEROS.id } : null);
       if (url.pathname.startsWith("/v1/platforms/")) return platformRoute(method, url, raw);
+      if (url.pathname.startsWith("/v1/interop")) return interopRoute(method, url, raw);
+      if (url.pathname === "/v1/program") {
+        if (customer) return { status: 403, body: { detail: "The program cockpit is Neros's own workspace." } };
+        return { status: 200, body: program.view(holds, opts.attrition?.demand ?? null) };
+      }
       if (url.pathname === "/v1/maintenance/close" && method === "POST") {
         // A customer's maintainer closes work orders on their own fleet; parts come from Neros depot stock.
         let msg = {};

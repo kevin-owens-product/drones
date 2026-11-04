@@ -9,26 +9,43 @@ import type { Section, Viewer } from "./types";
  */
 export type Workspace = "neros" | "customer" | "all";
 
-export const NAV: readonly { id: Section; label: string; in: readonly Workspace[] }[] = [
+export const NAV: readonly { id: Section; label: string; in: readonly Workspace[]; group?: string }[] = [
   { id: "ops", label: "Work queue", in: ["neros", "all"] },
   { id: "operate", label: "Operate", in: ["customer", "all"] },
   { id: "brief", label: "Brief", in: ["customer", "all"] },
   { id: "missions", label: "Missions", in: ["customer", "all"] },
   { id: "debrief", label: "Debrief", in: ["customer", "all"] },
   { id: "fleet", label: "Fleet", in: ["customer", "all"] },
-  { id: "receiving", label: "Receiving", in: ["customer", "all"] },
-  { id: "accountability", label: "Accountability", in: ["customer", "all"] },
   { id: "readiness", label: "Readiness", in: ["customer", "all"] },
-  { id: "supply", label: "Supply & support", in: ["customer", "all"] },
+  // Sustain: what arrives, what is spent, what to ask for, what to install.
+  { id: "receiving", label: "Receiving", in: ["customer", "all"], group: "Sustain" },
+  { id: "accountability", label: "Accountability", in: ["customer", "all"], group: "Sustain" },
+  { id: "supply", label: "Supply & support", in: ["customer", "all"], group: "Sustain" },
+  { id: "updates", label: "Updates", in: ["neros", "customer", "all"], group: "Sustain" },
   { id: "company", label: "Company", in: ["neros", "all"] },
+  { id: "program", label: "Program", in: ["neros", "all"] },
   { id: "quality", label: "Quality", in: ["neros", "all"] },
   { id: "compliance", label: "Compliance", in: ["neros", "all"] },
-  { id: "eval", label: "Eval", in: ["neros", "all"] },
-  { id: "attrition", label: "Attrition", in: ["neros", "customer", "all"] },
-  { id: "reports", label: "Reports", in: ["neros", "customer", "all"] },
-  { id: "denial", label: "Denial map", in: ["customer", "all"] },
-  { id: "configure", label: "Configure", in: ["neros", "customer", "all"] },
+  // Analysis: studies and models rather than daily work.
+  { id: "eval", label: "Eval", in: ["neros", "all"], group: "Analysis" },
+  { id: "attrition", label: "Attrition", in: ["neros", "customer", "all"], group: "Analysis" },
+  { id: "reports", label: "Reports", in: ["neros", "customer", "all"], group: "Analysis" },
+  { id: "denial", label: "Denial map", in: ["customer", "all"], group: "Analysis" },
+  { id: "configure", label: "Configure", in: ["neros", "customer", "all"], group: "Analysis" },
 ];
+
+/** The top bar: plain tabs, and a menu for each group with more than one page in this workspace. */
+export type NavEntry = { kind: "tab"; id: Section; label: string } | { kind: "menu"; label: string; items: { id: Section; label: string }[] };
+export function navEntries(w: Workspace): NavEntry[] {
+  const items = NAV.filter((n) => n.in.includes(w));
+  const size = (g: string) => items.filter((n) => n.group === g).length;
+  const out: NavEntry[] = [];
+  for (const n of items) {
+    if (!n.group || size(n.group) === 1) out.push({ kind: "tab", id: n.id, label: n.label });
+    else if (!out.some((e) => e.kind === "menu" && e.label === n.group)) out.push({ kind: "menu", label: n.group, items: items.filter((m) => m.group === n.group).map((m) => ({ id: m.id, label: m.label })) });
+  }
+  return out;
+}
 
 const KEY = "a2e-workspace";
 
@@ -55,7 +72,7 @@ export function rememberWorkspace(w: Workspace): void {
 }
 
 export function sectionsFor(w: Workspace): Section[] {
-  return [...NAV.filter((n) => n.in.includes(w)).map((n) => n.id), "access", "audit"];
+  return [...NAV.filter((n) => n.in.includes(w)).map((n) => n.id), "access", "integrations", "audit"];
 }
 
 export function homeOf(w: Workspace): Section {

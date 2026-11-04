@@ -306,3 +306,53 @@
 .th-inline select {
   padding-right: 26px;
 }
+
+/* Wave 3: program levers, updates and integrations. */
+.th-lever {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 10px 0 6px;
+}
+
+.th-lever input[type="range"] {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  accent-color: var(--accent);
+}
+
+.th-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+}
+
+.th-check-row input {
+  width: auto;
+}
+
+.th-stage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0;
+}
+
+.th-stage span {
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.th-stage span.is-done {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.th-stage span.is-bad {
+  border-color: var(--danger);
+  color: var(--danger);
+}

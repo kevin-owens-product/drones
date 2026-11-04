@@ -20,6 +20,9 @@ import { ReceivingPage } from "./pages/Receiving";
 import { AccountabilityPage } from "./pages/Accountability";
 import { CompliancePage } from "./pages/Compliance";
 import { ReadinessPage } from "./pages/Readiness";
+import { ProgramPage } from "./pages/Program";
+import { UpdatesPage } from "./pages/Updates";
+import { IntegrationsPage } from "./pages/Integrations";
 import { Login } from "./shell/Login";
 import { Shell } from "./shell/Shell";
 import type { Section, Viewer } from "./shell/types";
@@ -44,6 +47,9 @@ const SECTIONS: readonly Section[] = [
   "quality",
   "compliance",
   "readiness",
+  "program",
+  "updates",
+  "integrations",
   "access",
   "audit",
 ];
@@ -194,6 +200,9 @@ export function App() {
       {section === "quality" ? <QualityPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "compliance" ? <CompliancePage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "readiness" ? <ReadinessPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "program" ? <ProgramPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "updates" ? <UpdatesPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "integrations" ? <IntegrationsPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "access" ? <AccessPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "audit" ? <AuditPage viewer={viewer} onBanner={setBanner} /> : null}
     </Shell>

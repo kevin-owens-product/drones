@@ -10,14 +10,15 @@
 import { createSerials } from "./serials.mjs";
 import { createCompliance } from "./compliance.mjs";
 import { createReadiness } from "./readiness.mjs";
+import { createUpdates } from "./updates.mjs";
 
 const NEROS = "neros";
 const NEROS_ROLES = ["admin", "ops_lead"];
 const CUSTOMER_ROLES = ["admin", "mission_commander", "maintainer"];
 
 /** Actions by side. Names are what the console posts to /v1/thread/act (and /v1/ops/act as "thread.<name>"). */
-export const THREAD_CUSTOMER_ACTIONS = ["delivery.accept", "issue", "sync", "readiness.refresher"];
-export const THREAD_NEROS_ACTIONS = ["rejects.replace", "quality.action", "quality.hold", "quality.close", "compliance.request", "compliance.record"];
+export const THREAD_CUSTOMER_ACTIONS = ["delivery.accept", "issue", "sync", "readiness.refresher", "updates.approve", "updates.canary", "updates.promote", "updates.revert"];
+export const THREAD_NEROS_ACTIONS = ["rejects.replace", "quality.action", "quality.hold", "quality.close", "compliance.request", "compliance.record", "updates.publish", "updates.withdraw"];
 
 /**
  * @param {{ births: object[], sharing: Record<string, boolean>, holds: object[], audit: { append: (e: object) => void } }} deps
@@ -26,6 +27,7 @@ export function createThread({ births, sharing, holds, audit }) {
   const serials = createSerials({ births, sharing, holds });
   const compliance = createCompliance({ serials });
   const readiness = createReadiness({ serials, sharing });
+  const updates = createUpdates({ serials });
 
   function orgFor(viewer, url) {
     if (viewer && viewer.org && viewer.org !== NEROS) return viewer.org;
@@ -39,7 +41,7 @@ export function createThread({ births, sharing, holds, audit }) {
     const cust = THREAD_CUSTOMER_ACTIONS.includes(action);
     if (!neros && !cust) return { status: 400, body: { detail: "unknown action" } };
     const org = cust ? (viewer && viewer.org && viewer.org !== NEROS ? viewer.org : String(a.org ?? "CUS-A")) : NEROS;
-    const resource = String(a.id ?? a.lot ?? a.serial ?? org);
+    const resource = String(a.id ?? a.lot ?? a.serial ?? a.release ?? org);
     const deny = (detail) => {
       audit.append({ actor, action: `thread.${action}`, resource_type: neros ? "quality" : "delivery", resource_id: resource, decision: "deny", reason_codes: ["role_denied"] });
       return { status: 403, body: { detail } };
@@ -62,6 +64,12 @@ export function createThread({ births, sharing, holds, audit }) {
       case "compliance.request": out = compliance.request(a, actor); break;
       case "compliance.record": out = compliance.record(a, actor); break;
       case "readiness.refresher": out = readiness.refresher(org, a, actor); break;
+      case "updates.approve":
+      case "updates.canary":
+      case "updates.promote":
+      case "updates.revert":
+      case "updates.publish":
+      case "updates.withdraw": out = updates.act(org, action, a, actor); break;
       default: out = { error: "unknown action", status: 400 };
     }
     if (out.error) return { status: out.status ?? 400, body: { detail: out.error } };
@@ -98,6 +106,11 @@ export function createThread({ births, sharing, holds, audit }) {
       const out = d ? compliance.packet(id, !customer) : null;
       return out ? { status: 200, body: out } : { status: 404, body: { detail: "no such delivery lot" } };
     }
+    if (path === "/v1/thread/updates") return { status: 200, body: updates.view(org, !customer) };
+    if (path === "/v1/thread/bundle") {
+      const out = updates.bundle(org, String(url.searchParams.get("release") ?? ""), String(url.searchParams.get("unit") ?? ""));
+      return out ? { status: 200, body: out } : { status: 409, body: { detail: "Approve the release, and keep it out of halt, before building a bundle." } };
+    }
     if (path === "/v1/thread/readiness") return { status: 200, body: readiness.view(org) };
     if (path === "/v1/thread/training-effect") {
       if (customer) return { status: 403, body: { detail: "Neros's own workspace." } };
@@ -119,5 +132,5 @@ export function createThread({ births, sharing, holds, audit }) {
     return { status: 404, body: { detail: "unknown" } };
   }
 
-  return { handle, act, queueItems: () => [...serials.queueItems(), ...compliance.queueItems()], serials, compliance, readiness };
+  return { handle, act, queueItems: () => [...serials.queueItems(), ...compliance.queueItems(), ...updates.queueItems()], serials, compliance, readiness, updates };
 }
