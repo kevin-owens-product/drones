@@ -39,3 +39,35 @@ test("configuration refuses a mismatched swap and holds a converted airframe unt
   await page.getByTestId("config-rows").getByRole("button", { name: "Load P-8" }).click();
   await expect(page.locator(".ops-note")).toContainText("back to ready");
 });
+
+test("surge planner names what binds and turns on a second shift", async ({ page }) => {
+  await page.goto("/#surge");
+  await expect(page.getByTestId("surge-options")).toContainText("Expedite and add a second shift");
+  await page.getByRole("button", { name: /A brigade's 10-inch kit/ }).click();
+  await expect(page.getByTestId("surge-verdict")).toBeVisible();
+  await page.getByRole("button", { name: "Add a second shift" }).click();
+  await expect(page.locator(".ops-note")).toContainText("Second shift on");
+});
+
+test("bid desk answers from the record, keeps weapons rows out of scope, and exports a brief", async ({ page }) => {
+  await page.goto("/#bid");
+  const rows = page.getByTestId("bid-rows");
+  await expect(rows.locator('tr[data-status="out_of_scope"]')).toHaveCount(2);
+  await expect(rows.locator('tr[data-status="met"]').first().getByRole("link")).toBeVisible();
+  await rows.locator("tr", { hasText: "One operator flies several drones" }).getByRole("button", { name: "Assign" }).click();
+  await expect(page.locator(".ops-note")).toContainText("assigned to Product");
+  await page.getByRole("button", { name: "Export the response brief" }).click();
+  await expect(page.getByTestId("bid-brief")).toContainText("Out of scope");
+});
+
+test("fix loop refuses to close without data, then closes on a measured effect", async ({ page }) => {
+  await page.goto("/#cases");
+  const esc = page.getByTestId("case-list").locator("li.ops-item", { hasText: "ESC desync" });
+  await esc.getByRole("button", { name: "Close on the measurement" }).click();
+  await expect(page.locator(".ops-note")).toContainText("Not enough sorties");
+  await esc.getByRole("button", { name: /Add 14 days/ }).click();
+  await esc.getByRole("button", { name: /Add 14 days/ }).click();
+  await esc.getByRole("button", { name: "Close on the measurement" }).click();
+  await expect(page.locator(".ops-note")).toContainText("closed");
+  await expect(esc.locator(".th-check")).toHaveText("closed");
+});

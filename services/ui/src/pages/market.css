@@ -91,3 +91,18 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+.mk-brief {
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px;
+  max-height: 360px;
+  overflow: auto;
+}
+.mk-did {
+  max-width: 560px;
+  margin: 8px 0;
+}

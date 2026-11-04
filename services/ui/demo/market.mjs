@@ -8,6 +8,8 @@ import { createQuote } from "./quote.mjs";
 import { createMixedFleet } from "./mixedfleet.mjs";
 import { createConfig } from "./config.mjs";
 import { createSurge } from "./surge.mjs";
+import { createBidDesk } from "./biddesk.mjs";
+import { createCases } from "./cases.mjs";
 
 const NEROS = "neros";
 const NEROS_ROLES = ["admin", "ops_lead"];
@@ -20,16 +22,20 @@ const SIDE = {
   "mixed.import": "customer", "mixed.retire": "customer", "mixed.ngc2": "customer", "mixed.ground": "customer",
   "config.swap": "customer", "config.reconfigure": "customer", "config.params": "customer",
   "surge.expedite": "neros", "surge.shift": "neros",
+  "bid.owner": "neros",
+  "case.open": "neros", "case.assign": "neros", "case.ship": "neros", "case.collect": "neros", "case.close": "neros",
 };
 
-/** @param {{ company: any, thread: any, audit: { append: (e: object) => void }, holds: object[] }} deps */
-export function createMarket({ company, thread, audit, holds }) {
+/** @param {{ company: any, thread: any, audit: { append: (e: object) => void }, holds: object[], triage?: () => any[] }} deps */
+export function createMarket({ company, thread, audit, holds, triage = () => [] }) {
   const { serials, compliance } = thread;
   const surge = createSurge({ company, holds: () => holds });
   const config = createConfig({ serials });
   const notReady = (org) => config.notReady(org);
   const mixed = createMixedFleet({ serials, notReady });
   const quote = createQuote({ company, serials, compliance, surge });
+  const cases = createCases({ serials, triage });
+  const bid = createBidDesk({ company, thread, mixed, surge, cases: () => cases.view() });
 
   const isNeros = (viewer) => !viewer || !viewer.org || viewer.org === NEROS;
   const orgFor = (viewer, url, a = {}) => (viewer && viewer.org && viewer.org !== NEROS ? viewer.org : String(a.org ?? url?.searchParams.get("org") ?? "CUS-A"));
@@ -59,6 +65,8 @@ export function createMarket({ company, thread, audit, holds }) {
     else if (family === "config") out = config.act(org, action, a, actor);
     else if (action === "surge.expedite") out = surge.expedite(a);
     else if (action === "surge.shift") out = surge.setShift(a.on);
+    else if (family === "bid") out = bid.act(action, a, actor);
+    else if (family === "case") out = cases.act(action, a, actor);
     else out = { error: "unknown action", status: 400 };
     if (out.error) {
       audit.append({ actor, action: `market.${action}`, resource_type: family, resource_id: resource, decision: "deny", reason_codes: ["refused"], detail: String(out.error).slice(0, 200) });
@@ -69,7 +77,7 @@ export function createMarket({ company, thread, audit, holds }) {
     return { status: 200, body: { ok: true, message, ...rest } };
   }
 
-  const ROUTES = ["/v1/market/act", "/v1/quote", "/v1/mixed", "/v1/mixed/tail", "/v1/config", "/v1/config/quality", "/v1/surge"];
+  const ROUTES = ["/v1/market/act", "/v1/quote", "/v1/mixed", "/v1/mixed/tail", "/v1/config", "/v1/config/quality", "/v1/surge", "/v1/bid", "/v1/bid/brief", "/v1/cases"];
   const owns = (path) => ROUTES.includes(path);
 
   function handle(method, url, raw, viewer) {
@@ -109,8 +117,15 @@ export function createMarket({ company, thread, audit, holds }) {
       const out = surge.view(sku, Number(q.get("qty") ?? 400), q.get("by") ?? undefined);
       return out.ask?.error ? { status: out.ask.status, body: { detail: out.ask.error } } : { status: 200, body: out };
     }
+    if (path === "/v1/bid" || path === "/v1/bid/brief" || path === "/v1/cases") {
+      if (!neros) return { status: 403, body: { detail: "This is Neros's own workspace." } };
+      if (path === "/v1/bid") return { status: 200, body: bid.view(q.get("id")) };
+      if (path === "/v1/cases") return { status: 200, body: cases.view() };
+      const b = bid.brief(String(q.get("id") ?? ""));
+      return b ? { status: 200, body: b } : { status: 404, body: { detail: "no such solicitation" } };
+    }
     return { status: 404, body: { detail: "unknown" } };
   }
 
-  return { owns, handle, act, queueItems: () => [...quote.queueItems()], quote, mixed, config, surge };
+  return { owns, handle, act, queueItems: () => [...quote.queueItems(), ...bid.queueItems(), ...cases.queueItems()], quote, mixed, config, surge, bid, cases };
 }

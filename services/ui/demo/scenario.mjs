@@ -750,7 +750,7 @@ export function createDemo(opts = {}) {
   // The program cockpit (demo/program.mjs): Neros against Drone Dominance.
   const program = createProgram({ company, ops, thread });
   // Round two (demo/market.mjs): quotes, mixed fleets, field configuration, surge and the rest.
-  const market = createMarket({ company, thread, audit, holds });
+  const market = createMarket({ company, thread, audit, holds, triage: () => triage(reports, FLEET_SHARE) });
   const CUSTOMER_STAFF = ["admin", "mission_commander", "maintainer"];
   function interopRoute(method, url, raw) {
     const viewer = caller ? { ...caller, org: caller.org ?? NEROS.id } : null;

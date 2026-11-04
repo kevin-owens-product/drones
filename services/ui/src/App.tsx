@@ -24,6 +24,9 @@ import { ProgramPage } from "./pages/Program";
 import { UpdatesPage } from "./pages/Updates";
 import { IntegrationsPage } from "./pages/Integrations";
 import { QuotePage } from "./pages/Quote";
+import { SurgePage } from "./pages/Surge";
+import { BidDeskPage } from "./pages/BidDesk";
+import { CasesPage } from "./pages/Cases";
 import { MixedFleetPage } from "./pages/MixedFleet";
 import { ConfigurationPage } from "./pages/Configuration";
 import { Login } from "./shell/Login";
@@ -54,6 +57,9 @@ const SECTIONS: readonly Section[] = [
   "updates",
   "integrations",
   "quote",
+  "surge",
+  "bid",
+  "cases",
   "mixed",
   "config",
   "access",
@@ -210,6 +216,9 @@ export function App() {
       {section === "updates" ? <UpdatesPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "integrations" ? <IntegrationsPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "quote" ? <QuotePage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "surge" ? <SurgePage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "bid" ? <BidDeskPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "cases" ? <CasesPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "mixed" ? <MixedFleetPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "config" ? <ConfigurationPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "access" ? <AccessPage viewer={viewer} onBanner={setBanner} /> : null}
