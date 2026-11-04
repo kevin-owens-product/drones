@@ -17,6 +17,9 @@ export type Section =
   | "quality"
   | "compliance"
   | "readiness"
+  | "program"
+  | "updates"
+  | "integrations"
   | "access"
   | "audit";
 

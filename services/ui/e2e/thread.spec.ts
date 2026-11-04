@@ -43,3 +43,27 @@ test("readiness joins training to sorties and books a refresher", async ({ page 
   await row.getByRole("button", { name: "Book requalification" }).click();
   await expect(page.locator(".ops-note")).toContainText("simulator qualification booked");
 });
+
+test("updates halt a re-band release when its canary loses link", async ({ page }) => {
+  await page.goto("/#updates");
+  const rf = page.getByTestId("releases").locator("li.ops-item", { hasText: "RF-P4" });
+  await rf.getByRole("button", { name: "Approve for our fleet" }).click();
+  await rf.getByRole("button", { name: "Fly the canary" }).click();
+  await expect(page.locator(".ops-note")).toContainText("halted automatically");
+  await expect(page.getByTestId("canary-RF-P4")).toContainText("Fail");
+});
+
+test("integrations show the CoT the fleet sends and let the customer turn a feed off", async ({ page }) => {
+  await page.goto("/#integrations");
+  await expect(page.getByTestId("sample")).toContainText('type="a-f-A-M-H-Q"');
+  await expect(page.getByTestId("mavlink")).toContainText("GLOBAL_POSITION_INT");
+  await page.getByTestId("feeds").locator("tr", { hasText: "TAK Server" }).getByRole("button", { name: "Turn off" }).click();
+  await expect(page.locator(".ops-note")).toContainText("TAK Server feed off");
+});
+
+test("the program cockpit joins price, completion and delivery", async ({ page }) => {
+  await page.goto("/#program");
+  await expect(page.getByTestId("ladder")).toContainText("$2,300");
+  await expect(page.getByTestId("levers")).toContainText("per completed sortie");
+  await expect(page.getByTestId("program-orders")).toContainText("ORD-A1");
+});
