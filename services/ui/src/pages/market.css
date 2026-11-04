@@ -106,3 +106,8 @@
   max-width: 560px;
   margin: 8px 0;
 }
+.mk-tiers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}

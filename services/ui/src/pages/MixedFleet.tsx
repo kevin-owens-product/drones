@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { api } from "../api";
 import type { Viewer } from "../shell/types";
-import { Loading, Note, PageHead, Stat, useCustomerOrg, usePageData } from "./thread";
+import { Loading, Note, PageHead, Stat, useCustomerOrg, usePageData, Withheld } from "./thread";
 import "./market.css";
 
 interface UnitRow { unit: string; vendors: number; total: number; ready: number; unknown: number; grounded: number; held: number }
@@ -48,12 +48,13 @@ export function MixedFleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner:
       <p className="ins-source">{d.source}</p>
       {picker}
       <Note note={page.note} />
+      <Withheld data={d} />
 
       <div className="th-stats">
         <Stat label="Vendors" value={String(d.counts.vendors)} />
         <Stat label="Ready" value={`${d.counts.ready} of ${d.counts.tails}`} hint="Neros airframes held by configuration or stockpile health count as not ready" />
         <Stat label="No log in 21 days" value={String(d.counts.unknown)} hint="Status unknown until a log arrives" />
-        <Stat label="Publishing to NGC2 (SIM)" value={String(d.counts.ngc2)} hint="Neros fleet counts as one feed" />
+        <Stat label="Publishing to NGC2 (SIM)" value={d.counts.ngc2 == null ? "Withheld" : String(d.counts.ngc2)} hint="Neros fleet counts as one feed" />
       </div>
 
       <section className="panel">
@@ -113,12 +114,12 @@ export function MixedFleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner:
                   <td className="mono">{t.last}</td>
                   <td className="mono">{t.flights_30d}</td>
                   <td><span className={`th-check ${STATE[t.state] ?? ""}`}>{t.state}</span>{t.note ? <span className="meta"> {t.note}</span> : null}</td>
-                  <td>{t.ngc2 ? "Publishing" : "Off"}</td>
+                  <td>{t.ngc2 == null ? "Withheld" : t.ngc2 ? "Publishing" : "Off"}</td>
                   <td><button type="button" className="th-link" onClick={() => void lineage(t.tail)}>{t.depth.join(", ")}</button></td>
                   <td>
                     {t.state !== "retired" ? (
                       <span className="th-inline">
-                        <button type="button" className="btn btn-quiet" disabled={!canAct || page.busy} onClick={() => void post("mixed.ngc2", { tail: t.tail })}>{t.ngc2 ? "Stop NGC2" : "Publish to NGC2"}</button>
+                        {t.ngc2 != null ? <button type="button" className="btn btn-quiet" disabled={!canAct || page.busy} onClick={() => void post("mixed.ngc2", { tail: t.tail })}>{t.ngc2 ? "Stop NGC2" : "Publish to NGC2"}</button> : null}
                         <button type="button" className="btn btn-quiet" disabled={!canAct || page.busy} onClick={() => void post("mixed.ground", { tail: t.tail })}>{t.state === "grounded" ? "Return to service" : "Ground"}</button>
                         <button type="button" className="btn btn-quiet" disabled={!canAct || page.busy} onClick={() => void post("mixed.retire", { tail: t.tail, reason: "Expended" })}>Retire</button>
                       </span>

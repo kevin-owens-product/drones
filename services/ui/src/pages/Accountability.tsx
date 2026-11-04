@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Viewer } from "../shell/types";
-import { Loading, Note, PageHead, pct, SerialDrawer, Stat, useCustomerOrg, usePageData } from "./thread";
+import { Loading, Note, PageHead, pct, SerialDrawer, Stat, useCustomerOrg, usePageData, Withheld } from "./thread";
 
 interface UnitRow { unit: string; sku: string | null; in_store: number; issued: number; ended_14d: number; per_day: number; days_of_supply: number | null; sorties_14d: number }
 interface LotRow { lot: string; unit: string; sku: string; delivered: number; rejected: number; in_store: number; issued: number; ended: number }
@@ -43,6 +43,7 @@ export function AccountabilityPage({ viewer, onBanner }: { viewer: Viewer; onBan
       <p className="ins-source">{d.source}</p>
       {picker}
       <Note note={page.note} />
+      <Withheld data={d} />
 
       <div className="th-stats">
         <Stat label="Sorties, last 14 days" value={String(sorties)} />
@@ -224,10 +225,10 @@ export function AccountabilityPage({ viewer, onBanner }: { viewer: Viewer; onBan
                     {r.recovered ? <span className="meta"> recovered</span> : null}
                     {r.jamming ? <span className="meta"> · jamming</span> : null}
                   </td>
-                  <td className="mono">{r.last_link_dbm} dBm</td>
+                  <td className="mono">{r.last_link_dbm == null ? "Withheld" : `${r.last_link_dbm} dBm`}</td>
                   <td className="mono">{r.nav_source}</td>
                   <td className="mono">{r.battery_pct}%</td>
-                  <td className="mono">{r.fault_codes.join(", ") || "—"}</td>
+                  <td className="mono">{r.fault_codes ? r.fault_codes.join(", ") || "—" : "Withheld"}</td>
                 </tr>
               ))}
             </tbody>

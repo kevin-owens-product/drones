@@ -823,7 +823,13 @@ export function createDemo(opts = {}) {
   seedBriefs();
   return {
     extra: EXTRA,
+    // Allied sessions pass through their releasability rules on the way out (demo/release.mjs).
     handle(method, url, raw = "", who = null) {
+      return market.release.filter(routeRequest(method, url, raw, who), who);
+    },
+  };
+
+  function routeRequest(method, url, raw = "", who = null) {
       caller = who;
       syncFleet();
       if (url.pathname === "/v1/audit" && caller && !can(caller.roles, "audit.read")) return { status: 403, body: { detail: "role_denied" } };
@@ -881,6 +887,5 @@ export function createDemo(opts = {}) {
       }
       const route = ROUTES[url.pathname];
       return { status: 200, body: route ? route() : { items: [] } };
-    },
-  };
+  }
 }

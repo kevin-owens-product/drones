@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { Viewer } from "../shell/types";
-import { Loading, Note, PacketDrawer, PageHead, pct, SerialDrawer, Stat, useCustomerOrg, usePageData } from "./thread";
+import { Loading, Note, PacketDrawer, PageHead, pct, SerialDrawer, Stat, useCustomerOrg, usePageData, Withheld } from "./thread";
 
 interface Check { level: "fail" | "warn"; code: string; text: string }
 interface LotSummary {
@@ -48,6 +48,7 @@ export function ReceivingPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
       <p className="ins-source">{d.source}</p>
       {picker}
       <Note note={page.note} />
+      <Withheld data={d} />
       {!canAct ? <p className="meta">You can see every package; accepting or rejecting needs the mission commander or maintainer role.</p> : null}
 
       <div className="th-stats">
