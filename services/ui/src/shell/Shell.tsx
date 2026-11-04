@@ -113,6 +113,11 @@ export function Shell(props: {
     [pageCommands, onSection, onLogout, onWorkspace, PRIMARY, ADMIN, switchable, props.workspace, hidden],
   );
 
+  // Operate needs the width for its list, map and flight display, so there the rail floats over the page (opened
+  // from the menu button) unless the screen is wide enough for all four. Below 900 px every page uses the drawer.
+  const roomy = props.section === "operate";
+  const floating = () => window.matchMedia("(max-width: 900px)").matches || (roomy && window.matchMedia("(max-width: 1599px)").matches);
+
   function toggleRail() {
     setHidden((was) => {
       const next = !was;
@@ -174,9 +179,9 @@ export function Shell(props: {
   };
 
   return (
-    <div className={`shell shell-side${hidden ? " side-hidden" : ""}${drawer ? " side-drawer" : ""}`}>
+    <div className={`shell shell-side${hidden ? " side-hidden" : ""}${drawer ? " side-drawer" : ""}${roomy ? " side-float" : ""}`}>
       <header className="topbar">
-        <button type="button" className="side-toggle" aria-expanded={hidden ? false : drawer || undefined} aria-controls="sections" onClick={() => (window.matchMedia("(max-width: 900px)").matches ? setDrawer((o) => !o) : toggleRail())} title={hidden ? "Show the menu" : "Hide the menu"}>
+        <button type="button" className="side-toggle" aria-expanded={hidden ? false : drawer || undefined} aria-controls="sections" onClick={() => (floating() ? setDrawer((o) => !o) : toggleRail())} title={hidden ? "Show the menu" : "Hide the menu"}>
           <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
           <span className="sr-only">Menu</span>
         </button>
