@@ -1,0 +1,308 @@
+/* Serial record pages: Receiving, Accountability, Quality and the wave 2 and 3 pages. */
+.th-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.th-stats .stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.th-stats .stat-value {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.th-check {
+  display: inline-block;
+  margin: 1px 4px 1px 0;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.th-check.is-fail {
+  background: rgba(255, 107, 91, 0.14);
+  color: var(--danger);
+}
+
+.th-check.is-warn {
+  background: rgba(244, 180, 67, 0.14);
+  color: var(--warn);
+}
+
+.th-check.is-ok {
+  color: var(--ok);
+}
+
+.th-row-fail td {
+  background: rgba(255, 107, 91, 0.05);
+}
+
+.th-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+
+.th-link:hover {
+  text-decoration: underline;
+}
+
+.th-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.th-inline input[type="number"] {
+  width: 70px;
+}
+
+.th-inline select,
+.th-inline input {
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.th-bars {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.th-bars li {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.th-bar {
+  height: 10px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.th-bar.is-bad {
+  background: var(--danger);
+}
+
+.th-bar.is-warn {
+  background: var(--warn);
+}
+
+.th-bar.is-ok {
+  background: var(--ok);
+}
+
+.th-drawer {
+  position: fixed;
+  top: 40px;
+  right: 0;
+  bottom: 40px;
+  z-index: 50;
+  width: min(560px, 100vw);
+  overflow-y: auto;
+  padding: 16px;
+  border-left: 1px solid var(--line-strong);
+  background: var(--surface);
+  box-shadow: -12px 0 30px rgba(0, 0, 0, 0.4);
+}
+
+.th-drawer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.th-drawer h2 {
+  margin: 0;
+}
+
+.th-parts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.th-parts dt {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.th-parts dd {
+  margin: 0;
+}
+
+.th-events {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.th-ev {
+  display: grid;
+  grid-template-columns: 86px 70px minmax(0, 1fr) 86px;
+  gap: 8px;
+  padding: 6px 8px;
+  border-left: 3px solid var(--line-strong);
+  background: var(--surface-2);
+  font-size: 12px;
+}
+
+.th-ev-ended,
+.th-ev-rejected {
+  border-left-color: var(--danger);
+}
+
+.th-ev-accepted,
+.th-ev-born {
+  border-left-color: var(--ok);
+}
+
+.th-ev-kind {
+  color: var(--muted);
+  text-transform: uppercase;
+  font-size: 11px;
+}
+
+.th-hash {
+  color: var(--faint);
+  text-align: right;
+}
+
+.th-callout {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.th-callout.is-ok {
+  border-left-color: var(--ok);
+}
+
+.th-callout.is-bad {
+  border-left-color: var(--danger);
+}
+
+.th-code {
+  max-height: 260px;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: pre;
+}
+
+.th-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.th-steps li {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.th-steps li.is-done {
+  border-color: rgba(63, 214, 154, 0.4);
+  color: var(--ok);
+}
+
+.th-steps li.is-now {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.th-steps li.is-bad {
+  border-color: rgba(255, 107, 91, 0.5);
+  color: var(--danger);
+}
+
+@media (max-width: 720px) {
+  .th-bars li {
+    grid-template-columns: 110px minmax(0, 1fr) 34px;
+  }
+
+  .th-ev {
+    grid-template-columns: 80px minmax(0, 1fr);
+  }
+
+  .th-ev-kind,
+  .th-hash {
+    display: none;
+  }
+}
+
+/* Inline controls stay compact inside tables and action rows. */
+.th-inline input:not([type="checkbox"]):not([type="radio"]),
+.th-inline select {
+  width: auto;
+  min-width: 0;
+  height: 30px;
+  padding: 3px 8px;
+  font-size: 12px;
+}
+
+.th-inline input[type="number"] {
+  width: 72px;
+}
+
+.th-inline input[aria-label="Find a serial"] {
+  width: 240px;
+}
+
+.ops-page .pill.pill-warn {
+  border-color: rgba(244, 180, 67, 0.45);
+  background: rgba(244, 180, 67, 0.12);
+  color: var(--warn);
+}
+
+.ops-page .pill.pill-ok {
+  border-color: rgba(63, 214, 154, 0.35);
+  background: rgba(63, 214, 154, 0.1);
+  color: var(--ok);
+}
+
+.th-inline select {
+  padding-right: 26px;
+}

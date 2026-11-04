@@ -12,6 +12,9 @@ export type Section =
   | "denial"
   | "configure"
   | "brief"
+  | "receiving"
+  | "accountability"
+  | "quality"
   | "access"
   | "audit";
 

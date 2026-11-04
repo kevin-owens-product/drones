@@ -13,6 +13,7 @@ import { parseEvalTable } from "./evalrows.mjs";
 import { FLEET_SHARE, fileReport, seedReports, triage } from "./fieldvoice.mjs";
 import { ACCOUNTS, birthRecord, birthVerdict, can, createLedger } from "./ledger.mjs";
 import { acknowledge, RESPONSES, scorecard, startSession, visible } from "./training.mjs";
+import { createThread } from "./thread.mjs";
 
 export const BANNER = "UNCLASSIFIED // DEMO DATA";
 
@@ -737,12 +738,20 @@ export function createDemo(opts = {}) {
 
   // Two workspaces: the Neros operations queue and each customer's portal (demo/ops.mjs).
   const ops = createOps({ company, audit, platforms: PLATFORMS });
+  // The serial record: acceptance, accountability, end-of-flight records and the field-to-lot loop (demo/thread.mjs).
+  const thread = createThread({ births: BIRTH, sharing: ops.sharing, holds, audit });
+  // Supply & support counts airframes from the same record.
+  for (const [unit, stock] of Object.entries(company.supply.unitStock)) stock.airframes = thread.serials.onHand(unit);
   function opsRoute(method, url, raw) {
     const ctx = { holds, demand: opts.attrition?.demand ?? null, platforms: PLATFORMS };
     const viewer = caller ? { ...caller, org: caller.org ?? NEROS.id } : null;
     if (method === "GET" && url.pathname === "/v1/ops/queue") {
       if (viewer && viewer.org !== NEROS.id) return { status: 403, body: { detail: "The operations queue is Neros's own workspace." } };
-      return { status: 200, body: ops.queue(ctx) };
+      const q = ops.queue(ctx);
+      const SEV = { high: 0, medium: 1, low: 2 };
+      const items = [...q.items, ...thread.queueItems()].sort((a, b) => SEV[a.severity] - SEV[b.severity]);
+      const areas = [...new Set(items.map((i) => i.area))].map((area) => ({ area, count: items.filter((i) => i.area === area).length }));
+      return { status: 200, body: { ...q, items, areas } };
     }
     if (method === "GET" && url.pathname === "/v1/ops/portal") {
       // Neros staff can open any customer's portal to see what the customer sees; customers only their own.
@@ -758,7 +767,9 @@ export function createDemo(opts = {}) {
       } catch {
         return { status: 400, body: { error: "json" } };
       }
-      return ops.act(viewer, String(msg.action ?? ""), msg.args ?? {}, ctx);
+      const action = String(msg.action ?? "");
+      if (action.startsWith("thread.")) return thread.act(viewer, action.slice("thread.".length), msg.args ?? {});
+      return ops.act(viewer, action, msg.args ?? {}, ctx);
     }
     return { status: 404, body: { error: "unknown" } };
   }
@@ -780,6 +791,7 @@ export function createDemo(opts = {}) {
       if (url.pathname === "/v1/field-reports") return fieldReports(method, raw);
       if (url.pathname.startsWith("/v1/company")) return companyRoute(method, url, raw);
       if (url.pathname.startsWith("/v1/ops/")) return opsRoute(method, url, raw);
+      if (url.pathname.startsWith("/v1/thread/")) return thread.handle(method, url, raw, caller ? { ...caller, org: caller.org ?? NEROS.id } : null);
       if (url.pathname.startsWith("/v1/platforms/")) return platformRoute(method, url, raw);
       if (url.pathname === "/v1/maintenance/close" && method === "POST") {
         // A customer's maintainer closes work orders on their own fleet; parts come from Neros depot stock.

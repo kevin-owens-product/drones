@@ -458,7 +458,7 @@ export function createSupply({ births = [] } = {}) {
     for (const lot of heldLots(holds)) {
       const tails = births.filter((b) => b.parts.some((p) => p.lot === lot));
       for (const b of tails) {
-        extra.push({ id: `WO-H-${b.tail_number}`, tail: b.tail_number, kind: "quality hold", summary: `Inspect and replace the ${lot} part (lot on hold from Attrition)`, parts: [["ESC-4IN1", 1]], status: "open", returns_to_service: false, lot });
+        extra.push({ id: `WO-H-${b.tail_number}`, tail: b.tail_number, kind: "quality hold", summary: `Inspect and replace the ${lot} part (lot on quality hold)`, parts: [["ESC-4IN1", 1]], status: "open", returns_to_service: false, lot });
       }
     }
     const closed = new Set(workOrders.filter((w) => w.status === "closed").map((w) => w.id));
