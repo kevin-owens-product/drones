@@ -5,6 +5,7 @@
 //   npm run build && node demo/server.mjs   (then open http://localhost:4173)
 //   A2E_DEMO_FLEET=300 adds synthetic vehicles; A2E_DEMO_SPEED sets sim speed.
 import { createServer } from "node:http";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -63,7 +64,14 @@ createServer(async (req, res) => {
     }
     return;
   }
-  const file = normalize(join(DIST, path === "/" ? "index.html" : path));
+  // The public site's pages are folders (/product/, /help/, /developers/); "/product" redirects to the folder.
+  if (!extname(path) && !path.endsWith("/") && existsSync(join(DIST, path, "index.html"))) {
+    res.statusCode = 301;
+    res.setHeader("location", `${path}/`);
+    res.end();
+    return;
+  }
+  const file = normalize(join(DIST, path === "/" ? "index.html" : path.endsWith("/") ? `${path}index.html` : path));
   if (!file.startsWith(DIST)) {
     res.statusCode = 403;
     res.end();

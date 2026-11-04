@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>A2E Help Center</title>
+    <meta name="description" content="How to use A2E Mission Cloud: sign in, run the Operate screen, plan and approve missions, keep the fleet record and work the manufacturer queue." />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#07090d" />
+  </head>
+  <body>
+    <header data-site-nav></header>
+    <main>
+      <section class="docs-hero">
+        <div class="wrap">
+          <p class="kicker">Help center</p>
+          <h1>How can we help?</h1>
+          <p class="lede">Guides for operators, commanders, maintainers and the manufacturer's operations team. Each one ends with a link that opens the right page in the live console.</p>
+          <div class="search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+            <input id="q" type="search" placeholder="Search: launch, jamming, quality hold, quote, allied…" autocomplete="off" aria-label="Search help" />
+            <kbd>/</kbd>
+          </div>
+          <div class="quick">
+            <a href="#start"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 12h14M13 6l6 6-6 6" /></svg><b>Getting started</b><span>Sign in and find your way in five minutes.</span></a>
+            <a href="#operate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8" /><path d="M12 4v4M12 16v4M4 12h4M16 12h4" /></svg><b>Fly and supervise</b><span>Operate, launch readiness, Brief and Debrief.</span></a>
+            <a href="#fleet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="5" width="16" height="14" rx="2" /><path d="M4 10h16M9 5v14" /></svg><b>Keep the record</b><span>Airframes, holds, configuration, readiness.</span></a>
+            <a href="#queue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M4 12h10M4 17h7" /></svg><b>Run operations</b><span>Work queue, quotes, bids, surge, fix loop.</span></a>
+          </div>
+        </div>
+      </section>
+
+      <div class="wrap docs">
+        <nav class="side" id="side" aria-label="Help articles">
+          <h4>Start here</h4>
+          <a href="#start">Getting started</a>
+          <a href="#accounts">Demo accounts and roles</a>
+          <a href="#workspaces">The two workspaces</a>
+          <a href="#simulated">What is simulated</a>
+          <h4>Fly and supervise</h4>
+          <a href="#operate">The Operate screen</a>
+          <a href="#shortcuts">Keyboard shortcuts</a>
+          <a href="#launch">Launch readiness</a>
+          <a href="#contested">Jamming, VIO and lost link</a>
+          <a href="#brief">Brief and two-person approval</a>
+          <a href="#debrief">Missions, replay and debrief</a>
+          <h4>Keep the record</h4>
+          <a href="#fleet">Airframes and birth records</a>
+          <a href="#holds">Quality holds and work orders</a>
+          <a href="#config">Field configuration</a>
+          <a href="#mixed">All vendors</a>
+          <a href="#stockpile">Stockpile health</a>
+          <a href="#training">Training readiness</a>
+          <a href="#supply">Supply and support</a>
+          <h4>Run operations</h4>
+          <a href="#queue">The work queue</a>
+          <a href="#quote">Quotes and orders</a>
+          <a href="#bid">Bid desk and surge</a>
+          <a href="#attrition">Attrition and the fix loop</a>
+          <a href="#release">Allied tenants and releasability</a>
+          <h4>Trust</h4>
+          <a href="#guardrails">What the console will never do</a>
+          <a href="#audit">Access and the audit log</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+
+        <div class="doc" id="doc">
+          <p class="empty" id="empty">No article matches that search. Try a page name such as "Operate", "Brief" or "Fleet".</p>
+
+          <article class="article" id="start" data-tags="sign in login first start begin overview tour">
+            <div class="meta"><span class="tag">Start here</span><span class="tag">5 min</span></div>
+            <h2>Getting started</h2>
+            <p>A2E Mission Cloud is one platform with two sides: the manufacturer runs its operations, and each customer runs its own fleet. The hosted demo plays a scripted sortie on a real range in California's central coast, with nine vehicles in the air and three on the pad.</p>
+            <ol class="steps">
+              <li>Open the <a href="/#operate">console</a> and sign in with the account you were given (see <a href="#accounts">demo accounts</a>).</li>
+              <li>A customer account opens on <b>Operate</b>. A manufacturer account opens on the <b>Work queue</b>.</li>
+              <li>Press <kbd>⌘K</kbd> (or <kbd>Ctrl K</kbd>) to jump to any vehicle, page or filter. Press <kbd>?</kbd> for the shortcut sheet.</li>
+              <li>Take an action, then sign out and sign in as the other side to see its effect. Demo state lives in your browser tab, so it carries across accounts. Reloading starts the scenario over.</li>
+            </ol>
+            <div class="callout">Every page shows <code>UNCLASSIFIED // DEMO DATA</code> in the banner, and every simulated figure carries a <code>SIM</code> label.</div>
+            <a class="btn btn-sm go" href="/#operate">Open Operate →</a>
+          </article>
+
+          <article class="article" id="accounts" data-tags="accounts users roles password access invite login admin ops commander operator maintainer allied">
+            <div class="meta"><span class="tag">Start here</span></div>
+            <h2>Demo accounts and roles</h2>
+            <p>Demo access is by invitation: Kevin shares the passwords. There is one account per role, so you can see how each person's screen and permissions differ.</p>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Username</th><th>Workspace</th><th>Role</th><th>Try this</th></tr></thead>
+              <tbody>
+                <tr><td><code>ops</code></td><td>Manufacturer operations</td><td>Ops lead</td><td>Clear the work queue, ship a request, plan a surge</td></tr>
+                <tr><td><code>admin</code></td><td>Manufacturer, with a switch to the customer view</td><td>Admin</td><td>Flip between both sides without signing out</td></tr>
+                <tr><td><code>commander</code></td><td>Customer A</td><td>Mission commander, planner</td><td>Approve a Brief, request spares, build a quote</td></tr>
+                <tr><td><code>operator</code></td><td>Customer A</td><td>Operator</td><td>Supervise the fleet. Try to approve a plan: you can't</td></tr>
+                <tr><td><code>maintainer</code></td><td>Customer A</td><td>Maintainer</td><td>Close a work order and return an airframe to service</td></tr>
+                <tr><td><code>allied</code></td><td>Customer C, an allied partner</td><td>Mission commander, planner</td><td>See which fields are withheld and why</td></tr>
+              </tbody>
+            </table></div>
+            <div class="callout warn">The hosted demo checks passwords in the browser. It keeps casual visitors out but it is not a security boundary. A real deployment signs in through the organisation's identity provider (OIDC, with PIV/CAC).</div>
+          </article>
+
+          <article class="article" id="workspaces" data-tags="workspace tenant manufacturer customer neros switch scope">
+            <div class="meta"><span class="tag">Start here</span></div>
+            <h2>The two workspaces</h2>
+            <p>Your organisation decides your workspace. The navigation changes with it.</p>
+            <h3>Manufacturer workspace</h3>
+            <p>Work queue, Company, Program, Quality, Compliance, Updates, Quotes, Surge planner, Bid desk, Plans, Releasability, Fix loop, Eval, Attrition, Reports and Configure. The manufacturer never sees a customer's people or another customer's fleet, and sees loss data only while that customer shares it.</p>
+            <h3>Customer workspace</h3>
+            <p>Operate, Brief, Missions, Debrief, then Fleet (Airframes, All vendors, Configuration, Stockpile health, Readiness) and Sustain (Receiving, Accountability, Supply &amp; support, Updates, Quote and order). The manufacturer's internals return a refusal, not an empty page.</p>
+            <h3>What flows between them</h3>
+            <ul>
+              <li><b>Requests</b> from the customer: airframes, spares, training and repairs.</li>
+              <li><b>Shipments</b> from the maker, each with its birth record and packet.</li>
+              <li><b>Loss data</b> to the maker, only while the customer has sharing on.</li>
+            </ul>
+          </article>
+
+          <article class="article" id="simulated" data-tags="simulated sim demo data real fake measured sitl unit check honest">
+            <div class="meta"><span class="tag">Start here</span><span class="tag tag-sim">SIM</span></div>
+            <h2>What is simulated</h2>
+            <p>Read every number by its label:</p>
+            <ul>
+              <li><span class="tag tag-sitl">PX4 SITL</span> PX4 v1.18 flies in SIH with its own EKF2, and the onboard code closes the loop over MAVLink.</li>
+              <li><span class="tag tag-unit">Unit check</span> The onboard C module runs open loop against a synthetic or recorded stream.</li>
+              <li><span class="tag tag-sim">SIM</span> Demo scenario data: fleets, customers, orders, prices, lots, losses and training records.</li>
+            </ul>
+            <p>Manufacturer catalogue items appear as published. Other vendors appear under generic labels, never real product names. Prices are planning assumptions, not anyone's price list.</p>
+          </article>
+
+          <article class="article" id="operate" data-tags="operate map fleet list attention exceptions picture terrain 3d timeline replay follow">
+            <div class="meta"><span class="tag">Fly</span><span class="tag">Operator</span></div>
+            <h2>The Operate screen</h2>
+            <p>One screen for one operator and many vehicles. Left to right: the vehicle list, the tactical picture, the flight display for the selected vehicle, and the event timeline along the bottom.</p>
+            <ul>
+              <li><b>The list sorts by need.</b> Vehicles that need you rise to the top with the reason: link lost, GNSS rejected by the spoof gate, low battery, grounded.</li>
+              <li><b>The map works air-gapped.</b> Terrain is baked offline. Overlays show survey coverage, the jamming zone, each VIO error circle, link quality and the current task allocation. Every overlay is labelled <code>SIM</code>.</li>
+              <li><b>3D</b> shows the same picture in relief, each vehicle at its height above ground and the jamming zone as a dome (heights ×2).</li>
+              <li><b>Replay.</b> Drag the timeline, or use <kbd>←</kbd> <kbd>→</kbd>, to see what the console received at any moment.</li>
+              <li><b>Field report.</b> Select a vehicle and press <kbd>R</kbd> to file what you saw. Reports feed the fleet's record.</li>
+            </ul>
+            <p>Add <code>?fleet=300</code> to the console URL for the fleet-scale view.</p>
+            <a class="btn btn-sm go" href="/#operate">Open Operate →</a>
+          </article>
+
+          <article class="article" id="shortcuts" data-tags="keyboard shortcuts keys hotkeys command palette cmd k">
+            <div class="meta"><span class="tag">Fly</span></div>
+            <h2>Keyboard shortcuts</h2>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Key</th><th>What it does</th></tr></thead>
+              <tbody>
+                <tr><td><kbd>⌘K</kbd> / <kbd>Ctrl K</kbd></td><td>Command palette: any vehicle, page or filter</td></tr>
+                <tr><td><kbd>J</kbd> <kbd>K</kbd></td><td>Next and previous vehicle in the list</td></tr>
+                <tr><td><kbd>A</kbd></td><td>Show only vehicles that need attention</td></tr>
+                <tr><td><kbd>L</kbd></td><td>Launch view: vehicles on the ground, go or no-go</td></tr>
+                <tr><td><kbd>F</kbd></td><td>Follow the selected vehicle on the map</td></tr>
+                <tr><td><kbd>R</kbd></td><td>File a field report on the selected vehicle</td></tr>
+                <tr><td><kbd>/</kbd></td><td>Search the vehicle list</td></tr>
+                <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Step the replay timeline by 10 seconds</td></tr>
+                <tr><td><kbd>?</kbd></td><td>Show every shortcut</td></tr>
+                <tr><td><kbd>Esc</kbd></td><td>Close the palette or panel</td></tr>
+              </tbody>
+            </table></div>
+          </article>
+
+          <article class="article" id="launch" data-tags="launch readiness go no-go pad preflight battery fix airworthiness power on ready">
+            <div class="meta"><span class="tag">Fly</span><span class="tag">Operator</span></div>
+            <h2>Launch readiness</h2>
+            <p>Press <kbd>L</kbd> to see the vehicles on the ground. Each gets a go or no-go from four checks, and the row shows the first one that fails, so you know what to fix without opening anything:</p>
+            <ol>
+              <li>A fresh link.</li>
+              <li>Airworthiness from the fleet record (a failed end-of-line test or an open work order fails it).</li>
+              <li>Battery at or above 60%.</li>
+              <li>A position fix: trusted GNSS, or VIO.</li>
+            </ol>
+            <p>The console times each vehicle from power-on to GO and keeps the median. In the demo, NX-12 stays NO-GO because its bench test failed, and NX-11 sits at 41% battery.</p>
+            <div class="callout">GO is advice. The console does not arm or launch anything.</div>
+            <a class="btn btn-sm go" href="/#operate">Open the launch view →</a>
+          </article>
+
+          <article class="article" id="contested" data-tags="jamming gnss denied spoof vio drift lost link failsafe mesh replan cbba denial map">
+            <div class="meta"><span class="tag">Fly</span></div>
+            <h2>Jamming, VIO and lost link</h2>
+            <p><b>GNSS rejected.</b> When the spoof gate rejects GNSS, the vehicle navigates on visual-inertial odometry. The map draws its position error as a circle that grows with distance flown (an assumed 1% in the demo). NX-04 orbits inside the jamming zone to show it.</p>
+            <p><b>Lost link.</b> A vehicle that stops reporting goes stale after 20 seconds and rises to the top of the list. Its tasks go back to the fleet, and the remaining vehicles re-plan with CBBA. NX-07 drops off the link about every 100 seconds in the demo.</p>
+            <p><b>Denial map.</b> The Denial map page builds a picture of where GNSS was denied or rejected from repeated passes, so the next plan can route around it.</p>
+            <a class="btn btn-sm go" href="/#denial">Open the Denial map →</a>
+          </article>
+
+          <article class="article" id="brief" data-tags="brief plan intent approve approval two person rule planner commander tasking">
+            <div class="meta"><span class="tag">Fly</span><span class="tag">Commander</span></div>
+            <h2>Brief and two-person approval</h2>
+            <ol class="steps">
+              <li>On <b>Brief</b>, type the mission in plain words, for example "Search the north field with two vehicles before 14:00, then check the culvert, keep two in reserve".</li>
+              <li>The console proposes a plan: areas, vehicles, reserves, and which vehicles it left out and why (low battery, grounded, on hold).</li>
+              <li>A planner or mission commander approves it. The person who wrote the brief cannot approve their own plan.</li>
+            </ol>
+            <p>The parser is a fixed grammar that runs offline. There is no language model in the loop, so the same words always give the same plan.</p>
+            <div class="callout warn">Operators can read a Brief but cannot approve one. The refusal is written to the audit log.</div>
+            <a class="btn btn-sm go" href="/#brief">Open Brief →</a>
+          </article>
+
+          <article class="article" id="debrief" data-tags="missions plans debrief replay export timeline launch checks">
+            <div class="meta"><span class="tag">Fly</span></div>
+            <h2>Missions, replay and debrief</h2>
+            <p><b>Missions</b> lists every plan with its launch checks, tied to the same fleet record as Operate. <b>Debrief</b> replays a mission deterministically and exports the timeline with its marking.</p>
+            <a class="btn btn-sm go" href="/#missions">Open Missions →</a>
+          </article>
+
+          <article class="article" id="fleet" data-tags="fleet airframes birth record serial bench eol end of line lots firmware calibration">
+            <div class="meta"><span class="tag">Record</span><span class="tag">Maintainer</span></div>
+            <h2>Airframes and birth records</h2>
+            <p>Every airframe has a birth record from the end-of-line bench: its serial, the lot of every major part, its calibrations, its firmware hash and the bench test result. The record decides airworthiness, so a failed hover test grounds the serial before it ships.</p>
+            <p>Field events attach to the same serial: receiving, sorties, swaps, reports, losses. That is what lets the attrition autopsy find a bad lot.</p>
+            <a class="btn btn-sm go" href="/#fleet">Open Airframes →</a>
+          </article>
+
+          <article class="article" id="holds" data-tags="quality hold lot work order maintenance return to service rts restricted grounded">
+            <div class="meta"><span class="tag">Record</span><span class="tag">Maintainer</span></div>
+            <h2>Quality holds and work orders</h2>
+            <p>A lot hold restricts every tail that carries the lot. An open work order blocks return to service. To clear a vehicle:</p>
+            <ol class="steps">
+              <li>Open <b>Airframes</b> and pick the restricted tail.</li>
+              <li>Close its open work orders. Parts come from the maker's depot stock.</li>
+              <li>Return it to service. Launch readiness picks up the change at once.</li>
+            </ol>
+            <p>Closing a work order needs the maintainer, mission commander or admin role.</p>
+          </article>
+
+          <article class="article" id="config" data-tags="configuration swap conversion parameter set block field reconfiguration">
+            <div class="meta"><span class="tag">Record</span></div>
+            <h2>Field configuration</h2>
+            <p>Units swap parts and convert airframes in the field. Configuration keeps the as-flown record current. A mismatched swap is refused, and a conversion holds the airframe from ready until its parameter set loads.</p>
+            <a class="btn btn-sm go" href="/#config">Open Configuration →</a>
+          </article>
+
+          <article class="article" id="mixed" data-tags="all vendors mixed fleet import csv other vendors readiness">
+            <div class="meta"><span class="tag">Record</span><span class="tag">Commander</span></div>
+            <h2>All vendors</h2>
+            <p>One readiness picture across every vendor's airframes. Import a flight log as CSV: every row is checked, and rows that fail say why. Other vendors' airframes have no birth record, and the page says so instead of guessing.</p>
+            <a class="btn btn-sm go" href="/#mixed">Open All vendors →</a>
+          </article>
+
+          <article class="article" id="stockpile" data-tags="stockpile batteries packs age rotate storage health">
+            <div class="meta"><span class="tag">Record</span></div>
+            <h2>Stockpile health</h2>
+            <p>Pack age, charge and storage temperature per serial. An over-age or retired pack holds its airframe from ready; rotating the pack restores it. Holds feed the readiness count on All vendors.</p>
+            <a class="btn btn-sm go" href="/#stockpile">Open Stockpile health →</a>
+          </article>
+
+          <article class="article" id="training" data-tags="training readiness operators current currency simulator qualification refresher scorecard">
+            <div class="meta"><span class="tag">Record</span><span class="tag">Commander</span></div>
+            <h2>Training readiness</h2>
+            <p>Readiness shows which operators are current (at least three sorties in 28 days and one in the last 14), their simulator qualification and which refreshers are due. Operators appear as designators, never names. Scripted training scenarios in Operate produce a scorecard.</p>
+            <a class="btn btn-sm go" href="/#readiness">Open Readiness →</a>
+          </article>
+
+          <article class="article" id="supply" data-tags="supply support request spares airframes repair training portal receiving accountability ship">
+            <div class="meta"><span class="tag">Record</span><span class="tag">Customer</span></div>
+            <h2>Supply and support</h2>
+            <p>The customer's portal to the maker. Request airframes, spares, training or a repair, and follow each request to delivery. When a shipment arrives, sign for it on <b>Receiving</b>; custody moves to your unit and the airframe joins your fleet. Operators can view requests but not raise them.</p>
+            <a class="btn btn-sm go" href="/#supply">Open Supply and support →</a>
+          </article>
+
+          <article class="article" id="queue" data-tags="work queue ops manufacturer operations ship build po supply action">
+            <div class="meta"><span class="tag">Operations</span><span class="tag">Ops lead</span></div>
+            <h2>The work queue</h2>
+            <p>The manufacturer's home page. Everything that needs a decision, from customer requests to build orders, supplier POs and lot holds, sits in one queue, and each item carries the button that clears it: ship, build, receive, approve. Cleared items move to "Done this session", and each action is written to the audit log.</p>
+            <a class="btn btn-sm go" href="/#ops">Open the Work queue →</a>
+          </article>
+
+          <article class="article" id="quote" data-tags="quote order price package marketplace listing delivery date sortie cost">
+            <div class="meta"><span class="tag">Operations</span><span class="tag">Commander</span></div>
+            <h2>Quotes and orders</h2>
+            <p>Configure a package: airframes, sensor pack, quantity, course seats and the fleet subscription. The total always equals its lines. Cost per completed sortie comes from end-of-flight records, and the earliest delivery date comes from the factory's capacity, so nobody can promise a date the factory cannot make.</p>
+            <a class="btn btn-sm go" href="/#quote">Open Quote and order →</a>
+          </article>
+
+          <article class="article" id="bid" data-tags="bid desk rfp requirements evidence surge planner capacity shift expedite">
+            <div class="meta"><span class="tag">Operations</span></div>
+            <h2>Bid desk and surge</h2>
+            <p><b>Bid desk</b> answers each requirement of a solicitation from the record. Every "met" row links to the evidence; rows outside the platform's scope (anything weapons-related, per ADR 0016) say so.</p>
+            <p><b>Surge planner</b> shows the date a surge order can ship. The plain date never beats the slowest part; expediting and a second shift are never later and show what they cost.</p>
+            <a class="btn btn-sm go" href="/#bid">Open Bid desk →</a>
+          </article>
+
+          <article class="article" id="attrition" data-tags="attrition autopsy loss lot ratio fix loop case cohort control engineering change">
+            <div class="meta"><span class="tag">Operations</span><span class="tag tag-sim">SIM</span></div>
+            <h2>Attrition and the fix loop</h2>
+            <p><b>Attrition</b> ranks lots by their loss rate against the fleet baseline and proposes a quality hold on the tails that carry a flagged lot. In the demo, ESC lot ESC-2611 loses airframes at 2.14× the expected rate.</p>
+            <p><b>Fix loop</b> tracks the corrective change. A case closes only when the treated unit improves against the control units by a measured margin (a difference in differences with z ≤ −1.28 and at least 40 sorties a side). A change that does nothing never closes.</p>
+            <a class="btn btn-sm go" href="/#cases">Open the Fix loop →</a>
+          </article>
+
+          <article class="article" id="release" data-tags="allied releasability withheld fields export foreign marking tenant">
+            <div class="meta"><span class="tag">Trust</span></div>
+            <h2>Allied tenants and releasability</h2>
+            <p>An allied tenant has its own workspace. Its releasability rules run on every response before it leaves the server: withheld fields are removed at any depth and never reach the browser. The page lists each withheld field with the rule that withheld it, and shows the marking.</p>
+            <a class="btn btn-sm go" href="/#release">Open Releasability →</a>
+          </article>
+
+          <article class="article" id="guardrails" data-tags="weapons strike adr 0016 command arm launch never refuse inbound">
+            <div class="meta"><span class="tag">Trust</span></div>
+            <h2>What the console will never do</h2>
+            <div class="callout stop">The platform has no weapon, payload-release or fire-control type in its data model (ADR 0016). Strike airframes appear only as catalogue items.</div>
+            <ul>
+              <li>It never arms, launches or commands a vehicle. It reads MAVLink and sends no MAVLink commands.</li>
+              <li>It accepts no commands from external systems. Feeds to TAK and other C2 systems go out only; an inbound command is refused and audited.</li>
+              <li>Outcomes are neutral: completed, aborted, lost. There are no target, strike or damage fields.</li>
+              <li>Tracking means an operator-designated object, in simulation, with confirm, abort and timeout written to the audit log.</li>
+            </ul>
+          </article>
+
+          <article class="article" id="audit" data-tags="access users audit log hash chain deny allow reason">
+            <div class="meta"><span class="tag">Trust</span><span class="tag">Admin</span></div>
+            <h2>Access and the audit log</h2>
+            <p><b>Access</b> manages your organisation, its people and its sharing agreements. A customer sees only its own accounts. <b>Audit</b> shows every allow and deny with its reason codes, in a hash-chained log an assessor can verify.</p>
+            <a class="btn btn-sm go" href="/#audit">Open Audit →</a>
+          </article>
+
+          <article class="article" id="faq" data-tags="faq questions reset reload state mobile neros affiliated">
+            <div class="meta"><span class="tag">FAQ</span></div>
+            <h2>Frequently asked questions</h2>
+            <h3>How do I reset the demo?</h3>
+            <p>Reload the page. The scenario starts over; your sign-in lasts 12 hours.</p>
+            <h3>Why did an action say "role_denied"?</h3>
+            <p>Your role cannot do it. That is the point of the demo: sign in as the role that can, and the refusal stays in the audit log.</p>
+            <h3>Does it work on a phone?</h3>
+            <p>Yes for reading and acting on queues. The Operate screen is built for a laptop or a ground-station display.</p>
+            <h3>Is this a Neros product?</h3>
+            <p>No. It is an independent concept by Kevin Owens. Manufacturer catalogue items appear as published; everything else is simulated.</p>
+            <h3>Where is the API?</h3>
+            <p>See the <a href="/developers/">developer site</a>, which has a live API explorer that runs against the demo.</p>
+          </article>
+        </div>
+      </div>
+    </main>
+    <footer data-site-foot></footer>
+    <script type="module" src="/site/help.ts"></script>
+  </body>
+</html>

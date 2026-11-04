@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>A2E Developers</title>
+    <meta name="description" content="Build on A2E Mission Cloud: the REST API, the a2e/v1 telemetry ingest contract, CoT and entity feeds, the read-only MAVLink map and the adapter conformance suite. With a live API explorer." />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#07090d" />
+  </head>
+  <body>
+    <header data-site-nav></header>
+    <main>
+      <section class="docs-hero">
+        <div class="wrap">
+          <p class="kicker">Developers</p>
+          <h1>Bring any drone in. Send the picture anywhere.</h1>
+          <p class="lede" style="max-width:760px">One REST API over the fleet record, a stable telemetry contract for any autopilot, and outbound feeds to the systems units already run. Interfaces are free. The explorer below runs real requests against the live demo, in your browser.</p>
+          <div class="hero-ctas">
+            <a class="btn btn-primary" href="#explorer">Try the API →</a>
+            <a class="btn" href="#ingest">Telemetry contract</a>
+            <a class="btn" href="https://github.com/kevin-owens-product/drones">Source</a>
+          </div>
+        </div>
+      </section>
+
+      <div class="wrap docs">
+        <nav class="side" id="side" aria-label="Developer docs">
+          <h4>Start</h4>
+          <a href="#overview">Overview</a>
+          <a href="#quickstart">Quickstart</a>
+          <a href="#auth">Auth, tenants and roles</a>
+          <h4>API</h4>
+          <a href="#explorer">Live API explorer</a>
+          <a href="#reference">Endpoint reference</a>
+          <a href="#errors">Errors and refusals</a>
+          <h4>Integrate</h4>
+          <a href="#ingest">Telemetry ingest (a2e/v1)</a>
+          <a href="#mavlink">MAVLink, read only</a>
+          <a href="#conformance">Adapter conformance</a>
+          <a href="#feeds">TAK and entity feeds</a>
+          <a href="#versioning">Versioning policy</a>
+          <h4>Project</h4>
+          <a href="#changelog">Changelog</a>
+        </nav>
+
+        <div class="doc">
+          <article class="article" id="overview">
+            <span class="tag">Start</span>
+            <h2>Overview</h2>
+            <p>Vehicles report through PX4, Betaflight or an adapter into a Go gateway, onto NATS and MQTT, into a FastAPI control plane backed by Postgres with PostGIS and Timescale. The console and every integration read the same API. Nothing on the command side is exposed: the platform monitors, records and sells.</p>
+            <div class="arch">
+              <svg viewBox="0 0 800 300" role="img" aria-label="Architecture: vehicles to gateway to bus to control plane to console and feeds">
+                <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#5cc8ff" /></marker></defs>
+                <g font-size="12" fill="#e7ecf2">
+                  <g><rect x="10" y="30" width="150" height="40" rx="8" fill="#10151b" stroke="#2f3a47" /><text x="24" y="55">PX4 / Betaflight</text></g>
+                  <g><rect x="10" y="90" width="150" height="40" rx="8" fill="#10151b" stroke="#2f3a47" /><text x="24" y="115">Any-autopilot adapter</text></g>
+                  <g><rect x="10" y="150" width="150" height="40" rx="8" fill="#10151b" stroke="#2f3a47" /><text x="24" y="175">End-of-line bench</text></g>
+                  <g><rect x="215" y="80" width="140" height="60" rx="8" fill="#0d1c26" stroke="#5cc8ff" /><text x="230" y="105">Gateway (Go)</text><text x="230" y="124" fill="#93a0ae" font-size="11">validate, rate-limit</text></g>
+                  <g><rect x="400" y="80" width="120" height="60" rx="8" fill="#10151b" stroke="#2f3a47" /><text x="415" y="105">NATS · MQTT</text><text x="415" y="124" fill="#93a0ae" font-size="11">a2e/v1 topics</text></g>
+                  <g><rect x="565" y="30" width="220" height="160" rx="10" fill="#0d1c26" stroke="#5cc8ff" /><text x="582" y="56" font-weight="700">Control plane (FastAPI)</text><text x="582" y="80" fill="#93a0ae" font-size="11">OPA policy · row-level security</text><text x="582" y="100" fill="#93a0ae" font-size="11">hash-chained audit · markings</text><text x="582" y="120" fill="#93a0ae" font-size="11">releasability filter</text><text x="582" y="146" fill="#93a0ae" font-size="11">Postgres + PostGIS + Timescale</text><text x="582" y="166" fill="#93a0ae" font-size="11">MinIO · Redis live state</text></g>
+                  <g><rect x="565" y="230" width="100" height="44" rx="8" fill="#10151b" stroke="#2f3a47" /><text x="582" y="257">Console</text></g>
+                  <g><rect x="685" y="230" width="100" height="44" rx="8" fill="#10151b" stroke="#2f3a47" /><text x="698" y="252">CoT · entities</text><text x="698" y="266" fill="#93a0ae" font-size="10">outbound only</text></g>
+                </g>
+                <g stroke="#5cc8ff" stroke-width="1.5" fill="none" marker-end="url(#ah)">
+                  <path d="M160 50 C190 50 190 100 213 100" /><path d="M160 110 L213 110" /><path d="M160 170 C190 170 190 120 213 120" />
+                  <path d="M355 110 L398 110" /><path d="M520 110 L563 110" />
+                  <path d="M615 190 L615 228" /><path d="M735 190 L735 228" />
+                </g>
+                <text x="215" y="210" fill="#ff8a7d" font-size="11" font-family="JetBrains Mono Variable, monospace">no command path back to any vehicle (ADR 0016)</text>
+              </svg>
+            </div>
+          </article>
+
+          <article class="article" id="quickstart">
+            <span class="tag">Start</span>
+            <h2>Quickstart</h2>
+            <p>Run the demo console and its API with no stack, in under a minute:</p>
+            <pre><span class="c"># the scripted sortie, every page marked DEMO DATA</span>
+git clone https://github.com/kevin-owens-product/drones
+cd drones/services/ui &amp;&amp; npm ci &amp;&amp; npm run build &amp;&amp; npm run demo
+<span class="c"># http://localhost:4173 · the product site is at /product/</span>
+curl -s localhost:4173/v1/telemetry/live | jq '.items[0]'</pre>
+            <p>Or run the full stack (control plane, gateway, NATS, Postgres, Keycloak, OPA, MediaMTX):</p>
+            <pre>cp .env.example .env
+make demo          <span class="c"># http://localhost:18080, sign in as gwen.analyst</span>
+make test          <span class="c"># unit suite; make ci adds lint and OPA</span>
+make sitl          <span class="c"># PX4 v1.18 SIH closed-loop trials</span></pre>
+          </article>
+
+          <article class="article" id="auth">
+            <span class="tag">Start</span>
+            <h2>Auth, tenants and roles</h2>
+            <p>The control plane signs users in with OIDC (Keycloak in development, PIV/CAC-backed in production) and keeps a session cookie. Every request is evaluated twice: an OPA policy decides the action from the role matrix, and Postgres row-level security scopes the rows to the caller's tenant. Allows and denies both land in the audit chain.</p>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Role</th><th>Can</th></tr></thead>
+              <tbody>
+                <tr><td><code>operator</code></td><td>Read the fleet, file field reports, propose a brief</td></tr>
+                <tr><td><code>planner</code>, <code>mission_commander</code></td><td>Approve briefs (not their own), request supply, build quotes</td></tr>
+                <tr><td><code>maintainer</code></td><td>Close work orders, return airframes to service, receive shipments</td></tr>
+                <tr><td><code>ops_lead</code></td><td>The manufacturer's queue: ship, build, hold lots, plan surges</td></tr>
+                <tr><td><code>admin</code></td><td>Tenants, users, sharing agreements</td></tr>
+              </tbody>
+            </table></div>
+            <p>Every response carries an <code>X-A2E-Banner</code> header with the highest marking on the page. Clients must show it.</p>
+          </article>
+
+          <article class="article" id="explorer">
+            <span class="tag tag-sim">Live · SIM</span>
+            <h2>Live API explorer</h2>
+            <p>Pick an endpoint and a persona and send it. Requests run against the demo's scenario engine, in this page: the same code that answers the hosted console. Try the same call as a manufacturer and as a customer to see tenant scoping, or as the allied commander to see releasability strip fields.</p>
+            <div class="explorer" id="ex">
+              <div class="ex-bar">
+                <select id="ex-persona" aria-label="Persona"></select>
+                <select id="ex-method" aria-label="Method"><option>GET</option><option>POST</option></select>
+                <input id="ex-path" aria-label="Path" spellcheck="false" />
+                <button class="btn btn-primary btn-sm" id="ex-send">Send</button>
+              </div>
+              <div class="ex-body">
+                <div class="ex-list" id="ex-list"></div>
+                <div class="ex-out">
+                  <div class="ex-desc" id="ex-desc"></div>
+                  <div class="ex-status" id="ex-status"></div>
+                  <pre id="ex-res"></pre>
+                </div>
+              </div>
+            </div>
+            <div class="codetabs" role="tablist"><button aria-selected="true" data-lang="curl">curl</button><button aria-selected="false" data-lang="python">Python</button><button aria-selected="false" data-lang="ts">TypeScript</button></div>
+            <pre id="ex-code"></pre>
+          </article>
+
+          <article class="article" id="reference">
+            <span class="tag">API</span>
+            <h2>Endpoint reference</h2>
+            <p>The routes the console uses, grouped by product area. Click one to load it in the explorer.</p>
+            <div class="table-wrap"><table id="ref"><thead><tr><th>Method</th><th>Path</th><th>What it returns</th></tr></thead><tbody></tbody></table></div>
+          </article>
+
+          <article class="article" id="errors">
+            <span class="tag">API</span>
+            <h2>Errors and refusals</h2>
+            <p>Errors are JSON with a <code>detail</code> string written for a person. A refusal says what would make it succeed.</p>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Status</th><th>When</th><th>Example <code>detail</code></th></tr></thead>
+              <tbody>
+                <tr><td><code>400</code></td><td>Body is not JSON, or a value is out of range</td><td><code>json</code></td></tr>
+                <tr><td><code>401</code></td><td>No session</td><td><code>unauthenticated</code></td></tr>
+                <tr><td><code>403</code></td><td>Role, tenant, plan or policy refuses</td><td>"Closing a work order needs the maintainer, mission commander or admin role."</td></tr>
+                <tr><td><code>403</code></td><td>An inbound command from an external system</td><td>"This console accepts no commands from external systems. Feeds are outbound only (ADR-0016)."</td></tr>
+                <tr><td><code>404</code></td><td>Unknown resource in your tenant</td><td><code>unknown</code></td></tr>
+              </tbody>
+            </table></div>
+            <p>Try it: <button class="btn btn-sm" data-try="POST /v1/interop/inbound?from=external-c2 commander">Send an inbound command</button> <button class="btn btn-sm" data-try="GET /v1/ops/queue commander">Read the maker's queue as a customer</button> <button class="btn btn-sm" data-try="GET /v1/mixed recordplan">All vendors on the Record plan</button> <button class="btn btn-sm" data-try="GET /v1/thread/updates allied">Updates as an allied tenant</button></p>
+          </article>
+
+          <article class="article" id="ingest">
+            <span class="tag tag-sitl">Stable · v1</span>
+            <h2>Telemetry ingest (a2e/v1)</h2>
+            <p>The stable way to bring a vehicle or sensor that is not PX4. It is telemetry only: an adapter reports state, never receives tasking. Send one JSON object per sample, by either route:</p>
+            <pre><span class="c"># MQTT</span>
+mosquitto_pub -t a2e/v1/&lt;tenant&gt;/&lt;tail&gt;/telemetry -m @sample.json
+<span class="c"># HTTP, on the gateway</span>
+curl -X POST "$GATEWAY/ingest?topic=a2e/v1/&lt;tenant&gt;/&lt;tail&gt;/telemetry" -d @sample.json</pre>
+            <p>A live sample from the demo fleet, in exactly the wire shape:</p>
+            <pre id="sample"></pre>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Key</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>tail_number</code></td><td>string</td><td>yes</td><td>Must match the topic's tail</td></tr>
+                <tr><td><code>tenant_id</code></td><td>string</td><td>yes</td><td>Must match the topic's tenant</td></tr>
+                <tr><td><code>time</code></td><td>RFC 3339</td><td>yes</td><td></td></tr>
+                <tr><td><code>lat</code>, <code>lon</code></td><td>degrees</td><td>yes</td><td>Out-of-range rejects the sample</td></tr>
+                <tr><td><code>alt_m</code></td><td>metres MSL</td><td>yes</td><td></td></tr>
+                <tr><td><code>classification</code>, <code>caveats</code></td><td>string, string[]</td><td>yes</td><td>Above system high rejects the sample</td></tr>
+                <tr><td><code>heading_deg</code></td><td>[0, 360)</td><td></td><td></td></tr>
+                <tr><td><code>ground_mps</code>, <code>climb_mps</code></td><td>m/s</td><td></td><td></td></tr>
+                <tr><td><code>battery_pct</code></td><td>[0, 100]</td><td></td><td>An overcharged pack is clamped, not rejected</td></tr>
+                <tr><td><code>mode</code>, <code>armed</code></td><td>string, bool</td><td></td><td>Reported state only</td></tr>
+                <tr><td><code>nav_source</code>, <code>gnss_trusted</code></td><td>gnss | vio | none, bool</td><td></td><td>Drives the console's denied-navigation display</td></tr>
+              </tbody>
+            </table></div>
+            <p>Leave a key out when the source does not report it. Accepted samples are rate limited per tail.</p>
+          </article>
+
+          <article class="article" id="mavlink">
+            <span class="tag">Integrate</span>
+            <h2>MAVLink, read only</h2>
+            <p>Each console field and the MAVLink message it is read from. This table is generated from the code the demo runs (<code>demo/interop.mjs</code>), so it cannot drift from it.</p>
+            <div class="table-wrap"><table id="mav"><thead><tr><th>Console field</th><th>Message</th><th>Source</th></tr></thead><tbody></tbody></table></div>
+            <div class="callout stop"><b>Never sent.</b> <span id="never"></span>. The end-of-line bench uses the same read-only allow-list.</div>
+          </article>
+
+          <article class="article" id="conformance">
+            <span class="tag">Integrate</span>
+            <h2>Adapter conformance</h2>
+            <p><code>services/gateway/internal/conformance</code> holds a reference adapter for a small ground rover with its own autopilot and no MAVLink. Its test runs adapter output through the gateway's own decode, topic split and ingest pipeline and checks:</p>
+            <ul>
+              <li>values map correctly (course −90 becomes 270, 7.2 km/h becomes 2 m/s, 15.4 V on 4S becomes 50%);</li>
+              <li>the wire keys are exactly the documented list;</li>
+              <li>mismatched tail or tenant, an out-of-range latitude, and a classification above system high are each rejected;</li>
+              <li>an overcharged pack is clamped, not rejected.</li>
+            </ul>
+            <pre>cd services/gateway &amp;&amp; go test ./internal/conformance/</pre>
+            <p>A new adapter copies that test with its own mapping. Limits: the test calls the pipeline in process, and nothing here has run against a real non-PX4 vehicle yet.</p>
+          </article>
+
+          <article class="article" id="feeds">
+            <span class="tag tag-sim">Live · SIM</span>
+            <h2>TAK and entity feeds</h2>
+            <p>A customer's own fleet goes out as Cursor-on-Target events for a TAK Server and as Lattice-style entities. Own fleet only, outbound only. The entity shape follows Anduril's public Entities API documentation and has not been tested against a Lattice instance.</p>
+            <div class="tabs" role="tablist"><button class="tab" aria-selected="true" data-feed="cot">CoT XML</button><button class="tab" aria-selected="false" data-feed="entities">Entities JSON</button></div>
+            <pre id="feed"></pre>
+          </article>
+
+          <article class="article" id="versioning">
+            <span class="tag">Integrate</span>
+            <h2>Versioning policy</h2>
+            <ul>
+              <li>The topic prefix <code>a2e/v1</code> and the key names are the contract. Renaming or removing a key, or changing its unit, needs <code>a2e/v2</code>, served beside v1.</li>
+              <li>Adding an optional key is allowed in v1, so old adapters keep working.</li>
+              <li><code>proto/autonomy.proto</code> follows the same rule through its package name (<code>a2e.autonomy.v1</code>). Removed field numbers are <code>reserved</code> and never reused.</li>
+              <li>Behaviour packages are signed OCI artifacts; an unsigned package does not load.</li>
+            </ul>
+          </article>
+
+          <article class="article" id="changelog">
+            <span class="tag">Project</span>
+            <h2>Changelog</h2>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Release</th><th>What shipped</th></tr></thead>
+              <tbody>
+                <tr><td>Round two, wave 3</td><td>Allied tenants and releasability, plans and entitlements, stockpile health</td></tr>
+                <tr><td>Round two, wave 2</td><td>Surge planner, bid desk, fix loop</td></tr>
+                <tr><td>Round two, wave 1</td><td>Listing and quote, mixed-vendor fleet, field configuration</td></tr>
+                <tr><td>Digital thread</td><td>Receiving, accountability, readiness, compliance, fleet updates, CoT and entity feeds</td></tr>
+                <tr><td>Two workspaces</td><td>Manufacturer work queue and customer Supply and support, tenant scoping</td></tr>
+                <tr><td>Field loop</td><td>Attrition autopsy, field reports, GNSS denial map, Configure, Brief with approval, end-of-line bench</td></tr>
+                <tr><td>Operate</td><td>Exceptions-first console, launch readiness, operating picture, 3D, replay</td></tr>
+                <tr><td>Foundations</td><td>PX4 fleet and MAVLink gateway, CBBA tasking, PX4 SIH closed-loop trials</td></tr>
+              </tbody>
+            </table></div>
+          </article>
+        </div>
+      </div>
+    </main>
+    <footer data-site-foot></footer>
+    <script type="module" src="/site/developers.ts"></script>
+  </body>
+</html>
