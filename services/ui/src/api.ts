@@ -38,7 +38,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<{ banner
       ...(init?.headers ?? {}),
     },
   });
-  const banner = response.headers.get("X-A2E-Banner");
+  const banner = response.headers.get("X-Classification-Banner");
   if (!banner) {
     throw new BannerMissing();
   }

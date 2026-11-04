@@ -7,9 +7,16 @@
     <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Drone Developers</title>
-    <meta name="description" content="Build on Drone Mission Cloud: the REST API, the a2e/v1 telemetry ingest contract, CoT and entity feeds, the read-only MAVLink map and the adapter conformance suite. With a live API explorer." />
+    <meta name="description" content="Build on Drone Mission Cloud: the REST API, the dmc/v1 telemetry ingest contract, CoT and entity feeds, the read-only MAVLink map and the adapter conformance suite. With a live API explorer." />
+    <meta property="og:title" content="Drone Developers" />
+    <meta property="og:description" content="Drone Mission Cloud: one record for every drone you build, sell and fly. Simulated demo data, clearly labeled." />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#07090d" />
+    <meta property="og:image" content="https://drones.productexec.co/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
     <header data-site-nav></header>
@@ -38,7 +45,7 @@
           <a href="#reference">Endpoint reference</a>
           <a href="#errors">Errors and refusals</a>
           <h4>Integrate</h4>
-          <a href="#ingest">Telemetry ingest (a2e/v1)</a>
+          <a href="#ingest">Telemetry ingest (dmc/v1)</a>
           <a href="#mavlink">MAVLink, read only</a>
           <a href="#conformance">Adapter conformance</a>
           <a href="#feeds">TAK and entity feeds</a>
@@ -60,7 +67,7 @@
                   <g><rect x="10" y="90" width="150" height="40" rx="8" fill="#10151b" stroke="#2f3a47" /><text x="24" y="115">Any-autopilot adapter</text></g>
                   <g><rect x="10" y="150" width="150" height="40" rx="8" fill="#10151b" stroke="#2f3a47" /><text x="24" y="175">End-of-line bench</text></g>
                   <g><rect x="215" y="80" width="140" height="60" rx="8" fill="#0d1c26" stroke="#5cc8ff" /><text x="230" y="105">Gateway (Go)</text><text x="230" y="124" fill="#93a0ae" font-size="11">validate, rate-limit</text></g>
-                  <g><rect x="400" y="80" width="120" height="60" rx="8" fill="#10151b" stroke="#2f3a47" /><text x="415" y="105">NATS · MQTT</text><text x="415" y="124" fill="#93a0ae" font-size="11">a2e/v1 topics</text></g>
+                  <g><rect x="400" y="80" width="120" height="60" rx="8" fill="#10151b" stroke="#2f3a47" /><text x="415" y="105">NATS · MQTT</text><text x="415" y="124" fill="#93a0ae" font-size="11">dmc/v1 topics</text></g>
                   <g><rect x="565" y="30" width="220" height="160" rx="10" fill="#0d1c26" stroke="#5cc8ff" /><text x="582" y="56" font-weight="700">Control plane (FastAPI)</text><text x="582" y="80" fill="#93a0ae" font-size="11">OPA policy · row-level security</text><text x="582" y="100" fill="#93a0ae" font-size="11">hash-chained audit · markings</text><text x="582" y="120" fill="#93a0ae" font-size="11">releasability filter</text><text x="582" y="146" fill="#93a0ae" font-size="11">Postgres + PostGIS + Timescale</text><text x="582" y="166" fill="#93a0ae" font-size="11">MinIO · Redis live state</text></g>
                   <g><rect x="565" y="230" width="100" height="44" rx="8" fill="#10151b" stroke="#2f3a47" /><text x="582" y="257">Console</text></g>
                   <g><rect x="685" y="230" width="100" height="44" rx="8" fill="#10151b" stroke="#2f3a47" /><text x="698" y="252">CoT · entities</text><text x="698" y="266" fill="#93a0ae" font-size="10">outbound only</text></g>
@@ -105,7 +112,7 @@ make sitl          <span class="c"># PX4 v1.18 SIH closed-loop trials</span></pr
                 <tr><td><code>admin</code></td><td>Tenants, users, sharing agreements</td></tr>
               </tbody>
             </table></div>
-            <p>Every response carries an <code>X-A2E-Banner</code> header with the highest marking on the page. Clients must show it.</p>
+            <p>Every response carries an <code>X-Classification-Banner</code> header with the highest marking on the page. Clients must show it.</p>
           </article>
 
           <article class="article" id="explorer">
@@ -158,12 +165,12 @@ make sitl          <span class="c"># PX4 v1.18 SIH closed-loop trials</span></pr
 
           <article class="article" id="ingest">
             <span class="tag tag-sitl">Stable · v1</span>
-            <h2>Telemetry ingest (a2e/v1)</h2>
+            <h2>Telemetry ingest (dmc/v1)</h2>
             <p>The stable way to bring a vehicle or sensor that is not PX4. It is telemetry only: an adapter reports state, never receives tasking. Send one JSON object per sample, by either route:</p>
             <pre><span class="c"># MQTT</span>
-mosquitto_pub -t a2e/v1/&lt;tenant&gt;/&lt;tail&gt;/telemetry -m @sample.json
+mosquitto_pub -t dmc/v1/&lt;tenant&gt;/&lt;tail&gt;/telemetry -m @sample.json
 <span class="c"># HTTP, on the gateway</span>
-curl -X POST "$GATEWAY/ingest?topic=a2e/v1/&lt;tenant&gt;/&lt;tail&gt;/telemetry" -d @sample.json</pre>
+curl -X POST "$GATEWAY/ingest?topic=dmc/v1/&lt;tenant&gt;/&lt;tail&gt;/telemetry" -d @sample.json</pre>
             <p>A live sample from the demo fleet, in exactly the wire shape:</p>
             <pre id="sample"></pre>
             <div class="table-wrap"><table>
@@ -219,10 +226,10 @@ curl -X POST "$GATEWAY/ingest?topic=a2e/v1/&lt;tenant&gt;/&lt;tail&gt;/telemetry
             <span class="tag">Integrate</span>
             <h2>Versioning policy</h2>
             <ul>
-              <li>The topic prefix <code>a2e/v1</code> and the key names are the contract. Renaming or removing a key, or changing its unit, needs <code>a2e/v2</code>, served beside v1.</li>
+              <li>The topic prefix <code>dmc/v1</code> and the key names are the contract. Renaming or removing a key, or changing its unit, needs <code>dmc/v2</code>, served beside v1.</li>
               <li>Adding an optional key is allowed in v1, so old adapters keep working.</li>
               <li><code>proto/autonomy.proto</code> follows the same rule through its package name (<code>a2e.autonomy.v1</code>). Removed field numbers are <code>reserved</code> and never reused.</li>
-              <li>Behaviour packages are signed OCI artifacts; an unsigned package does not load.</li>
+              <li>Behavior packages are signed OCI artifacts; an unsigned package does not load.</li>
             </ul>
           </article>
 

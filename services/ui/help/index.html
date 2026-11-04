@@ -8,8 +8,15 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Drone Help Center</title>
     <meta name="description" content="How to use Drone Mission Cloud: sign in, run the Operate screen, plan and approve missions, keep the fleet record and work the manufacturer queue." />
+    <meta property="og:title" content="Drone Help Center" />
+    <meta property="og:description" content="Drone Mission Cloud: one record for every drone you build, sell and fly. Simulated demo data, clearly labeled." />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#07090d" />
+    <meta property="og:image" content="https://drones.productexec.co/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
     <header data-site-nav></header>
@@ -87,7 +94,7 @@
           <article class="article" id="accounts" data-tags="accounts users roles password access invite login admin ops commander operator maintainer allied">
             <div class="meta"><span class="tag">Start here</span></div>
             <h2>Demo accounts and roles</h2>
-            <p>Demo access is by invitation: Kevin shares the passwords. There is one account per role, so you can see how each person's screen and permissions differ.</p>
+            <p>Demo access is by invitation: <a href="mailto:kevin.a.owens@gmail.com?subject=Drone%20Mission%20Cloud%20invite">ask Kevin</a> for an invite link that signs you straight in. There is one account per role, so you can see how each person's screen and permissions differ.</p>
             <div class="table-wrap"><table>
               <thead><tr><th>Username</th><th>Workspace</th><th>Role</th><th>Try this</th></tr></thead>
               <tbody>
@@ -99,13 +106,13 @@
                 <tr><td><code>allied</code></td><td>Customer C, an allied partner</td><td>Mission commander, planner</td><td>See which fields are withheld and why</td></tr>
               </tbody>
             </table></div>
-            <div class="callout warn">The hosted demo checks passwords in the browser. It keeps casual visitors out but it is not a security boundary. A real deployment signs in through the organisation's identity provider (OIDC, with PIV/CAC).</div>
+            <div class="callout warn">The hosted demo checks passwords in the browser. It keeps casual visitors out but it is not a security boundary. A real deployment signs in through the organization's identity provider (OIDC, with PIV/CAC).</div>
           </article>
 
           <article class="article" id="workspaces" data-tags="workspace tenant manufacturer customer neros switch scope">
             <div class="meta"><span class="tag">Start here</span></div>
             <h2>The two workspaces</h2>
-            <p>Your organisation decides your workspace, and your role shapes the menu on the left: each role lands on its own home and sees the pages it works in, in the order its work runs. Every other page in the workspace is still one <kbd>⌘K</kbd> away. A red count beside a page means something there is waiting on you.</p>
+            <p>Your organization decides your workspace, and your role shapes the menu on the left: each role lands on its own home and sees the pages it works in, in the order its work runs. Every other page in the workspace is still one <kbd>⌘K</kbd> away. A red count beside a page means something there is waiting on you.</p>
             <h3>Manufacturer workspace</h3>
             <p>Work queue, then Deliver (Contract to field, Program), Make (Quality, Compliance, Configuration, Software updates), Sell (Quotes, Surge planner, Bid desk, Pricing plans, Releasability) and Learn (Field fixes, Attrition, Field reports, Evidence, Loadout planner). The manufacturer never sees a customer's people or another customer's fleet, and sees loss data only while that customer shares it.</p>
             <h3>Customer workspace</h3>
@@ -127,7 +134,7 @@
               <li><span class="tag tag-unit">Unit check</span> The onboard C module runs open loop against a synthetic or recorded stream.</li>
               <li><span class="tag tag-sim">SIM</span> Demo scenario data: fleets, customers, orders, prices, lots, losses and training records.</li>
             </ul>
-            <p>Manufacturer catalogue items appear as published. Other vendors appear under generic labels, never real product names. Prices are planning assumptions, not anyone's price list.</p>
+            <p>Manufacturer catalog items appear as published. Other vendors appear under generic labels, never real product names. Prices are planning assumptions, not anyone's price list.</p>
           </article>
 
           <article class="article" id="operate" data-tags="operate map fleet list attention exceptions picture terrain 3d timeline replay follow">
@@ -136,7 +143,7 @@
             <p>One screen for one operator and many vehicles. Left to right: the vehicle list, the tactical picture, the flight display for the selected vehicle, and the event timeline along the bottom.</p>
             <ul>
               <li><b>The list sorts by need.</b> Vehicles that need you rise to the top with the reason: link lost, GNSS rejected by the spoof gate, low battery, grounded.</li>
-              <li><b>The map works air-gapped.</b> Terrain is baked offline. Overlays show survey coverage, the jamming zone, each VIO error circle, link quality and the current task allocation. Every overlay is labelled <code>SIM</code>.</li>
+              <li><b>The map works air-gapped.</b> Terrain is baked offline. Overlays show survey coverage, the jamming zone, each VIO error circle, link quality and the current task allocation. Every overlay is labeled <code>SIM</code>.</li>
               <li><b>3D</b> shows the same picture in relief, each vehicle at its height above ground and the jamming zone as a dome (heights ×2).</li>
               <li><b>Replay.</b> Drag the timeline, or use <kbd>←</kbd> <kbd>→</kbd>, to see what the console received at any moment.</li>
               <li><b>Field report.</b> Select a vehicle and press <kbd>R</kbd> to file what you saw. Reports feed the fleet's record.</li>
@@ -304,7 +311,7 @@
           <article class="article" id="guardrails" data-tags="weapons strike adr 0016 command arm launch never refuse inbound">
             <div class="meta"><span class="tag">Trust</span></div>
             <h2>What the console will never do</h2>
-            <div class="callout stop">The platform has no weapon, payload-release or fire-control type in its data model (ADR 0016). Strike airframes appear only as catalogue items.</div>
+            <div class="callout stop">The platform has no weapon, payload-release or fire-control type in its data model (ADR 0016). Strike airframes appear only as catalog items.</div>
             <ul>
               <li>It never arms, launches or commands a vehicle. It reads MAVLink and sends no MAVLink commands.</li>
               <li>It accepts no commands from external systems. Feeds to TAK and other C2 systems go out only; an inbound command is refused and audited.</li>
@@ -316,7 +323,7 @@
           <article class="article" id="audit" data-tags="access users audit log hash chain deny allow reason">
             <div class="meta"><span class="tag">Trust</span><span class="tag">Admin</span></div>
             <h2>Access and the audit log</h2>
-            <p><b>Access</b> manages your organisation, its people and its sharing agreements. A customer sees only its own accounts. <b>Audit</b> shows every allow and deny with its reason codes, in a hash-chained log an assessor can verify.</p>
+            <p><b>Access</b> manages your organization, its people and its sharing agreements. A customer sees only its own accounts. <b>Audit</b> shows every allow and deny with its reason codes, in a hash-chained log an assessor can verify.</p>
             <a class="btn btn-sm go" href="/#audit">Open Audit →</a>
           </article>
 
@@ -330,7 +337,7 @@
             <h3>Does it work on a phone?</h3>
             <p>Yes for reading and acting on queues. The Operate screen is built for a laptop or a ground-station display.</p>
             <h3>Is this a Neros product?</h3>
-            <p>No. It is an independent concept by Kevin Owens. Manufacturer catalogue items appear as published; everything else is simulated.</p>
+            <p>No. It is an independent concept by Kevin Owens. Manufacturer catalog items appear as published; everything else is simulated.</p>
             <h3>Where is the API?</h3>
             <p>See the <a href="/developers/">developer site</a>, which has a live API explorer that runs against the demo.</p>
           </article>

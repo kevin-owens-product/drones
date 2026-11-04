@@ -75,7 +75,7 @@ const ACTION_TEXT: Record<string, string> = {
   "request.fulfil": "Customer request shipped",
   "request.propose": "Resupply proposed to a customer",
   "order.ship": "Order shipped",
-  "licence.record": "Export licence recorded",
+  "license.record": "Export license recorded",
   "build.run": "Build run",
   "po.raise": "Purchase order raised",
   "po.expedite": "Purchase order expedited",

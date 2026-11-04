@@ -7,7 +7,7 @@ mountChrome("developers");
 type Endpoint = { group: string; method: "GET" | "POST"; path: string; desc: string; persona: Persona; body?: string };
 
 const ENDPOINTS: Endpoint[] = [
-  { group: "Operate", method: "GET", path: "/v1/telemetry/live", desc: "Latest a2e/v1 sample per vehicle. Poll at 1-2 Hz or subscribe on NATS.", persona: "commander" },
+  { group: "Operate", method: "GET", path: "/v1/telemetry/live", desc: "Latest dmc/v1 sample per vehicle. Poll at 1-2 Hz or subscribe on NATS.", persona: "commander" },
   { group: "Operate", method: "GET", path: "/v1/operations/picture", desc: "The map's overlays: survey areas and coverage, jamming zones, link quality, CBBA task allocation.", persona: "commander" },
   { group: "Operate", method: "GET", path: "/v1/platforms", desc: "The fleet register with airworthiness and the reason when restricted or grounded.", persona: "commander" },
   { group: "Operate", method: "GET", path: "/v1/missions", desc: "Mission plans with launch checks tied to the fleet record.", persona: "commander" },
@@ -57,12 +57,12 @@ list.innerHTML = ENDPOINTS.map((e, i) => {
 function snippet(): string {
   const m = method.value;
   const p = path.value;
-  const host = "https://a2e.example.mil";
+  const host = "https://dmc.example.mil";
   if (lang === "python") {
-    return `import requests\n\ns = requests.Session()  # carries the OIDC session cookie\nr = s.${m.toLowerCase()}("${host}${p}"${m === "POST" ? `, json=${body || "{}"}` : ""})\nprint(r.headers["X-A2E-Banner"])  # show the marking\nprint(r.json())`;
+    return `import requests\n\ns = requests.Session()  # carries the OIDC session cookie\nr = s.${m.toLowerCase()}("${host}${p}"${m === "POST" ? `, json=${body || "{}"}` : ""})\nprint(r.headers["X-Classification-Banner"])  # show the marking\nprint(r.json())`;
   }
   if (lang === "ts") {
-    return `const r = await fetch("${host}${p}", {\n  method: "${m}",\n  credentials: "include",${m === "POST" ? `\n  headers: { "content-type": "application/json" },\n  body: JSON.stringify(${body || "{}"}),` : ""}\n});\nconsole.log(r.headers.get("X-A2E-Banner"), await r.json());`;
+    return `const r = await fetch("${host}${p}", {\n  method: "${m}",\n  credentials: "include",${m === "POST" ? `\n  headers: { "content-type": "application/json" },\n  body: JSON.stringify(${body || "{}"}),` : ""}\n});\nconsole.log(r.headers.get("X-Classification-Banner"), await r.json());`;
   }
   return `curl -s -X ${m} "${host}${p}" \\\n  -b session.txt${m === "POST" ? ` \\\n  -H 'content-type: application/json' \\\n  -d '${body || "{}"}'` : ""} \\\n  -D - | jq .`;
 }
@@ -72,7 +72,7 @@ function send() {
   const ok = out.status < 400;
   const json = JSON.stringify(out.body, null, 2);
   const shown = json.length > 60_000 ? `${json.slice(0, 60_000)}\n… (${(json.length / 1024).toFixed(0)} KB, truncated)` : json;
-  status.innerHTML = `<b class="${ok ? "ok" : "bad"}">${out.status} ${ok ? "OK" : out.status === 403 ? "Forbidden" : out.status === 404 ? "Not found" : "Error"}</b><span>${out.ms.toFixed(1)} ms</span><span>${(json.length / 1024).toFixed(1)} KB</span><span>X-A2E-Banner: UNCLASSIFIED // DEMO DATA</span><span>as ${esc(PERSONAS[persona.value as Persona].who.display_name)} · ${esc(PERSONAS[persona.value as Persona].who.org)}</span>`;
+  status.innerHTML = `<b class="${ok ? "ok" : "bad"}">${out.status} ${ok ? "OK" : out.status === 403 ? "Forbidden" : out.status === 404 ? "Not found" : "Error"}</b><span>${out.ms.toFixed(1)} ms</span><span>${(json.length / 1024).toFixed(1)} KB</span><span>X-Classification-Banner: UNCLASSIFIED // DEMO DATA</span><span>as ${esc(PERSONAS[persona.value as Persona].who.display_name)} · ${esc(PERSONAS[persona.value as Persona].who.org)}</span>`;
   res.innerHTML = highlight(shown);
   code.textContent = snippet();
 }

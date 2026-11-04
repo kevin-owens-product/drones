@@ -13,4 +13,4 @@ React and TypeScript in strict mode, Vite for the build. CesiumJS for 3D and Map
 
 ## Consequences
 
-The banner text comes from `X-A2E-Banner`. If the header is missing the UI shows a fault and does not render the body. The API and the UI are same-origin: the API serves the built assets, and Vite proxies `/v1` in development, so the session cookie is first-party.
+The banner text comes from `X-Classification-Banner`. If the header is missing the UI shows a fault and does not render the body. The API and the UI are same-origin: the API serves the built assets, and Vite proxies `/v1` in development, so the session cookie is first-party.

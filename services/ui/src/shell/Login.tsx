@@ -24,7 +24,7 @@ export function Login(props: {
           <h1>
             <span>Plan, watch, and debrief.</span>
             <span>Humans approve every tasking change.</span>
-            <span>No weapons employment.</span>
+            <span>The console never arms or fires.</span>
           </h1>
           <p className="meta">{props.banner}</p>
         </section>

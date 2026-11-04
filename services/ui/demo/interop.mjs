@@ -60,7 +60,7 @@ export function createInterop({ live, platforms }) {
     const ce = v.pos_sigma_m == null ? 9999999 : Number(v.pos_sigma_m.toFixed(1));
     const remarks = `SIM. ${v.mode}${v.armed ? ", motors armed" : ""}. Nav ${v.nav_source}${v.nav_source === "vio" ? " (GNSS rejected)" : ""}. Battery ${Math.round(v.battery_pct)}%.`;
     return [
-      `<event version="2.0" uid="A2E-${esc(v.tail_number)}" type="a-f-A-M-H-Q" how="${how}" time="${iso(now)}" start="${iso(now)}" stale="${iso(now + 30_000)}">`,
+      `<event version="2.0" uid="DMC-${esc(v.tail_number)}" type="a-f-A-M-H-Q" how="${how}" time="${iso(now)}" start="${iso(now)}" stale="${iso(now + 30_000)}">`,
       `  <point lat="${v.lat.toFixed(6)}" lon="${v.lon.toFixed(6)}" hae="${(v.alt_m ?? 0).toFixed(1)}" ce="${ce}" le="9999999"/>`,
       "  <detail>",
       `    <contact callsign="${esc(v.tail_number)}"/>`,

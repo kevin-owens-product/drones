@@ -44,7 +44,7 @@ createServer(async (req, res) => {
     let raw = "";
     if (req.method === "POST") for await (const chunk of req) raw += chunk;
     const out = demo.handle(req.method ?? "GET", url, raw);
-    res.setHeader("X-A2E-Banner", BANNER);
+    res.setHeader("X-Classification-Banner", BANNER);
     res.setHeader("content-type", "application/json");
     res.statusCode = out.status;
     res.end(JSON.stringify(out.body));

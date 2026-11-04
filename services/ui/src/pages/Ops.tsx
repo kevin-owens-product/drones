@@ -99,7 +99,7 @@ export function OpsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (banne
             ))}
           </div>
           <p className="meta ops-summary">
-            {data.items.length} open items, {now} that need someone now. Today is {data.today} in the scenario.
+            {data.items.length} open items, {now} that need someone now. The scenario is set on {data.today}.
           </p>
           {shown.length === 0 ? <p className="meta">Nothing open here.</p> : null}
           <ul className="ops-list" data-testid="ops-items">

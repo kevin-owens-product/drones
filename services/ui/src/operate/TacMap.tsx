@@ -262,7 +262,10 @@ export function TacMap({
 
   const areas = layers.coverage
     ? (picture?.areas ?? []).map((a) => {
-        const [lx, ly] = a.ring[0] ? ll(a.ring[0][0], a.ring[0][1]) : [0, 0];
+        // Label the bottom-left corner: vehicles enter at the first corner, so a label there sits under them.
+        const pts = a.ring.map(([la, lo]) => ll(la, lo));
+        const lx = pts.length ? Math.min(...pts.map((q) => q[0])) : 0;
+        const ly = pts.length ? Math.max(...pts.map((q) => q[1])) - 28 : 0;
         return (
           <g key={a.id} className="tac-area">
             <path d={`${polyline(a.ring)} Z`} className="tac-area-edge" />

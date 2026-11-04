@@ -11,7 +11,7 @@ const OPERATOR = { display_name: "Demo Operator", roles: ["operator"] };
 const get = (demo, path, who = ADMIN) => demo.handle("GET", new URL(`http://x${path}`), "", who);
 const post = (demo, path, body, who = ADMIN) => demo.handle("POST", new URL(`http://x${path}`), JSON.stringify(body), who);
 
-test("Strike SKUs are catalogue entries only: no BOM, no orders, no build plan (ADR-0016)", () => {
+test("Strike SKUs are catalog entries only: no BOM, no orders, no build plan (ADR-0016)", () => {
   const strike = CATALOG.filter((c) => c.restricted);
   assert.equal(strike.length, 3);
   for (const s of strike) {
@@ -61,12 +61,12 @@ test("the Attrition shortfall becomes a kit plan for the unit's model", () => {
   assert.ok(alpha.spares.some((x) => x.dg));
 });
 
-test("orders get a projected ship date, and an export order waits on its licence", () => {
+test("orders get a projected ship date, and an export order waits on its license", () => {
   const body = get(createDemo({ attrition }), "/v1/company").body;
   const c1 = body.orders.find((o) => o.id === "ORD-C1");
   assert.equal(c1.projected, null);
   assert.equal(c1.at_risk, true);
-  assert.match(c1.why, /licence/);
+  assert.match(c1.why, /license/);
   for (const o of body.orders.filter((x) => x.id !== "ORD-C1")) assert.match(o.projected, /^\d{4}-\d{2}-\d{2}$/);
 });
 

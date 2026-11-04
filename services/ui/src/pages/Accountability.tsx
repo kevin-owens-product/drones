@@ -49,7 +49,7 @@ export function AccountabilityPage({ viewer, onBanner }: { viewer: Viewer; onBan
         <Stat label="Sorties, last 14 days" value={String(sorties)} />
         <Stat label="Completed" value={pct(sorties ? (d.outcomes.completed ?? 0) / sorties : null)} />
         <Stat label="Airframes ended, 14 days" value={String(ended)} />
-        <Stat label="Ground stations synced to" value={d.synced_to} hint={`Today is ${d.today} in the scenario`} />
+        <Stat label="Ground stations synced to" value={d.synced_to} hint={`The scenario is set on ${d.today}`} />
       </div>
 
       <div className="ops-actions">

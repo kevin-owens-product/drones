@@ -1,11 +1,11 @@
-// The whole company on one thread: customer programmes and orders, production,
+// The whole company on one thread: customer programs and orders, production,
 // supply chain, logistics, sustainment, training and engineering change, all
 // keyed by SKU and serial so a person can follow one airframe from contract to
 // loss and back to the reorder it causes.
 //
 // Products come from demo/supply.mjs (as Neros publishes them). Customers,
 // orders, rates, capacity, shipments, courses booked and change orders are
-// SIM: made up for the demo, with generic customer names so no real programme
+// SIM: made up for the demo, with generic customer names so no real program
 // is implied. Strike SKUs never enter an order, a build plan or a shipment
 // here (ADR-0016).
 //
@@ -16,9 +16,9 @@ import { BOMS, CATALOG, UNITS, createSupply, nameOf, skuForTail } from "./supply
 export const TODAY = "2026-11-03";
 
 // Customers and their orders (SIM). DPAS rating sets shipping priority; an
-// export order cannot ship until its licence is approved.
+// export order cannot ship until its license is approved.
 export const CUSTOMERS = [
-  { id: "CUS-A", name: "Customer A: Army brigade programme (SIM)", country: "US", units: ["Alpha", "Bravo", "Charlie", "Delta"] },
+  { id: "CUS-A", name: "Customer A: Army brigade program (SIM)", country: "US", units: ["Alpha", "Bravo", "Charlie", "Delta"] },
   { id: "CUS-B", name: "Customer B: Marine Corps evaluation (SIM)", country: "US", units: [] },
   { id: "CUS-C", name: "Customer C: allied partner (SIM)", country: "Allied", units: [] },
 ];
@@ -30,7 +30,7 @@ export const ORDERS = [
   { id: "ORD-A4", customer: "CUS-A", sku: "CROSSBOW", qty: 24, delivered: 17, due: "2026-12-15", dpas: "DO-A1", export: null },
   { id: "ORD-B1", customer: "CUS-B", sku: "ARCHER-8", qty: 30, delivered: 0, due: "2026-11-30", dpas: "DO", export: null },
   { id: "ORD-B2", customer: "CUS-B", sku: "FLATBOW", qty: 6, delivered: 0, due: "2026-11-30", dpas: "DO", export: null },
-  { id: "ORD-C1", customer: "CUS-C", sku: "ARCHER-8", qty: 60, delivered: 0, due: "2027-01-20", dpas: null, export: { licence: "DSP-5", status: "pending" } },
+  { id: "ORD-C1", customer: "CUS-C", sku: "ARCHER-8", qty: 60, delivered: 0, due: "2027-01-20", dpas: null, export: { license: "DSP-5", status: "pending" } },
 ];
 
 // Training bookings against MISSION Success courses (SIM).
@@ -134,7 +134,7 @@ export function createCompany({ births = [] } = {}) {
         projected: exportHold ? null : ships,
         at_risk: Boolean(exportHold) || ships > o.due,
         why: exportHold
-          ? `Export licence (${o.export.licence}) ${o.export.status}`
+          ? `Export license (${o.export.license}) ${o.export.status}`
           : blocked
             ? `${blocked.short} short of ${blocked.part}${blocked.po ? ` until ${blocked.po}${blocked.late_days ? ` (${blocked.late_days} days late)` : ""}` : ", no PO open"}`
             : ships > o.due
@@ -251,7 +251,7 @@ export function createCompany({ births = [] } = {}) {
   function shipOrder(id, qty, by) {
     const o = orders.find((x) => x.id === id);
     if (!o) return { error: "no such order", status: 404 };
-    if (o.export && o.export.status !== "approved") return { error: `Export licence (${o.export.licence}) is ${o.export.status}`, status: 409 };
+    if (o.export && o.export.status !== "approved") return { error: `Export license (${o.export.license}) is ${o.export.status}`, status: 409 };
     const left = o.qty - o.delivered - o.shipped;
     const n = Math.min(left, Math.round(Number(qty)));
     if (!Number.isFinite(n) || n <= 0) return { error: "nothing left to ship on this line", status: 409 };
@@ -279,13 +279,13 @@ export function createCompany({ births = [] } = {}) {
     }
   }
 
-  /** Records a licence decision that arrived from the government; it does not grant anything itself. */
-  function recordLicence(id) {
+  /** Records a license decision that arrived from the government; it does not grant anything itself. */
+  function recordLicense(id) {
     const o = orders.find((x) => x.id === id);
-    if (!o?.export) return { error: "no export licence on this order", status: 404 };
+    if (!o?.export) return { error: "no export license on this order", status: 404 };
     if (o.export.status === "approved") return { error: "already recorded", status: 409 };
     o.export.status = "approved";
-    return { ok: true, message: `${o.export.licence} approval recorded for ${o.id}; the line can ship` };
+    return { ok: true, message: `${o.export.license} approval recorded for ${o.id}; the line can ship` };
   }
 
   function approveEco(id) {
@@ -312,7 +312,7 @@ export function createCompany({ births = [] } = {}) {
     supply,
     shipOrder,
     deliver,
-    recordLicence,
+    recordLicense,
     approveEco,
     bookCourse,
     plan: (holds, demand) => {

@@ -19,7 +19,7 @@
 //    supplier corrective action or hold the lot, and say whether the evidence
 //    supports moving end-of-line flight test from 100% to sampling.
 //
-// Everything is simulated (seeded, deterministic) and labelled SIM on screen.
+// Everything is simulated (seeded, deterministic) and labeled SIM on screen.
 // Pure JavaScript, so it runs behind demo/server.mjs and in the browser.
 
 import { sha256Hex } from "./ledger.mjs";
@@ -138,9 +138,9 @@ export function wilsonUpper(k, n, z = 1.645) {
   if (n === 0) return 1;
   const p = k / n;
   const den = 1 + (z * z) / n;
-  const centre = p + (z * z) / (2 * n);
+  const center = p + (z * z) / (2 * n);
   const spread = z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n));
-  return (centre + spread) / den;
+  return (center + spread) / den;
 }
 
 /** Operators on each unit's roster. Designators only; no names. */

@@ -2,7 +2,7 @@
 // test that holds it to the gateway's ingest contract (docs/design/integration.md).
 //
 // The contract is telemetry only. An adapter publishes sample.Sample as JSON on
-// a2e/v1/<tenant>/<tail>/telemetry (MQTT) or POSTs it to /ingest?topic=<same>.
+// dmc/v1/<tenant>/<tail>/telemetry (MQTT) or POSTs it to /ingest?topic=<same>.
 // There is no path back to the vehicle: adapters do not receive tasking.
 package conformance
 
@@ -32,7 +32,7 @@ type RoverReading struct {
 
 // Topic is the MQTT topic the adapter publishes on.
 func Topic(tenant, tail string) string {
-	return fmt.Sprintf("a2e/v1/%s/%s/telemetry", tenant, tail)
+	return fmt.Sprintf("dmc/v1/%s/%s/telemetry", tenant, tail)
 }
 
 // FromRover maps a rover reading to the ingest contract. It returns the JSON

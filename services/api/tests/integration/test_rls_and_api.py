@@ -173,7 +173,7 @@ async def test_api_release_and_banner(require_services: None) -> None:
             json={"username": username, "password": password},
         )
         assert response.status_code == 200, response.text
-        assert response.headers["X-A2E-Banner"] == "CUI"
+        assert response.headers["X-Classification-Banner"] == "CUI"
 
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         await login(client, "gwen.analyst")
@@ -182,7 +182,7 @@ async def test_api_release_and_banner(require_services: None) -> None:
         tails = {item["tail_number"] for item in listed.json()["items"]}
         assert {"N-002", "N-003"} <= tails
         assert "N-001" not in tails
-        assert listed.headers["X-A2E-Banner"].startswith("CUI")
+        assert listed.headers["X-Classification-Banner"].startswith("CUI")
         hidden = await client.post(
             "/v1/exports",
             json={

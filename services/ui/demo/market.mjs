@@ -1,7 +1,7 @@
 // Routes for the round-two builds (docs/design/round-two.md): selling through
 // the storefront, running a mixed-vendor fleet, field configuration, surge
 // planning, the bid desk, the fix loop, allied tenants, plans and stockpile
-// health. Each organisation sees only its own data; every action, refusals
+// health. Each organization sees only its own data; every action, refusals
 // included, goes to the audit log. Pure JavaScript.
 
 import { createQuote } from "./quote.mjs";

@@ -35,8 +35,10 @@ interface BirthRow {
   serial: string;
   tail_number: string;
   parts: { part: string; lot: string }[];
-  calibrations: { name: string; value: number; low: number; high: number }[];
-  firmware_sha256: string;
+  /** Absent for a tenant whose releasability rules withhold bench data. */
+  calibrations?: { name: string; value: number; low: number; high: number }[];
+  /** Absent for a tenant whose releasability rules withhold build hashes. */
+  firmware_sha256?: string;
   eol: { kind: string; passed: boolean; note: string };
   recorded_at: string;
   verdict: { status: string; reason: string };
@@ -400,7 +402,7 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
                         </li>
                       );
                     })}
-                    {birth.calibrations.map((cal) => {
+                    {(birth.calibrations ?? []).map((cal) => {
                       const ok = cal.value >= cal.low && cal.value <= cal.high;
                       return (
                         <li key={cal.name}>
@@ -411,13 +413,21 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
                         </li>
                       );
                     })}
+                    {birth.calibrations ? null : (
+                      <li>
+                        <strong>Bench calibrations</strong>
+                        <span className="meta">Withheld for this tenant</span>
+                      </li>
+                    )}
                     <li>
                       <strong>EOL {birth.eol.kind} test</strong>
                       <span className={birth.eol.passed ? "meta" : "fault"}>{birth.eol.passed ? "Passed" : `Failed${birth.eol.note ? `: ${birth.eol.note}` : ""}`}</span>
                     </li>
                     <li>
                       <strong>Firmware</strong>
-                      <span className="meta"><code title={birth.firmware_sha256}>{birth.firmware_sha256.slice(0, 12)}</code> · {birth.recorded_at.slice(0, 10)}</span>
+                      <span className="meta">
+                        {birth.firmware_sha256 ? <code title={birth.firmware_sha256}>{birth.firmware_sha256.slice(0, 12)}</code> : "Hash withheld for this tenant"} · {birth.recorded_at.slice(0, 10)}
+                      </span>
                     </li>
                   </ul>
                 </div>

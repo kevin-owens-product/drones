@@ -25,12 +25,19 @@ export const RULES = [
 ];
 
 export const TENANTS = [
-  { org: "CUS-A", name: "Customer A: Army brigade programme (SIM)", country: "US", marking: "US", hosting: "Neros cloud (US)" },
+  { org: "CUS-A", name: "Customer A: Army brigade program (SIM)", country: "US", marking: "US", hosting: "Neros cloud (US)" },
   { org: "CUS-B", name: "Customer B: Marine Corps evaluation (SIM)", country: "US", marking: "US", hosting: "Neros cloud (US)" },
   { org: "CUS-C", name: "Customer C: allied partner (SIM)", country: "Allied", marking: "REL TO allied partner (SIM)", hosting: "Sovereign region, air-gapped option (SIM)" },
 ];
 
-const WITHHELD = new Set(RULES.map((r) => r.field));
+/**
+ * Other keys that carry the same withheld data under another name. The birth
+ * record calls its hash `firmware_sha256` and its bench readings
+ * `calibrations`; both are withheld under the rule they belong to.
+ */
+export const ALIASES = { firmware_sha256: "sha256", calibrations: "bench" };
+
+const WITHHELD = new Set([...RULES.map((r) => r.field), ...Object.keys(ALIASES)]);
 
 export function createRelease() {
   const tenantOf = (org) => TENANTS.find((t) => t.org === org) ?? null;
@@ -44,7 +51,7 @@ export function createRelease() {
       if (v && typeof v === "object") {
         const out = {};
         for (const [k, x] of Object.entries(v)) {
-          if (WITHHELD.has(k)) found.add(k);
+          if (WITHHELD.has(k)) found.add(ALIASES[k] ?? k);
           else out[k] = walk(x);
         }
         return out;

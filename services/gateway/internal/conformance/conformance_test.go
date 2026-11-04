@@ -38,7 +38,7 @@ func TestRoverAdapterPassesIngest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if topic != "a2e/v1/"+tenant+"/UGV-7/telemetry" {
+	if topic != "dmc/v1/"+tenant+"/UGV-7/telemetry" {
 		t.Fatalf("topic %q", topic)
 	}
 	ok, err := ingest(pipe, topic, payload)
@@ -56,7 +56,7 @@ func TestRoverAdapterPassesIngest(t *testing.T) {
 }
 
 // The wire keys are the stable interface. Renaming one breaks every adapter,
-// so this list changes only with a new topic version (a2e/v2/...).
+// so this list changes only with a new topic version (dmc/v2/...).
 func TestContractKeysAreStable(t *testing.T) {
 	payload, _, _ := FromRover(tenant, reading())
 	var m map[string]any

@@ -13,4 +13,4 @@ Vehicles publish MQTT. The gateway is the only subscriber that writes to JetStre
 
 ## Consequences
 
-MQTT topics are `a2e/v1/{tenant}/{tail}/telemetry`. The gateway rejects a publish whose tenant does not match the connection credential. Core services that need telemetry subscribe to JetStream, not to MQTT.
+MQTT topics are `dmc/v1/{tenant}/{tail}/telemetry`. The gateway rejects a publish whose tenant does not match the connection credential. Core services that need telemetry subscribe to JetStream, not to MQTT.

@@ -1,13 +1,13 @@
 # Integration layer
 
-This is the stable interface for bringing a vehicle or sensor that is not PX4 into A2E. It is telemetry only. An adapter reports state; it never receives tasking, and there is no command path through it (ADR 0016).
+This is the stable interface for bringing a vehicle or sensor that is not PX4 into Drone Mission Cloud. It is telemetry only. An adapter reports state; it never receives tasking, and there is no command path through it (ADR 0016).
 
-## Telemetry ingest (stable, version a2e/v1)
+## Telemetry ingest (stable, version dmc/v1)
 
 An adapter sends one JSON object per sample, by either route:
 
-- MQTT: publish to `a2e/v1/<tenant>/<tail>/telemetry`.
-- HTTP: `POST /ingest?topic=a2e/v1/<tenant>/<tail>/telemetry` on the gateway.
+- MQTT: publish to `dmc/v1/<tenant>/<tail>/telemetry`.
+- HTTP: `POST /ingest?topic=dmc/v1/<tenant>/<tail>/telemetry` on the gateway.
 
 The object is `sample.Sample` in `services/gateway/internal/sample`. Required keys: `tail_number`, `tenant_id`, `time` (RFC 3339), `lat`, `lon`, `alt_m`, `classification`, `caveats`. Optional keys: `heading_deg` [0, 360), `ground_mps`, `climb_mps`, `battery_pct` [0, 100], `mode`, `armed`, `nav_source`, `gnss_trusted`. Leave a key out when the source does not report it.
 
@@ -15,7 +15,7 @@ The gateway rejects a sample when identity is missing, the tenant or tail differ
 
 ## Versioning
 
-- The topic prefix `a2e/v1` and the key names are the contract. Renaming or removing a key, or changing its unit, needs `a2e/v2`, served beside v1.
+- The topic prefix `dmc/v1` and the key names are the contract. Renaming or removing a key, or changing its unit, needs `dmc/v2`, served beside v1.
 - Adding an optional key is allowed in v1. Old adapters keep working because every new key is optional.
 - `proto/autonomy.proto` follows the same rule through its package name (`a2e.autonomy.v1`). Its header comment states the policy: removed field numbers are `reserved` and never reused.
 

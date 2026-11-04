@@ -2,7 +2,7 @@
 //
 // Customers: Receiving (acceptance packages), Accountability (on hand, issued,
 // ended, end-of-flight records). Neros: Quality (the field-to-lot loop and the
-// supplier scorecard). Each organisation sees only its own data; Neros sees a
+// supplier scorecard). Each organization sees only its own data; Neros sees a
 // customer's end-of-flight records only while that customer shares them, and
 // then only the outcome fields. Every action is written to the audit log,
 // refusals included. Pure JavaScript.

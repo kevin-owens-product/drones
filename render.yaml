@@ -1,5 +1,5 @@
 # Render Blueprint for the hosted demo at drones.productexec.co: the product site
-# (/product/, /help/, /developers/) and the operator console (/#operate). Static build: the scripted sortie runs in the browser
+# (/product/, /help/, /developers/, /why/) and the operator console (/#operate). Static build: the scripted sortie runs in the browser
 # (services/ui/src/staticDemo.ts), so there is no API, database or server behind
 # it, and every page says DEMO DATA.
 services:
@@ -27,6 +27,9 @@ services:
       - type: redirect
         source: /developers
         destination: /developers/
+      - type: redirect
+        source: /why
+        destination: /why/
       - type: rewrite
         source: /product/*
         destination: /product/index.html
@@ -36,6 +39,9 @@ services:
       - type: rewrite
         source: /developers/*
         destination: /developers/index.html
+      - type: rewrite
+        source: /why/*
+        destination: /why/index.html
       - type: rewrite
         source: /*
         destination: /index.html

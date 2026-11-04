@@ -79,7 +79,7 @@ const cellOf = (x, y) => {
   const r = Math.floor((y - AREA.y0) / AREA.cell);
   return c >= 0 && r >= 0 && c < cols() && r < rows() ? r * cols() + c : -1;
 };
-const centre = (i) => ({ x: AREA.x0 + ((i % cols()) + 0.5) * AREA.cell, y: AREA.y0 + (Math.floor(i / cols()) + 0.5) * AREA.cell });
+const center = (i) => ({ x: AREA.x0 + ((i % cols()) + 0.5) * AREA.cell, y: AREA.y0 + (Math.floor(i / cols()) + 0.5) * AREA.cell });
 
 /** Per-cell counts and a Beta(1,1) posterior mean of "denied". */
 export function buildMap(samples) {
@@ -91,7 +91,7 @@ export function buildMap(samples) {
     n[i] += 1;
     d[i] += s.denied ? 1 : 0;
   }
-  return n.map((count, i) => ({ i, ...centre(i), n: count, denied: d[i], p: (d[i] + 1) / (count + 2) }));
+  return n.map((count, i) => ({ i, ...center(i), n: count, denied: d[i], p: (d[i] + 1) / (count + 2) }));
 }
 
 /**
@@ -128,8 +128,8 @@ export function plan(risk, from = STATION, to = TARGET) {
   const prev = new Map();
   const open = new Set([start]);
   const h = (i) => {
-    const a = centre(i);
-    const b = centre(goal);
+    const a = center(i);
+    const b = center(goal);
     return Math.hypot(a.x - b.x, a.y - b.y);
   };
   const f = new Map([[start, h(start)]]);
@@ -160,7 +160,7 @@ export function plan(risk, from = STATION, to = TARGET) {
   }
   const cells = [goal];
   while (cells[0] !== start && prev.has(cells[0])) cells.unshift(prev.get(cells[0]));
-  const pts = [[from.x, from.y], ...cells.slice(1, -1).map((i) => [centre(i).x, centre(i).y]), [to.x, to.y]];
+  const pts = [[from.x, from.y], ...cells.slice(1, -1).map((i) => [center(i).x, center(i).y]), [to.x, to.y]];
   return pts;
 }
 

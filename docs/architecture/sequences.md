@@ -19,7 +19,7 @@ sequenceDiagram
   alt SQL and OPA both allow
     A->>P: business query (RLS still applies)
     A->>P: append audit when the action is a decision
-    A-->>B: body + X-A2E-Banner
+    A-->>B: body + X-Classification-Banner
   else either denies, or OPA is down
     A->>P: append deny audit
     A-->>B: 403 or 503, no row content

@@ -128,9 +128,9 @@ export function createQuote({ company, serials, compliance, surge }) {
       if (neros) return { error: "The customer accepts a quote.", status: 403 };
       if (q.status !== "quoted") return { error: `quote is ${q.status}`, status: 409 };
       q.status = "ordered";
-      const order = { id: `ORD-${q.id}`, customer: q.org, sku: q.sku, qty: q.qty, delivered: 0, shipped: 0, due: q.committed.date, dpas: "DO", export: CUSTOMERS.find((c) => c.id === q.org)?.country === "US" ? null : { licence: "DSP-5", status: "pending" } };
+      const order = { id: `ORD-${q.id}`, customer: q.org, sku: q.sku, qty: q.qty, delivered: 0, shipped: 0, due: q.committed.date, dpas: "DO", export: CUSTOMERS.find((c) => c.id === q.org)?.country === "US" ? null : { license: "DSP-5", status: "pending" } };
       company.orders.push(order);
-      return { ok: true, message: `${q.id} accepted: order ${order.id} for ${q.qty} × ${nameOf(q.sku)}, due ${order.due}${order.export ? "; export licence pending" : ""}.` };
+      return { ok: true, message: `${q.id} accepted: order ${order.id} for ${q.qty} × ${nameOf(q.sku)}, due ${order.due}${order.export ? "; export license pending" : ""}.` };
     }
     if (action === "quote.decline") {
       if (q.status === "ordered") return { error: "already ordered", status: 409 };

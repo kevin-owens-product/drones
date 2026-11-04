@@ -100,6 +100,33 @@ function sectionFromHash(): Section {
   return SECTIONS.find((item) => item === raw) ?? MOVED[raw] ?? "operate";
 }
 
+/**
+ * One-link access for the hosted demo: `?invite=<base64url of user:password>`
+ * signs that account in and then drops the parameter from the address bar, so
+ * an invitee gets one link instead of a username and password to type. The
+ * hosted gate is a browser-side courtesy, not a security boundary, so the link
+ * carries no more than the password would.
+ */
+async function signInFromInvite(): Promise<void> {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("invite");
+  if (!token) return;
+  params.delete("invite");
+  const rest = params.toString();
+  window.history.replaceState(null, "", `${window.location.pathname}${rest ? `?${rest}` : ""}${window.location.hash}`);
+  try {
+    const plain = atob(token.replace(/-/g, "+").replace(/_/g, "/"));
+    const at = plain.indexOf(":");
+    if (at < 1) return;
+    await api("/v1/session/dev-login", {
+      method: "POST",
+      body: JSON.stringify({ username: plain.slice(0, at), password: plain.slice(at + 1) }),
+    });
+  } catch {
+    /* a stale or mistyped link falls back to the sign-in form */
+  }
+}
+
 export function App() {
   const [banner, setBanner] = useState("CUI");
   const [config, setConfig] = useState<SessionConfig | null>(null);
@@ -120,7 +147,8 @@ export function App() {
         setConfig(body);
       })
       .catch((error: unknown) => setFault(error instanceof Error ? error.message : "config failed"));
-    void api<Viewer>("/v1/me")
+    void signInFromInvite()
+      .then(() => api<Viewer>("/v1/me"))
       .then(({ banner: next, body }) => {
         setBanner(next);
         setViewer(body);
@@ -153,7 +181,7 @@ export function App() {
     setSection(next);
   }
 
-  // Each organisation sees its own workspace; a section outside it lands on that workspace's home.
+  // Each organization sees its own workspace; a section outside it lands on that workspace's home.
   const [workspace, setWorkspace] = useState<Workspace>("all");
   useEffect(() => {
     if (viewer) setWorkspace(workspaceOf(viewer));

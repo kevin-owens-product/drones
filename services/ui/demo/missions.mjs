@@ -3,7 +3,7 @@
 // replayable debrief for every plan that has flown. Pure JavaScript, no Node
 // imports, so it runs behind demo/server.mjs and inside the hosted static demo.
 //
-// Everything here is simulated and labelled so. Plans survey, observe, relay and
+// Everything here is simulated and labeled so. Plans survey, observe, relay and
 // inspect; nothing arms, releases or engages (ADR-0016). Moving a plan only
 // changes its state on the board and writes the audit log: no vehicle is
 // commanded from here.

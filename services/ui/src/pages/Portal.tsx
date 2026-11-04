@@ -35,13 +35,13 @@ const STATUS: Record<string, string> = {
   submitted: "Waiting on Neros",
   proposed: "Neros proposes",
   approved: "Approved, shipping next",
-  authorised: "Return authorised",
+  authorized: "Return authorized",
   booked: "Class booked",
   shipped: "Shipped",
   delivered: "Delivered",
   declined: "Declined",
 };
-const GOOD = new Set(["approved", "authorised", "booked", "shipped", "delivered"]);
+const GOOD = new Set(["approved", "authorized", "booked", "shipped", "delivered"]);
 
 /** A customer's own workspace: their units, orders and shipments, and what they need from Neros. */
 export function PortalPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (banner: string) => void }) {
@@ -375,7 +375,7 @@ export function PortalPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ba
               <li key={c.id}>
                 <span className="mono">{c.id}</span> {c.name.split(" / ")[1] ?? c.name}
                 <span className={c.status === "complete" ? "pill pill-ok" : "pill"}>{c.status}</span>
-                <span className="meta">{c.unit ?? "Programme"} · {c.seats} seats · {c.start}</span>
+                <span className="meta">{c.unit ?? "Program"} · {c.seats} seats · {c.start}</span>
               </li>
             ))}
           </ul>
