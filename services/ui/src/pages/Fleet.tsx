@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { planLabel, type PlanAssignment } from "../plans";
 import { can, inCustomerView } from "../shell/workspace";
+import { Donut, TileGrid, type Tone } from "../viz/viz";
 
 interface Viewer {
   id: string;
@@ -113,6 +114,7 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
   const [exportResult, setExportResult] = useState("");
   const [exportIsFault, setExportIsFault] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [statusPick, setStatusPick] = useState<string | null>(null);
   const [maintenance, setMaintenance] = useState<MaintenanceRow[]>([]);
   const [births, setBirths] = useState<BirthRow[] | null>(null);
   const [alerts, setAlerts] = useState<QualityAlert[]>([]);
@@ -240,6 +242,11 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
   const flaggedLot = (rec: BirthRow | null) =>
     rec ? alerts.find((a) => rec.parts.some((p) => p.part === partOf(a.attribute) && p.lot === a.value)) ?? null : null;
   const openOrders = maintenance.filter((item) => item.status === "open");
+  const toneOf = (a: string): Tone => (a === "airworthy" ? "ok" : a === "restricted" ? "warn" : a === "grounded" ? "bad" : "muted");
+  const states = ["airworthy", "restricted", "grounded", "unknown"];
+  const slices = states.map((a) => ({ label: statusText(a), value: roster.filter((r) => r.airworthiness === a).length, tone: toneOf(a) })).filter((x) => x.value > 0);
+  const ready = roster.filter((r) => r.airworthiness === "airworthy").length;
+  const lotCarriers = roster.filter((r) => flaggedLot(birthOf(r.tail_number)) && r.airworthiness === "airworthy").length;
 
   return (
     <section className="page" data-testid="fleet">
@@ -255,6 +262,42 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
         </div>
       </header>
       {fault ? <p className="fault" role="alert">{fault}</p> : null}
+      {roster.length ? (
+        <section className="panel fleet-glance" data-testid="fleet-glance">
+          <div className="fleet-glance-ring">
+            <Donut slices={slices} center={`${Math.round((ready / roster.length) * 100)}%`} sub="ready to fly" active={statusPick} onPick={setStatusPick} />
+            <ul className="fleet-glance-key">
+              {slices.map((x) => (
+                <li key={x.label}>
+                  <button type="button" className={statusPick === x.label ? "is-on" : undefined} onClick={() => setStatusPick(statusPick === x.label ? null : x.label)}>
+                    <i className={`tone-${x.tone}`} /> <strong className="mono">{x.value}</strong> {x.label}
+                  </button>
+                </li>
+              ))}
+              {openOrders.length ? <li className="meta">{openOrders.length} open work order{openOrders.length === 1 ? "" : "s"}</li> : null}
+              {lotCarriers ? <li className="fleet-glance-warn">{lotCarriers} flying on a flagged lot</li> : null}
+            </ul>
+          </div>
+          <TileGrid
+            picked={selectedId}
+            onPick={setSelectedId}
+            dim={(t) => statusPick !== null && t.group !== statusPick}
+            tiles={roster.map((r) => {
+              const lot = flaggedLot(birthOf(r.tail_number));
+              const wo = openOrders.find((o) => o.tail_number === r.tail_number);
+              return {
+                id: r.id,
+                title: r.tail_number,
+                sub: [r.designation, wo ? wo.id : lot ? `lot ${lot.value}` : null].filter(Boolean).join(" · "),
+                tone: r.airworthiness === "airworthy" && lot ? "warn" : toneOf(r.airworthiness),
+                group: statusText(r.airworthiness),
+                badge: r.airworthiness !== "airworthy" ? statusText(r.airworthiness) : lot ? "Flagged lot" : undefined,
+                note: r.airworthiness_reason ?? r.service_note ?? (lot ? `Carries flagged lot ${lot.value}` : birthOf(r.tail_number)?.verdict.reason ?? undefined),
+              };
+            })}
+          />
+        </section>
+      ) : null}
       <div className="fleet-grid">
       <section className="panel fleet-registry">
         <div className="table-wrap">

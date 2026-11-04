@@ -1772,3 +1772,19 @@ tbody tr:hover td {
 .page[data-testid="fleet"] > .panel:first-of-type {
   flex: none;
 }
+
+/* Fleet at a glance: readiness ring beside one tile per tail. */
+.page > .panel.fleet-glance { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 24px; align-items: center; padding: 16px 18px; margin-bottom: 16px; }
+.fleet-glance-ring { display: flex; align-items: center; gap: 16px; }
+.fleet-glance-key { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
+.fleet-glance-key button { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 2px 6px; border-radius: 4px; color: var(--text); }
+.fleet-glance-key button:hover,
+.fleet-glance-key button.is-on { background: var(--accent-soft); }
+.fleet-glance-key button:focus-visible { outline: 2px solid var(--accent); }
+.fleet-glance-key i { width: 9px; height: 9px; border-radius: 50%; background: var(--tone); display: inline-block; }
+.fleet-glance-key .meta,
+.fleet-glance-warn { padding-left: 6px; }
+.fleet-glance-warn { color: var(--warn); }
+@media (max-width: 760px) {
+  .page > .panel.fleet-glance { grid-template-columns: 1fr; }
+}
