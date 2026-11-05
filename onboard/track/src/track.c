@@ -106,6 +106,54 @@ static void build_bank(track_lock *lock, const uint8_t *frame, int x, int y) {
     }
 }
 
+void track_motion_init(track_motion *motion) {
+    memset(motion, 0, sizeof(*motion));
+}
+
+void track_motion_coast(track_motion *motion, float dt_s) {
+    motion->since_adopt_s += dt_s;
+    motion->anchor_age_s += dt_s;
+}
+
+/* One frame is about a pixel of travel, so speed needs a longer base than one step. */
+#define MOTION_WINDOW_S 0.5f
+#define MOTION_JUMP_M 1.5f
+#define MOTION_JUMP_GROW_MPS 1.0f
+#define MOTION_HOLD_S 3.0f
+
+int track_motion_keep(track_motion *motion, float n, float e, float dt_s) {
+    float off_n;
+    float off_e;
+    if (dt_s < 0.001f) {
+        dt_s = 0.001f;
+    }
+    if (!motion->filled) {
+        motion->filled = 1;
+        motion->n = motion->anchor_n = n;
+        motion->e = motion->anchor_e = e;
+        return TRACK_MOTION_ADOPT;
+    }
+    track_motion_coast(motion, dt_s);
+    off_n = n - (motion->n + motion->vn * motion->since_adopt_s);
+    off_e = e - (motion->e + motion->ve * motion->since_adopt_s);
+    if (sqrtf(off_n * off_n + off_e * off_e) > MOTION_JUMP_M + MOTION_JUMP_GROW_MPS * motion->since_adopt_s) {
+        motion->refused_s += dt_s;
+        return motion->refused_s >= MOTION_HOLD_S ? TRACK_MOTION_GIVE_UP : TRACK_MOTION_REFUSE;
+    }
+    if (motion->anchor_age_s >= MOTION_WINDOW_S) {
+        motion->vn = 0.5f * motion->vn + 0.5f * (n - motion->anchor_n) / motion->anchor_age_s;
+        motion->ve = 0.5f * motion->ve + 0.5f * (e - motion->anchor_e) / motion->anchor_age_s;
+        motion->anchor_n = n;
+        motion->anchor_e = e;
+        motion->anchor_age_s = 0.0f;
+    }
+    motion->n = n;
+    motion->e = e;
+    motion->since_adopt_s = 0.0f;
+    motion->refused_s = 0.0f;
+    return TRACK_MOTION_ADOPT;
+}
+
 void track_init(track_lock *lock, const uint8_t *frame, int x, int y) {
     int row;
     int col;

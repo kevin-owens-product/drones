@@ -1,4 +1,4 @@
-.PHONY: up down demo test test-unit test-integration test-scale scale sitl-clean lint opa ui sbom ci bench-demo
+.PHONY: up down demo test test-unit test-integration test-scale test-motion scale sitl-clean lint opa ui sbom ci bench-demo
 
 up:
 	@test -f .env || (echo "Copy .env.example to .env first" && exit 1)
@@ -24,7 +24,7 @@ test-integration: $(PY)
 	@test -f .env || (echo "Copy .env.example to .env and start postgres + opa" && exit 1)
 	set -a && . ./.env && set +a && cd services/api && $(PY) -m pytest tests/integration
 
-test: test-unit test-crsf test-spoof test-failsafe test-cbba test-separate test-link test-track test-mesh test-flowhold test-associate test-scale test-contested
+test: test-unit test-crsf test-spoof test-failsafe test-cbba test-separate test-link test-track test-mesh test-flowhold test-associate test-scale test-contested test-motion
 
 test-crsf:
 	$(MAKE) -C firmware/crsf test
@@ -62,6 +62,9 @@ test-associate:
 # Kinematic supervision sim: unit checks (< 20 s), and the sweep behind docs/eval/scale.md.
 test-scale:
 	python3 -m unittest discover -s sim/scale -p 'test_*.py'
+
+test-motion:
+	cd sim/sitl && python3 -m unittest test_motion.py
 
 scale:
 	python3 sim/scale/fleet.py --seeds 20

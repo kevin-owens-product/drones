@@ -43,6 +43,33 @@ typedef struct {
     float vz;
 } track_vel;
 
+/* Ground-frame motion gate. It refuses a measurement that jumps away from where
+ * the track should be, which is how a parked look-alike takes a track. A target
+ * that brakes and stops moves smoothly, so it is still adopted. */
+typedef struct {
+    float n;
+    float e;
+    float vn;
+    float ve;
+    float anchor_n;
+    float anchor_e;
+    float anchor_age_s;
+    float since_adopt_s;
+    float refused_s;
+    int filled;
+} track_motion;
+
+#define TRACK_MOTION_ADOPT 1
+#define TRACK_MOTION_REFUSE 0
+/* Refused for too long. The operator has to designate the target again. */
+#define TRACK_MOTION_GIVE_UP (-1)
+
+void track_motion_init(track_motion *motion);
+/* Call on a frame with no measurement to offer, so the prediction keeps moving. */
+void track_motion_coast(track_motion *motion, float dt_s);
+/* Returns one of TRACK_MOTION_*. A refusal leaves the track state unchanged. */
+int track_motion_keep(track_motion *motion, float n, float e, float dt_s);
+
 void track_init(track_lock *lock, const uint8_t *frame, int x, int y);
 /* Returns 1 when the peak correlation is above the lock threshold. */
 int track_step(track_lock *lock, const uint8_t *frame);
