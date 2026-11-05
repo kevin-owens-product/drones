@@ -31,21 +31,23 @@ orphaned tasks.
 
 - `make test-scale` runs the unit checks (about 2 s here). It is part of `make test`.
 - `make scale` runs the sweep (N in 5, 10, 20, 30, 40, 50, 100; 20 seeds; about 15 s).
-- `python3 sim/scale/fleet.py --n 10,50 --seeds 5 --rate-scale 2` for other settings.
+- `python3 sim/scale/fleet.py --n 10,50 --seeds 5 --rate-scale 2 --wind 8` for other settings.
 
 ## What it measures
 
-Per N: mission success (all tasks done in the 40 min window), fraction of tasks done,
-exceptions and interventions per vehicle-hour, failsafe timeouts and vehicles lost per run,
-operator busy fraction, and effective sorties per operator-hour. Results are in
-`docs/eval/scale.md`, labelled Sim (kinematic).
+Per N: mission success (all tasks done in the 60 min window), fraction of tasks done,
+exceptions and interventions per vehicle-hour, pack swaps per vehicle, Wh per task, failsafe
+timeouts and vehicles lost per run, operator busy fraction, and effective sorties per
+operator-hour. Results are in `docs/eval/scale.md`, labelled Sim (energy model).
 
 ## Limits
 
 - Event rates, service times and deadlines are assumptions, not field data. The knee moves
   with them; rerun with `--rate-scale` before quoting a ratio.
 - One operator, no fatigue, no handoff, no batching of similar exceptions, no UI latency.
-- Kinematics only: no wind, no battery drain model, no airspace separation.
+- Flight is the demo performance model (`services/ui/demo/physics.mjs`, ported in `fleet.py`):
+  a steady wind, the power curve, pack energy, bingo and a crew swap. The coefficients are
+  assumptions. No gusts here, no airspace separation, no terrain.
 - Allocation is the converged full-network CBBA result; consensus rounds, message loss and
   re-plan latency are not modelled here (see docs/design/cbba.md).
 - Exceptions are independent per vehicle; correlated events such as area-wide GNSS

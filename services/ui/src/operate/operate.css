@@ -1732,3 +1732,8 @@ kbd {
   font-family: var(--font-mono);
   font-weight: 700;
 }
+
+/* Attitude and wind on the flight display */
+.hud-horizon { stroke: #7dffc4; stroke-width: 1.6; opacity: 0.85; }
+.hud-arrowhead { fill: #7dffc4; }
+.hud-wind line { stroke-width: 1.6; }

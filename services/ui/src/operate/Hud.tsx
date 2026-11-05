@@ -51,9 +51,56 @@ function ladder(value: number | undefined, side: "left" | "right", step: number,
   return out;
 }
 
+/** Horizon line and pitch ladder, rolled and shifted the way a flight display does. Degrees to pixels: 4 px per degree of pitch. */
+function horizon(roll: number | undefined, pitch: number | undefined): JSX.Element | null {
+  if (typeof roll !== "number" || typeof pitch !== "number") return null;
+  const cx = W / 2;
+  const cy = H / 2;
+  const pxPerDeg = 4;
+  const dy = pitch * pxPerDeg; // nose down (negative pitch) raises the horizon line on the display
+  const rungs: JSX.Element[] = [];
+  for (const d of [-10, -5, 5, 10]) {
+    const y = cy + dy + d * pxPerDeg;
+    const half = d % 10 === 0 ? 34 : 20;
+    rungs.push(<line key={d} x1={cx - half} x2={cx + half} y1={y} y2={y} className="hud-ink hud-dim" />);
+    if (d % 10 === 0) rungs.push(<text key={`t${d}`} x={cx + half + 6} y={y + 4} className="hud-text hud-dim">{Math.abs(d)}</text>);
+  }
+  return (
+    <g transform={`rotate(${-roll} ${cx} ${cy})`} aria-hidden="true">
+      <line x1={cx - 150} x2={cx - 60} y1={cy + dy} y2={cy + dy} className="hud-horizon" />
+      <line x1={cx + 60} x2={cx + 150} y1={cy + dy} y2={cy + dy} className="hud-horizon" />
+      {rungs}
+    </g>
+  );
+}
+
+/** Wind as an arrow the way it blows across the display, with its speed. */
+function windArrow(speed: number | undefined, from: number | undefined, heading: number | undefined): JSX.Element | null {
+  if (typeof speed !== "number" || typeof from !== "number") return null;
+  // Relative to the nose when we know it, so the operator reads crosswind at a glance.
+  const rel = ((from - (heading ?? 0)) * Math.PI) / 180;
+  const cx = 56;
+  const cy = H - 60;
+  const len = 10 + Math.min(16, speed * 1.6);
+  // The arrow points the way the air moves: away from "from".
+  const tx = cx - Math.sin(rel) * len;
+  const ty = cy + Math.cos(rel) * len;
+  const hx = cx + Math.sin(rel) * len * 0.5;
+  const hy = cy - Math.cos(rel) * len * 0.5;
+  return (
+    <g className="hud-wind">
+      <circle cx={cx} cy={cy} r={22} className="hud-ink hud-dim" fill="none" />
+      <line x1={hx} y1={hy} x2={tx} y2={ty} className="hud-accent" markerEnd="url(#hud-arrow)" />
+      <text x={cx} y={cy + 36} textAnchor="middle" className="hud-text">{`WIND ${Math.round(speed)} m/s`}</text>
+    </g>
+  );
+}
+
 export function Hud({ vehicle }: { vehicle: Vehicle | null }): JSX.Element {
   const p = vehicle?.live ?? null;
   const denied = p?.gnss_trusted === false;
+  const flying = p?.armed !== false;
+  const spare = typeof p?.endurance_min === "number" && typeof p?.home_min === "number" ? p.endurance_min - p.home_min : null;
   return (
     <figure className="hud" aria-label="Flight display">
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-hidden={p ? undefined : true}>
@@ -61,6 +108,9 @@ export function Hud({ vehicle }: { vehicle: Vehicle | null }): JSX.Element {
           <pattern id="hud-grid" width="24" height="24" patternUnits="userSpaceOnUse">
             <path d="M24 0H0V24" className="hud-grid" />
           </pattern>
+          <marker id="hud-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0 0L10 5L0 10z" className="hud-arrowhead" />
+          </marker>
           <radialGradient id="hud-vignette" cx="50%" cy="50%" r="70%">
             <stop offset="55%" stopColor="#000" stopOpacity="0" />
             <stop offset="100%" stopColor="#000" stopOpacity="0.55" />
@@ -71,6 +121,7 @@ export function Hud({ vehicle }: { vehicle: Vehicle | null }): JSX.Element {
         <rect width={W} height={H} fill="url(#hud-vignette)" />
         {p ? (
           <>
+            {flying ? horizon(p.roll_deg, p.pitch_deg) : null}
             {headingTape(p.heading_deg)}
             <path d={`M${W / 2 - 6} 46 L${W / 2} 40 L${W / 2 + 6} 46`} className="hud-accent" fill="none" />
             <text x={W / 2} y={62} textAnchor="middle" className="hud-num">{fmt(p.heading_deg, 0, "°")}</text>
@@ -88,6 +139,13 @@ export function Hud({ vehicle }: { vehicle: Vehicle | null }): JSX.Element {
               <line x1={W / 2 + 22} x2={W / 2 + 40} y1={H / 2} y2={H / 2} />
               <line x1={W / 2} x2={W / 2} y1={H / 2 + 22} y2={H / 2 + 32} />
             </g>
+            {flying ? windArrow(p.wind_mps, p.wind_from_deg, p.heading_deg) : null}
+            {typeof p.roll_deg === "number" && flying ? <text x={W / 2} y={H / 2 + 50} textAnchor="middle" className="hud-text hud-dim">{`BANK ${Math.abs(p.roll_deg).toFixed(0)}° ${p.roll_deg > 0.5 ? "R" : p.roll_deg < -0.5 ? "L" : ""} · AIR ${fmt(p.air_mps, 0, "")} m/s`}</text> : null}
+            {spare !== null && flying ? (
+              <text x={W / 2} y={H - 34} textAnchor="middle" className={spare < 2 ? "hud-text hud-alert" : spare < 5 ? "hud-text hud-warn" : "hud-text"}>
+                {`${fmt(p.power_w, 0, " W")} · ${Math.max(0, p.endurance_min ?? 0).toFixed(0)} MIN LEFT · ${(p.home_min ?? 0).toFixed(0)} MIN HOME${p.bingo ? " · BINGO" : ""}`}
+              </text>
+            ) : null}
             <text x={14} y={H - 16} className="hud-text hud-strong">{p.mode ?? "MODE —"}{p.armed === false ? " · DISARMED" : ""}</text>
             <text x={W / 2} y={H - 16} textAnchor="middle" className={denied || p.nav_source === "none" ? "hud-text hud-warn" : "hud-text"}>
               {p.nav_source === "none"

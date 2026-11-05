@@ -7,7 +7,7 @@ test("cold weather moves the recommendation to the bigger pack", async ({ page }
   await page.goto("/#configure");
   const root = page.getByTestId("configure");
   await expect(root.locator(".cf-answer")).toContainText("6S 2200 mAh LiPo");
-  await root.getByLabel("Temperature").fill("-10");
+  await root.getByLabel("Temperature").fill("-20");
   await expect(root.locator(".cf-answer")).toContainText("6S 4000 mAh Li-ion");
   await root.getByLabel("Expected jamming").selectOption("heavy");
   await root.getByLabel("Range, one way").fill("5");

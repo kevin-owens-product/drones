@@ -2,6 +2,10 @@ import type { LivePoint } from "../live";
 
 export const LINK_STALE_AFTER_MS = 20_000;
 export const BATTERY_LOW_PCT = 25;
+/** Minutes of energy the console wants left after the flight home before it calls bingo. */
+export const BINGO_MARGIN_MIN = 2;
+/** Below this the radio is one more kilometre, or one hill, from dropping. */
+export const LINK_MARGIN_LOW_DB = 8;
 
 export interface Registered {
   tail_number: string;
@@ -48,6 +52,28 @@ export function assess(point: LivePoint | null, airworthiness: string, now: numb
   if (typeof point.battery_pct === "number" && point.battery_pct < BATTERY_LOW_PCT) {
     reasons.push(`Battery ${Math.round(point.battery_pct)}%`);
     health = "alert";
+  }
+  // Energy against distance: the reserve would not survive the plan, so the vehicle is (or should be) coming home.
+  if (point.armed !== false && typeof point.endurance_min === "number" && typeof point.home_min === "number") {
+    const spare = point.endurance_min - point.home_min;
+    if (point.forced_landing) {
+      reasons.push("Landing short: usable energy gone");
+      health = "alert";
+    } else if (point.bingo || spare < BINGO_MARGIN_MIN) {
+      reasons.push(`Bingo · ${Math.max(0, point.endurance_min).toFixed(0)} min left, ${point.home_min.toFixed(0)} min home${point.mode === "RTL" ? " · on RTL" : ""}`);
+      health = "alert";
+    } else if (spare < BINGO_MARGIN_MIN * 2.5) {
+      reasons.push(`Energy tight · ${spare.toFixed(0)} min spare after the flight home`);
+      if (health === "ok") health = "warn";
+    }
+  }
+  if (point.mode === "LANDED" && point.forced_landing) {
+    reasons.push("Down in the field: recover the airframe");
+    health = "alert";
+  }
+  if (typeof point.link_margin_db === "number" && point.link_margin_db < LINK_MARGIN_LOW_DB && !(age === null || age > LINK_STALE_AFTER_MS)) {
+    reasons.push(`Link margin ${point.link_margin_db} dB`);
+    if (health === "ok") health = "warn";
   }
   if (airworthiness === "restricted") {
     reasons.push("Restricted");
@@ -102,6 +128,9 @@ export function diffEvents(before: ReadonlyMap<string, Vehicle>, after: readonly
       const wb = was.battery_pct ?? 100;
       const ib = is.battery_pct ?? 100;
       if (wb >= BATTERY_LOW_PCT && ib < BATTERY_LOW_PCT) push(v.tail, "alert", `Battery low, ${Math.round(ib)}%`);
+      if (!was.bingo && is.bingo) push(v.tail, "alert", `Bingo: ${Math.round(is.endurance_min ?? 0)} min of energy, ${Math.round(is.home_min ?? 0)} min to home. Turning for the station.`);
+      if (was.mode !== "LANDED" && is.mode === "LANDED") push(v.tail, is.forced_landing ? "alert" : "info", is.forced_landing ? "Landed short of the station on the energy floor" : `Landed at the station with ${Math.round(ib)}%`);
+      if (!was.forced_landing && is.forced_landing && is.mode !== "LANDED") push(v.tail, "alert", "Usable energy gone: landing where it is");
     }
     const wasStale = old.reasons.includes("Link stale");
     const isStale = v.reasons.includes("Link stale");

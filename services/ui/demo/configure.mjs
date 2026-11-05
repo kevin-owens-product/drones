@@ -4,6 +4,8 @@
 // approximation or an assumption, written out so it can be argued with; none
 // is a measured Neros figure. Pure JavaScript, runs in the browser demo.
 
+import { ASSUMED as PHYSICS, coldFactor, power } from "./physics.mjs";
+
 export const VARIANTS = [
   { id: "A", label: "Variant A (standard radio)", mass_kg: 0.9, link_db: 0, price_usd: 1800 },
   { id: "B", label: "Variant B (hardened radio)", mass_kg: 0.95, link_db: 10, price_usd: 2150 },
@@ -28,23 +30,26 @@ export const BANDS = [
 ];
 
 export const ASSUMPTIONS = {
-  hover_w_at_1kg: 95,
+  hover_w_at_1kg: PHYSICS.hover_w_at_1kg,
   cruise_mps: 16,
-  usable_depth: 0.85,
-  reserve: 0.2,
+  usable_depth: PHYSICS.usable_depth,
+  reserve: PHYSICS.reserve,
   link_margin_db: 10,
-  cold_derate_per_c: 0.0075,
+  cold_derate_per_c: PHYSICS.cold_derate_per_c,
+  /** Drag area per kg^(2/3) of airframe, m^2; the planner scales it with the loadout's mass. */
+  drag_area_m2_per_kg23: 0.0115,
 };
 
-/** Usable fraction of rated energy at a temperature: full at 20 °C and above, 7.5% less per 10 °C below. */
-export function coldFactor(tempC) {
-  return Math.max(0.5, Math.min(1, 1 - ASSUMPTIONS.cold_derate_per_c * (20 - tempC)));
-}
+export { coldFactor };
 
-/** Electrical power in cruise. Hover scales with mass^1.5 (momentum theory); cruise adds a drag term. */
+/**
+ * Electrical power in cruise, from the same power curve the live sortie and the
+ * debrief use (demo/physics.mjs): induced power from momentum theory, parasite
+ * drag from a drag area scaled with mass, profile power and avionics.
+ */
 export function cruiseWatts(massKg, airspeed = ASSUMPTIONS.cruise_mps) {
-  const hover = ASSUMPTIONS.hover_w_at_1kg * massKg ** 1.5;
-  return hover * (0.8 + 0.0012 * airspeed * airspeed);
+  const frame = { mass_kg: massKg, drag_area_m2: ASSUMPTIONS.drag_area_m2_per_kg23 * massKg ** (2 / 3) };
+  return power(frame, airspeed);
 }
 
 /** Link margin at a distance on a band, with the jamming level and the variant's radio. */
