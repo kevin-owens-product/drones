@@ -64,7 +64,7 @@ export function CasesPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
                   {c.days_to_fix != null ? ` Fixed and measured in ${c.days_to_fix} days.` : ""}
                 </p>
                 {m && c.shipped ? (
-                  <div className="table-wrap">
+                  <div className="table-wrap" tabIndex={0}>
                     <table className="mk-did">
                       <thead><tr><th /><th>Before ({d.rule.before_days} days)</th><th>After ({c.trial_days} days)</th></tr></thead>
                       <tbody>
@@ -105,7 +105,7 @@ export function CasesPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
 
       <section className="panel">
         <div className="panel-head"><h2>Field-report themes</h2></div>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table data-testid="case-themes">
             <thead><tr><th>Theme</th><th>Reports</th><th>Units</th><th>Latest</th><th /></tr></thead>
             <tbody>

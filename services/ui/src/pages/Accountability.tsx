@@ -72,7 +72,7 @@ export function AccountabilityPage({ viewer, onBanner }: { viewer: Viewer; onBan
         <div className="panel-head">
           <h2>By unit</h2>
         </div>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table data-testid="acct-units">
             <thead>
               <tr>
@@ -137,7 +137,7 @@ export function AccountabilityPage({ viewer, onBanner }: { viewer: Viewer; onBan
           <div className="panel-head">
             <h2>By delivery lot</h2>
           </div>
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0}>
             <table data-testid="acct-lots">
               <thead>
                 <tr>
@@ -196,7 +196,7 @@ export function AccountabilityPage({ viewer, onBanner }: { viewer: Viewer; onBan
             ))}
           </div>
         </div>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table data-testid="acct-records">
             <thead>
               <tr>

@@ -61,7 +61,7 @@ export function BidDeskPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
           <h2>{c.name}</h2>
           <button type="button" className="btn btn-quiet" onClick={() => void exportBrief()}>Export the response brief</button>
         </div>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table data-testid="bid-rows">
             <thead><tr><th>Requirement</th><th>Status</th><th>From the record</th><th>Evidence</th><th>Owner</th></tr></thead>
             <tbody>

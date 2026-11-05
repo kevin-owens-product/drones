@@ -71,7 +71,7 @@ export function SurgePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
 
       <section className="panel">
         <div className="panel-head"><h2>Three ways to meet it</h2></div>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table data-testid="surge-options">
             <thead><tr><th>Option</th><th>Ships</th><th>Makes the date</th><th>Material ready</th><th>Build days</th><th>Extra cost</th></tr></thead>
             <tbody>
@@ -98,7 +98,7 @@ export function SurgePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
       <div className="ops-two">
         <section className="panel">
           <div className="panel-head"><h2>Parts, as planned</h2></div>
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0}>
             <table data-testid="surge-parts">
               <thead><tr><th>Part</th><th>Need</th><th>Released</th><th>On order</th><th>To order</th><th>Ready</th></tr></thead>
               <tbody>
@@ -118,7 +118,7 @@ export function SurgePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
         </section>
         <section className="panel">
           <div className="panel-head"><h2>Lines</h2></div>
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0}>
             <table>
               <thead><tr><th>Airframe</th><th>Rate a day</th><th>Open orders</th><th>Free from</th></tr></thead>
               <tbody>

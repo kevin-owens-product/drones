@@ -110,7 +110,7 @@ export function QuotePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
       <div className="ops-two">
         <section className="panel">
           <div className="panel-head"><h2>Lines</h2></div>
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0}>
             <table data-testid="quote-lines">
               <thead><tr><th>Item</th><th>Qty</th><th>Each</th><th>Amount</th></tr></thead>
               <tbody>

@@ -59,7 +59,7 @@ export function IntegrationsPage({ viewer, onBanner }: { viewer: Viewer; onBanne
         <div className="panel-head">
           <h2>Feeds</h2>
         </div>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table data-testid="feeds">
             <thead>
               <tr>
@@ -108,7 +108,7 @@ export function IntegrationsPage({ viewer, onBanner }: { viewer: Viewer; onBanne
               <button type="button" className={tab === "entity" ? "ops-chip is-on" : "ops-chip"} onClick={() => setTab("entity")}>Lattice-style entity</button>
             </div>
           </div>
-          <pre className="th-code" data-testid="sample">{tab === "cot" ? d.sample.cot ?? "No drones in the feed" : JSON.stringify(d.sample.entity, null, 2)}</pre>
+          <pre className="th-code" data-testid="sample" tabIndex={0}>{tab === "cot" ? d.sample.cot ?? "No drones in the feed" : JSON.stringify(d.sample.entity, null, 2)}</pre>
           <div className="ops-actions">
             <button type="button" className="btn btn-primary" onClick={() => void exportCot()}>Export CoT snapshot</button>
             <button type="button" className="btn btn-quiet" onClick={() => void exportEntities()}>Export entities</button>
@@ -119,7 +119,7 @@ export function IntegrationsPage({ viewer, onBanner }: { viewer: Viewer; onBanne
           <div className="panel-head">
             <h2>MAVLink sources</h2>
           </div>
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0}>
             <table data-testid="mavlink">
               <thead>
                 <tr>

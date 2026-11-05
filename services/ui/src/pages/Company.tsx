@@ -316,7 +316,7 @@ export function CompanyPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
                   <h3>
                     Bill of materials <Sim />
                   </h3>
-                  <div className="table-wrap">
+                  <div className="table-wrap" tabIndex={0}>
                     <table>
                       <thead>
                         <tr>
@@ -357,7 +357,7 @@ export function CompanyPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
               <h2>Open orders, in shipping priority</h2>
               <Sim />
             </div>
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0}>
               <table data-testid="orders">
                 <thead>
                   <tr>
@@ -397,7 +397,7 @@ export function CompanyPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
             <div className="panel-head">
               <h2>Sales and operations plan</h2>
             </div>
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0}>
               <table>
                 <thead>
                   <tr>
@@ -450,7 +450,7 @@ export function CompanyPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
               <h2>Work in progress by step</h2>
               <Sim />
             </div>
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0}>
               <table>
                 <thead>
                   <tr>
@@ -502,7 +502,7 @@ export function CompanyPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
             <div className="panel-head">
               <h2>Suppliers</h2>
             </div>
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0}>
               <table>
                 <thead>
                   <tr>
@@ -534,7 +534,7 @@ export function CompanyPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
               <h2>Lots and where they went</h2>
               <input className="co-filter" placeholder="Filter by lot or part" value={lotFilter} onChange={(e) => setLotFilter(e.target.value)} aria-label="Filter lots" />
             </div>
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0}>
               <table data-testid="lots">
                 <thead>
                   <tr>
@@ -573,7 +573,7 @@ export function CompanyPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
             <div className="panel-head">
               <h2>Parts and open purchase orders</h2>
             </div>
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0}>
               <table>
                 <thead>
                   <tr>
@@ -643,7 +643,7 @@ export function CompanyPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
               <h2>Shipments</h2>
               <Sim />
             </div>
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0}>
               <table>
                 <thead>
                   <tr>
@@ -710,7 +710,7 @@ export function CompanyPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
               <h2>Units in the field</h2>
               <Sim />
             </div>
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0}>
               <table>
                 <thead>
                   <tr>
@@ -750,7 +750,7 @@ export function CompanyPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
               <h2>Who can fly what they were sent</h2>
               <Sim />
             </div>
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0}>
               <table>
                 <thead>
                   <tr>

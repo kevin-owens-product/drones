@@ -99,7 +99,7 @@ export function ReceivingPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
         <div className="panel-head">
           <h2>Received</h2>
         </div>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table data-testid="receiving-history">
             <thead>
               <tr>
@@ -174,7 +174,7 @@ function PackageView({ id, org, disabled, onSerial, onDecide }: { id: string; or
   const n = Object.keys(reject).length;
   return (
     <div className="th-package" data-testid="package">
-      <div className="table-wrap">
+      <div className="table-wrap" tabIndex={0}>
         <table>
           <thead>
             <tr>

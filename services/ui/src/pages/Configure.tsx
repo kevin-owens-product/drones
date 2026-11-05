@@ -70,7 +70,7 @@ function PowerCurves({ physics }: { physics: Physics }) {
   const y = (w: number) => H - B - ((H - B - 14) * w) / maxW;
   return (
     <figure className="cf-curves" aria-label="Power against airspeed">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img">
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Power against airspeed for each airframe">
         {[0, 100, 200, 300, 400].filter((w) => w <= maxW).map((w) => (
           <g key={w}>
             <line x1={L} x2={W - 12} y1={y(w)} y2={y(w)} className="cf-grid" />
@@ -173,7 +173,7 @@ export function ConfigurePage({ onBanner }: { viewer: Viewer; onBanner: (banner:
                 <span className="pill pill-warn">SIM</span>
               </div>
               <PowerCurves physics={physics} />
-              <div className="table-wrap">
+              <div className="table-wrap" tabIndex={0}>
                 <table>
                   <thead>
                     <tr>
@@ -209,7 +209,7 @@ export function ConfigurePage({ onBanner }: { viewer: Viewer; onBanner: (banner:
             <div className="panel-head">
               <h2>Every option</h2>
             </div>
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0}>
               <table>
                 <thead>
                   <tr>

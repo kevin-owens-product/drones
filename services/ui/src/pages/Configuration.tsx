@@ -67,7 +67,7 @@ export function ConfigurationPage({ viewer, onBanner }: { viewer: Viewer; onBann
           </div>
         </div>
         {here ? <p className="meta">Spares at {here.unit}: {Object.entries(here.spares).map(([pn, n]) => `${pn} ${n}`).join(", ")}. A swap takes a set of 4.</p> : null}
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table data-testid="config-rows">
             <thead><tr><th>Serial</th><th>Built as</th><th>Now</th><th>Arms, motors, props</th><th>Sensor pack</th><th>Parameters</th><th>State</th><th /></tr></thead>
             <tbody>
@@ -118,7 +118,7 @@ export function ConfigurationPage({ viewer, onBanner }: { viewer: Viewer; onBann
       {neros && byConfig ? (
         <section className="panel">
           <div className="panel-head"><h2>Neros Quality: shared results by configuration</h2></div>
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0}>
             <table data-testid="by-config">
               <thead><tr><th>Configuration now</th><th>Sorties</th><th>Completed</th><th>Hardware faults</th></tr></thead>
               <tbody>

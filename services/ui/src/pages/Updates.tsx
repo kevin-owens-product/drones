@@ -135,7 +135,7 @@ export function UpdatesPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
         <div className="panel-head">
           <h2>What each unit is running</h2>
         </div>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table data-testid="versions">
             <thead>
               <tr>

@@ -199,7 +199,7 @@ export function AuditPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b: 
       ) : null}
       {access === "open" && ordered.length === 0 ? <p className="empty">No events in this filter.</p> : null}
       {access === "open" && ordered.length > 0 ? (
-        <div className="chain">
+        <div className="chain" tabIndex={0}>
           {ordered.map((row) => (
             <article className="chain-row" key={row.id}>
               <p className="meta">{compactTime(row.occurred_at)}</p>
