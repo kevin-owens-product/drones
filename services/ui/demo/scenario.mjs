@@ -556,9 +556,10 @@ export function createDemo(opts = {}) {
       const alert = opts.attrition.autopsy.alerts.find((a) => a.attribute === msg.attribute && a.value === msg.value);
       if (!alert) return { status: 404, body: { error: "no such alert" } };
       const actor = caller?.display_name ?? String(msg.by ?? "operator");
-      if (caller && !can(caller.roles, "fleet.write")) {
+      // A customer's maintainer or commander holds the lot in their fleet; Neros's ops lead holds it from the queue.
+      if (caller && !can(caller.roles, "fleet.write") && !caller.roles.includes("ops_lead")) {
         audit.append({ actor, action: "attrition.hold", resource_type: "lot", resource_id: alert.value, decision: "deny", reason_codes: ["role_denied"] });
-        return { status: 403, body: { detail: "Holding a lot needs the maintainer, mission commander or admin role." } };
+        return { status: 403, body: { detail: "Holding a lot needs the maintainer, mission commander, ops lead or admin role." } };
       }
       if (!holds.some((h) => h.attribute === alert.attribute && h.value === alert.value)) {
         audit.append({ actor, action: "attrition.hold", resource_type: "lot", resource_id: alert.value, detail: `${alert.in_service_count} airframes in service held for inspection` });
@@ -965,6 +966,6 @@ export function createDemo(opts = {}) {
         return { status: out.error ? 400 : 200, body: out };
       }
       const route = ROUTES[url.pathname];
-      return { status: 200, body: route ? route() : { items: [] } };
+      return route ? { status: 200, body: route() } : { status: 404, body: { detail: "unknown" } };
   }
 }

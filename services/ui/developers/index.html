@@ -113,6 +113,8 @@ make sitl          <span class="c"># PX4 v1.18 SIH closed-loop trials</span></pr
               </tbody>
             </table></div>
             <p>Every response carries an <code>X-Classification-Banner</code> header with the highest marking on the page. Clients must show it.</p>
+            <h3>Who can read and do what, as a test</h3>
+            <p>The demo probes every read route and the writes that carry a rule as each of its accounts, and publishes the result as a table: <a href="https://github.com/kevin-owens-product/drones/blob/cursor/a2e-mission-cloud/docs/security/demo-access-matrix.md">docs/security/demo-access-matrix.md</a>. A test fails when the table and the code drift, and when any of these stop holding: Neros's own routes answer 403 in a customer session, the audit log needs <code>audit.read</code>, accounts are listed per tenant, an allied tenant never receives a withheld field, an operator cannot approve a plan or hold a lot, and no caller can send a command inbound. Unknown routes answer 404.</p>
           </article>
 
           <article class="article" id="explorer">

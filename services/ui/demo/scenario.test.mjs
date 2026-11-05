@@ -26,9 +26,9 @@ test("synthetic fleet adds vehicles and registry rows only when asked", () => {
   assert.equal(get(createDemo({ extra: 50 }), "/v1/platforms").items.length, 62);
 });
 
-test("unknown routes answer with an empty list, training errors with 400", () => {
+test("unknown routes answer 404, training errors with 400", () => {
   const demo = createDemo();
-  assert.deepEqual(get(demo, "/v1/nothing"), { items: [] });
+  assert.equal(demo.handle("GET", new URL("/v1/nothing", "http://x")).status, 404);
   assert.equal(demo.handle("GET", new URL("/v1/training/state", "http://x")).status, 400);
 });
 
