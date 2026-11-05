@@ -6,6 +6,8 @@ import { createRequire } from "node:module";
 // against the demo sortie (node demo/server.mjs), like operate.spec.ts. Serious and critical
 // findings fail the build; the rest are reported in the test output.
 test.skip(!process.env.A2E_DEMO, "needs the demo server");
+// Fade-ins are off under reduced motion; axe would otherwise catch an event row mid-fade.
+test.use({ reducedMotion: "reduce" });
 
 const AXE = readFileSync(createRequire(import.meta.url).resolve("axe-core/axe.min.js"), "utf8");
 const PAGES = ["operate", "ops", "fleet", "missions", "brief", "debrief", "quality", "company", "reports", "configure", "program", "integrations", "access", "audit", "release"];
