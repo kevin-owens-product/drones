@@ -125,6 +125,8 @@ export function Shell(props: {
       { id: "rail", label: hidden ? "Show the menu" : "Hide the menu", group: "View", run: () => toggleRail() },
       { id: "help", label: "Keyboard shortcuts", group: "Help", hint: "?", run: () => setHelp(true) },
       ...(hasTour ? [{ id: "tour", label: "Walk the demo", group: "Help", run: () => setTour(true) }] : []),
+      { id: "whats-new", label: "What's new", group: "Help", run: () => window.open("/help/#whats-new", "_blank", "noopener") },
+      { id: "help-center", label: "Help center", group: "Help", run: () => window.open("/help/", "_blank", "noopener") },
       { id: "logout", label: "Log out", group: "Session", run: onLogout },
       ...entities,
     ],

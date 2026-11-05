@@ -1,39 +1,43 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { lazy, Suspense, useEffect, useState, type FormEvent } from "react";
 import { invited, markInvited, notify } from "./notify";
 import { api, sessionLost, type SessionConfig } from "./api";
-import { AccessPage } from "./pages/Access";
-import { AttritionPage } from "./pages/Attrition";
-import { AuditPage } from "./pages/Audit";
-import { BriefPage } from "./pages/Brief";
-import { CompanyPage } from "./pages/Company";
-import { ConfigurePage } from "./pages/Configure";
-import { DebriefPage } from "./pages/Debrief";
-import { DenialMapPage } from "./pages/DenialMap";
-import { EvalPage } from "./pages/Eval";
-import { FieldReportsPage } from "./pages/FieldReports";
-import { FleetPage } from "./pages/Fleet";
-import { MissionsPage } from "./pages/Missions";
 import { OperatePage } from "./operate/Operate";
 import { OpsPage } from "./pages/Ops";
-import { PortalPage } from "./pages/Portal";
-import { QualityPage } from "./pages/Quality";
-import { ReceivingPage } from "./pages/Receiving";
-import { AccountabilityPage } from "./pages/Accountability";
-import { CompliancePage } from "./pages/Compliance";
-import { ReadinessPage } from "./pages/Readiness";
-import { ProgramPage } from "./pages/Program";
-import { UpdatesPage } from "./pages/Updates";
-import { IntegrationsPage } from "./pages/Integrations";
-import { QuotePage } from "./pages/Quote";
-import { SurgePage } from "./pages/Surge";
-import { BidDeskPage } from "./pages/BidDesk";
-import { CasesPage } from "./pages/Cases";
-import { StockpilePage } from "./pages/Stockpile";
-import { PlansPage } from "./pages/Plans";
-import { ReleasabilityPage } from "./pages/Releasability";
-import { MixedFleetPage } from "./pages/MixedFleet";
-import { ConfigurationPage } from "./pages/Configuration";
 import { Login } from "./shell/Login";
+
+// Operate and the work queue are the two home pages, so they ship with the shell; every other page loads
+// the first time it opens. Each is a few kilobytes; the shell no longer carries all thirty at once.
+const AccessPage = lazy(() => import("./pages/Access").then((m) => ({ default: m.AccessPage })));
+const AttritionPage = lazy(() => import("./pages/Attrition").then((m) => ({ default: m.AttritionPage })));
+const AuditPage = lazy(() => import("./pages/Audit").then((m) => ({ default: m.AuditPage })));
+const BriefPage = lazy(() => import("./pages/Brief").then((m) => ({ default: m.BriefPage })));
+const CompanyPage = lazy(() => import("./pages/Company").then((m) => ({ default: m.CompanyPage })));
+const ConfigurePage = lazy(() => import("./pages/Configure").then((m) => ({ default: m.ConfigurePage })));
+const DebriefPage = lazy(() => import("./pages/Debrief").then((m) => ({ default: m.DebriefPage })));
+const DenialMapPage = lazy(() => import("./pages/DenialMap").then((m) => ({ default: m.DenialMapPage })));
+const EvalPage = lazy(() => import("./pages/Eval").then((m) => ({ default: m.EvalPage })));
+const FieldReportsPage = lazy(() => import("./pages/FieldReports").then((m) => ({ default: m.FieldReportsPage })));
+const FleetPage = lazy(() => import("./pages/Fleet").then((m) => ({ default: m.FleetPage })));
+const MissionsPage = lazy(() => import("./pages/Missions").then((m) => ({ default: m.MissionsPage })));
+const PortalPage = lazy(() => import("./pages/Portal").then((m) => ({ default: m.PortalPage })));
+const QualityPage = lazy(() => import("./pages/Quality").then((m) => ({ default: m.QualityPage })));
+const ReceivingPage = lazy(() => import("./pages/Receiving").then((m) => ({ default: m.ReceivingPage })));
+const AccountabilityPage = lazy(() => import("./pages/Accountability").then((m) => ({ default: m.AccountabilityPage })));
+const CompliancePage = lazy(() => import("./pages/Compliance").then((m) => ({ default: m.CompliancePage })));
+const ReadinessPage = lazy(() => import("./pages/Readiness").then((m) => ({ default: m.ReadinessPage })));
+const ProgramPage = lazy(() => import("./pages/Program").then((m) => ({ default: m.ProgramPage })));
+const UpdatesPage = lazy(() => import("./pages/Updates").then((m) => ({ default: m.UpdatesPage })));
+const IntegrationsPage = lazy(() => import("./pages/Integrations").then((m) => ({ default: m.IntegrationsPage })));
+const QuotePage = lazy(() => import("./pages/Quote").then((m) => ({ default: m.QuotePage })));
+const SurgePage = lazy(() => import("./pages/Surge").then((m) => ({ default: m.SurgePage })));
+const BidDeskPage = lazy(() => import("./pages/BidDesk").then((m) => ({ default: m.BidDeskPage })));
+const CasesPage = lazy(() => import("./pages/Cases").then((m) => ({ default: m.CasesPage })));
+const StockpilePage = lazy(() => import("./pages/Stockpile").then((m) => ({ default: m.StockpilePage })));
+const PlansPage = lazy(() => import("./pages/Plans").then((m) => ({ default: m.PlansPage })));
+const ReleasabilityPage = lazy(() => import("./pages/Releasability").then((m) => ({ default: m.ReleasabilityPage })));
+const MixedFleetPage = lazy(() => import("./pages/MixedFleet").then((m) => ({ default: m.MixedFleetPage })));
+const ConfigurationPage = lazy(() => import("./pages/Configuration").then((m) => ({ default: m.ConfigurationPage })));
+
 import { Shell } from "./shell/Shell";
 import type { Section, Viewer } from "./shell/types";
 import { homeOf, navFor, rememberWorkspace, sectionsFor, workspaceOf, type Workspace } from "./shell/workspace";
@@ -241,6 +245,7 @@ export function App() {
   const page = viewer ? (
     <Shell banner={banner} viewer={viewer} section={section} onSection={onSection} workspace={workspace} onWorkspace={onWorkspace} onLogout={() => void onLogout()}>
       {section === "ops" ? <OpsPage viewer={viewer} onBanner={setBanner} /> : null}
+      <Suspense fallback={<section className="page" aria-busy="true"><p className="meta">Loading…</p></section>}>
       {section === "supply" ? <PortalPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "operate" ? <OperatePage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "fleet" ? <FleetPage viewer={viewer} onBanner={setBanner} /> : null}
@@ -272,6 +277,7 @@ export function App() {
       {section === "config" ? <ConfigurationPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "access" ? <AccessPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "audit" ? <AuditPage viewer={viewer} onBanner={setBanner} /> : null}
+      </Suspense>
     </Shell>
   ) : (
     <Login

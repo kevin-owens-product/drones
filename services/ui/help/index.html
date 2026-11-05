@@ -44,6 +44,7 @@
         <nav class="side" id="side" aria-label="Help articles">
           <h4>Start here</h4>
           <a href="#start">Getting started</a>
+          <a href="#whats-new">What's new</a>
           <a href="#accounts">Demo accounts and roles</a>
           <a href="#workspaces">The two workspaces</a>
           <a href="#simulated">What is simulated</a>
@@ -84,11 +85,25 @@
             <ol class="steps">
               <li>Open the <a href="/#operate">console</a> and sign in with the account you were given (see <a href="#accounts">demo accounts</a>).</li>
               <li>A customer account opens on <b>Operate</b>. A manufacturer account opens on the <b>Work queue</b>.</li>
-              <li>Press <kbd>⌘K</kbd> (or <kbd>Ctrl K</kbd>) to jump to any vehicle, page or filter. Press <kbd>?</kbd> for the shortcut sheet.</li>
+              <li>Press <kbd>⌘K</kbd> (or <kbd>Ctrl K</kbd>) to jump to any vehicle, plan, page or filter. Press <kbd>?</kbd> for the shortcut sheet. <b>Walk the demo</b> in ⌘K opens a guided walk through the loop; it opens by itself on a first visit from an invite link.</li>
               <li>Take an action, then sign out and sign in as the other side to see its effect. Demo state lives in your browser tab, so it carries across accounts. Reloading starts the scenario over.</li>
             </ol>
             <div class="callout">Every page shows <code>UNCLASSIFIED // DEMO DATA</code> in the banner, and every simulated figure carries a <code>SIM</code> label.</div>
             <a class="btn btn-sm go" href="/#operate">Open Operate →</a>
+          </article>
+
+          <article class="article" id="whats-new" data-tags="what's new whats new changelog release notes latest shipped updates version">
+            <div class="meta"><span class="tag">Project</span></div>
+            <h2>What's new</h2>
+            <p>The newest things in the console, with the full list in the repository's <a href="https://github.com/kevin-owens-product/drones/blob/cursor/a2e-mission-cloud/CHANGELOG.md">CHANGELOG.md</a>.</p>
+            <ul class="steps">
+              <li><b>Guided walk.</b> A card that steps a first visitor through the loop: work queue, quality hold, the customer's fleet, Brief, Operate, Debrief and the audit chain. Open it from ⌘K with <b>Walk the demo</b>.</li>
+              <li><b>⌘K finds things.</b> Every tail and every plan in the workspace is a palette entry and opens selected on its page.</li>
+              <li><b>Access as a document.</b> Who can read and do what in the demo is a generated table that a test holds the code to: see the <a href="/developers/#auth">developer site</a>.</li>
+              <li><b>Faster first open.</b> Each page loads the first time it opens, so the console's entry script is a fifth of its former size.</li>
+              <li><b>Accessibility.</b> WCAG 2.1 A/AA checks run on fifteen pages in CI; the contrast and keyboard findings they caught are fixed.</li>
+              <li><b>One physics model.</b> Momentum-theory power, a LiPo curve and gusting wind drive the sortie, launch checks, debrief energy and the loadout planner.</li>
+            </ul>
           </article>
 
           <article class="article" id="accounts" data-tags="accounts users roles password access invite login admin ops commander operator maintainer allied">
