@@ -87,13 +87,13 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--bg);
-  color: var(--faint);
+  color: var(--muted);
   font-size: 13px;
 }
 
 .search-trigger:hover {
   border-color: var(--line-strong);
-  color: var(--muted);
+  color: var(--text);
 }
 
 .topbar-right {
@@ -878,7 +878,7 @@ kbd {
   position: absolute;
   bottom: -16px;
   transform: translateX(-50%);
-  color: var(--faint);
+  color: var(--muted);
   font-family: var(--font-mono);
   font-size: 9.5px;
 }

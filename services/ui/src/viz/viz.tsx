@@ -161,8 +161,8 @@ export function TimelineRows({ lanes, today, onPick, picked }: { lanes: Lane[]; 
   const ticks: number[] = [];
   for (let d = Math.ceil(t0 / 7) * 7; d <= t1; d += 7) ticks.push(d);
   return (
-    <div className="viz-lanes" role="table" aria-label="Delivery timeline">
-      <div className="viz-lane viz-lane-axis" role="row">
+    <div className="viz-lanes" role="list" aria-label="Delivery timeline">
+      <div className="viz-lane viz-lane-axis" aria-hidden="true">
         <span />
         <div className="viz-lane-track">
           {ticks.filter((d) => Math.abs(d - day(today)) > 3).map((d) => (
@@ -177,7 +177,7 @@ export function TimelineRows({ lanes, today, onPick, picked }: { lanes: Lane[]; 
         return (
           <div
             key={l.id}
-            role="row"
+            role="listitem"
             className={`viz-lane${l.risk ? " is-risk" : ""}${picked === l.id ? " is-on" : ""}${onPick ? " is-pick" : ""}`}
             tabIndex={onPick ? 0 : undefined}
             onClick={onPick ? () => onPick(l.id) : undefined}
@@ -362,13 +362,12 @@ export interface Tile { id: string; title: string; sub: string; tone: Tone; grou
 /** One tile per asset, coloured by state. Selecting a tile selects that row elsewhere on the page. */
 export function TileGrid({ tiles, picked, onPick, dim }: { tiles: Tile[]; picked?: string | null; onPick: (id: string) => void; dim?: (t: Tile) => boolean }) {
   return (
-    <ul className="viz-tiles" role="listbox" aria-label="Airframes">
+    <div className="viz-tiles" role="group" aria-label="Airframes">
       {tiles.map((t) => (
-        <li key={t.id}>
           <button
+            key={t.id}
             type="button"
-            role="option"
-            aria-selected={picked === t.id}
+            aria-pressed={picked === t.id}
             className={`viz-tile tone-${t.tone}${picked === t.id ? " is-on" : ""}${dim?.(t) ? " is-dim" : ""}`}
             title={t.note ?? t.sub}
             onClick={() => onPick(t.id)}
@@ -379,8 +378,7 @@ export function TileGrid({ tiles, picked, onPick, dim }: { tiles: Tile[]; picked
             </span>
             <span className="viz-tile-sub">{t.sub}</span>
           </button>
-        </li>
       ))}
-    </ul>
+    </div>
   );
 }

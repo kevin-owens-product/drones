@@ -114,7 +114,7 @@ export function EvalPage({ onBanner }: { viewer: Viewer; onBanner: (banner: stri
             </div>
           ) : null}
         </div>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table>
             <thead>
               <tr>

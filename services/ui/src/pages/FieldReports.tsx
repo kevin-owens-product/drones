@@ -119,11 +119,10 @@ export function FieldReportsPage({ viewer, onBanner }: { viewer: Viewer; onBanne
         .
       </p>
 
-      <div className="fr-themes" role="list">
+      <div className="fr-themes" role="group" aria-label="Themes">
         {body.triage.map((g) => (
           <button
             type="button"
-            role="listitem"
             key={g.theme}
             className={`fr-theme${g.concentrated ? " is-hot" : ""}${theme === g.theme ? " is-on" : ""}`}
             aria-pressed={theme === g.theme}

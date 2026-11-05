@@ -128,7 +128,7 @@ export function QualityPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
           <h2>Field faults by component lot</h2>
           <button type="button" className="btn btn-quiet" onClick={() => setAll(!all)}>{all ? "Lots with faults only" : "Every lot"}</button>
         </div>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table data-testid="quality-lots">
             <thead>
               <tr>
@@ -179,7 +179,7 @@ export function QualityPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
           <div className="panel-head">
             <h2>Supplier scorecard</h2>
           </div>
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0}>
             <table data-testid="quality-suppliers">
               <thead>
                 <tr>

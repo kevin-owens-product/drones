@@ -302,7 +302,7 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
       ) : null}
       <div className="fleet-grid">
       <section className="panel fleet-registry">
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table id="fleet">
             <thead>
               <tr>

@@ -85,7 +85,7 @@ export function AccessPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ba
   const mine = new Set(viewer.roles);
 
   return (
-    <section className="page" data-testid="access">
+    <section className="page" data-testid="access" tabIndex={0}>
       <header className="page-head">
         <div>
           <p className="kicker">Admin</p>
@@ -116,7 +116,7 @@ export function AccessPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ba
         <header className="panel-head">
           <h2>Roles</h2>
         </header>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table className="access-matrix">
             <thead>
               <tr>

@@ -16,7 +16,7 @@ export function ReleasabilityPage({ onBanner }: { viewer: Viewer; onBanner: (ban
   const d = page.data;
 
   return (
-    <section className="page ins-page co-page ops-page" data-testid="release">
+    <section className="page ins-page co-page ops-page" data-testid="release" tabIndex={0}>
       <PageHead
         kicker={d.you ? "Your tenant" : "Neros commercial"}
         title="Releasability"
@@ -33,7 +33,7 @@ export function ReleasabilityPage({ onBanner }: { viewer: Viewer; onBanner: (ban
 
       <section className="panel">
         <div className="panel-head"><h2>Withheld from allied sessions</h2></div>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table data-testid="release-rules">
             <thead><tr><th>Field</th><th>What it is</th><th>Why</th></tr></thead>
             <tbody>
@@ -47,7 +47,7 @@ export function ReleasabilityPage({ onBanner }: { viewer: Viewer; onBanner: (ban
       {!d.you ? (
         <section className="panel">
           <div className="panel-head"><h2>Tenants</h2></div>
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0}>
             <table data-testid="release-tenants">
               <thead><tr><th>Tenant</th><th>Country</th><th>Marking</th><th>Hosting</th><th>Fields withheld</th></tr></thead>
               <tbody>

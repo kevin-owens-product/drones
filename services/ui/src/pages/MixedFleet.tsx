@@ -59,7 +59,7 @@ export function MixedFleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner:
 
       <section className="panel">
         <div className="panel-head"><h2>By unit</h2></div>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table data-testid="mixed-units">
             <thead><tr><th>Unit</th><th>Vendors</th><th>Tails</th><th>Ready</th><th>Held (Neros)</th><th>Grounded</th><th>Unknown</th></tr></thead>
             <tbody>
@@ -74,7 +74,7 @@ export function MixedFleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner:
       <div className="ops-two">
         <section className="panel">
           <div className="panel-head"><h2>Neros airframes</h2></div>
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0}>
             <table>
               <thead><tr><th>Unit</th><th>Model</th><th>On hand</th><th>Ready</th><th>Sorties, 14 days</th></tr></thead>
               <tbody>
@@ -101,7 +101,7 @@ export function MixedFleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner:
 
       <section className="panel">
         <div className="panel-head"><h2>Other vendors' tails</h2></div>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table data-testid="mixed-tails">
             <thead><tr><th>Tail</th><th>Vendor</th><th>Unit</th><th>Source</th><th>Last log</th><th>Flights, 30 days</th><th>Status</th><th>NGC2</th><th>Record</th><th /></tr></thead>
             <tbody>

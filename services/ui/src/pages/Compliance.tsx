@@ -51,7 +51,7 @@ export function CompliancePage({ viewer, onBanner }: { viewer: Viewer; onBanner:
         <div className="panel-head">
           <h2>Component lots</h2>
         </div>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table data-testid="compliance-lots">
             <thead>
               <tr>

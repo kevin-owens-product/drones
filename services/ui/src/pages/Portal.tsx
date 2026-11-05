@@ -183,7 +183,7 @@ export function PortalPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ba
           <div className="panel-head">
             <h2>Your units</h2>
           </div>
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0}>
             <table data-testid="portal-units">
               <thead>
                 <tr>
@@ -335,7 +335,7 @@ export function PortalPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ba
         <div className="panel-head">
           <h2>On order</h2>
         </div>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table data-testid="portal-orders">
             <thead>
               <tr>

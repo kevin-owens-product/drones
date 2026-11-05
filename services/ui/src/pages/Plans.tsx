@@ -48,7 +48,7 @@ export function PlansPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
 
       <section className="panel">
         <div className="panel-head"><h2>Customers</h2></div>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table data-testid="plan-rows">
             <thead><tr><th>Customer</th><th>Plan</th><th>Drones</th><th>Formations</th><th>Record</th><th>Fleet</th><th>A year</th><th>Change plan</th></tr></thead>
             <tbody>

@@ -2,6 +2,10 @@ import { useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { usePageCommands, type Command } from "./commands";
 import { useNavCounts } from "./counts";
 import { Palette } from "./Palette";
+import { useEntityCommands } from "./search";
+import { Tour } from "./Tour";
+import { readTour, saveTour, tourFor } from "./tour";
+import { invited } from "../notify";
 import "../pages/ops.css";
 import "./shell.css";
 import type { Section, Viewer } from "./types";
@@ -79,11 +83,23 @@ export function Shell(props: {
     }
   });
   const [orgMenu, setOrgMenu] = useState(false);
+  // The guided walk opens itself once for an invited visitor, or on ?tour, and otherwise from ⌘K.
+  const [tour, setTour] = useState(() => {
+    const saved = readTour();
+    if (new URLSearchParams(window.location.search).has("tour")) return true;
+    return saved.open || (invited() && !saved.seen);
+  });
+  function closeTour() {
+    saveTour({ ...readTour(), open: false, seen: true });
+    setTour(false);
+  }
   // Audit is in Settings only for the roles that can read it; Access (who can do what) is for everyone.
   const ADMIN = useMemo(() => ADMIN_ALL.filter((item) => !item.needs || can(props.viewer, item.needs)), [props.viewer]);
   const orgRef = useRef<HTMLDivElement>(null);
   const pageCommands = usePageCommands();
   const { onSection, onLogout, onWorkspace } = props;
+  const entities = useEntityCommands(palette, props.workspace, props.viewer, props.section, onSection);
+  const hasTour = tourFor(props.viewer).length > 0;
   // Every page in the workspace stays in the palette, including ones this role's rail leaves out.
   const PRIMARY = useMemo(() => navFor(props.workspace), [props.workspace]);
   const GROUPS = useMemo(() => railFor(props.workspace, props.viewer), [props.workspace, props.viewer]);
@@ -108,9 +124,11 @@ export function Shell(props: {
         : []),
       { id: "rail", label: hidden ? "Show the menu" : "Hide the menu", group: "View", run: () => toggleRail() },
       { id: "help", label: "Keyboard shortcuts", group: "Help", hint: "?", run: () => setHelp(true) },
+      ...(hasTour ? [{ id: "tour", label: "Walk the demo", group: "Help", run: () => setTour(true) }] : []),
       { id: "logout", label: "Log out", group: "Session", run: onLogout },
+      ...entities,
     ],
-    [pageCommands, onSection, onLogout, onWorkspace, PRIMARY, ADMIN, switchable, props.workspace, hidden],
+    [pageCommands, onSection, onLogout, onWorkspace, PRIMARY, ADMIN, switchable, props.workspace, hidden, hasTour, entities],
   );
 
   // Operate needs the width for its list, map and flight display, so there the rail floats over the page (opened
@@ -194,7 +212,7 @@ export function Shell(props: {
             Drone <span className="brand-sub">Mission Cloud</span>
           </span>
         </div>
-        <div className="crumb" aria-label="You are here">
+        <div className="crumb">
           {hereGroup ? <span>{hereGroup}</span> : null}
           <strong>{here?.label ?? ""}</strong>
         </div>
@@ -272,6 +290,18 @@ export function Shell(props: {
         <div className="workspace">{props.children}</div>
       </div>
       <Palette open={palette} commands={commands} onClose={() => setPalette(false)} />
+      <Tour
+        viewer={props.viewer}
+        section={props.section}
+        workspace={props.workspace}
+        open={tour}
+        onClose={closeTour}
+        onGo={(section, workspace) => {
+          setDrawer(false);
+          if (workspace && switchable && workspace !== props.workspace) onWorkspace(workspace);
+          onSection(section);
+        }}
+      />
       {help ? (
         <div className="palette-scrim" role="presentation" onMouseDown={() => setHelp(false)}>
           <div className="shortcuts" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" onMouseDown={(e) => e.stopPropagation()}>

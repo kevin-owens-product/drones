@@ -56,7 +56,7 @@ export function StockpilePage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
             {d.units.map((u) => <button key={u.unit} type="button" className={d.unit === u.unit ? "ops-chip is-on" : "ops-chip"} onClick={() => setUnit(u.unit)}>{u.unit} ({u.held} held of {u.stored})</button>)}
           </div>
         </div>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table data-testid="stock-rows">
             <thead><tr><th>Serial</th><th>Unit</th><th>Pack</th><th>Age</th><th>Charge</th><th>Store max</th><th>State</th><th /></tr></thead>
             <tbody>

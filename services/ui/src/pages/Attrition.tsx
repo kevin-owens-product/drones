@@ -320,7 +320,7 @@ export function AttritionPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
           <p className="ins-legend">
             <span className="ins-key ins-bar-A" /> Variant A <span className="ins-key ins-bar-B" /> Variant B
           </p>
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0}>
             <table>
               <thead>
                 <tr>
@@ -358,7 +358,7 @@ export function AttritionPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
               {first.trend && first.trend > 1.2 ? `, ${first.trend}x the rate of the week before` : ""}. {customer ? `Ask Neros to resupply ${first.unit} first.` : `Ship to ${first.unit} first.`}
             </p>
           ) : null}
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0}>
             <table>
               <thead>
                 <tr>
@@ -420,7 +420,7 @@ export function AttritionPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
         <div className="panel-head">
           <h2>By unit and mission</h2>
         </div>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table>
             <thead>
               <tr>

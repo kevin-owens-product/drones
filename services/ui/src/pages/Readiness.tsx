@@ -91,7 +91,7 @@ export function ReadinessPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
             ))}
           </div>
         </div>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table data-testid="readiness-operators">
             <thead>
               <tr>
