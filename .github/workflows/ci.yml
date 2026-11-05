@@ -101,6 +101,8 @@ jobs:
           cache-dependency-path: services/ui/package-lock.json
       - run: npm ci
       - run: node --test demo/*.test.mjs
+      - name: Access matrix document matches the demo
+        run: node demo/access-matrix.mjs | diff - ../../docs/security/demo-access-matrix.md
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - name: Operate screen against the demo sortie
