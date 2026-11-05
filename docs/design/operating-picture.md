@@ -34,7 +34,7 @@ leaves those layers and their switches off.
 In the demo, every picture layer comes from the scenario in `services/ui/demo/server.mjs`,
 and the map says so with a `SIM` tag:
 
-- The jamming zone and the VIO error growth (an assumed 1% of distance flown). Not measured.
+- The jamming zone and the VIO error growth (assumed: 1% of distance flown plus a random walk, `physics.mjs`). Not measured.
 - Link quality is a range model, not radio data.
 - Task allocation is the assignment CBBA converges to on a connected, lossless network
   (sequential greedy with `onboard/alloc`'s score, as in `sim/scale`), computed from orbit

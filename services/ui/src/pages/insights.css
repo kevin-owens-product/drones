@@ -424,3 +424,12 @@ section.page.ins-page > .panel.br-form,
 section.page.ins-page > .panel.br-result {
   flex: 0 0 auto;
 }
+
+/* Loadout planner: power curves */
+.cf-curves { margin: 0 0 12px; }
+.cf-curves svg { width: 100%; height: auto; display: block; }
+.cf-grid { stroke: rgba(205, 240, 255, 0.12); stroke-width: 1; }
+.cf-axis { fill: rgba(205, 240, 255, 0.6); font-family: var(--font-mono); font-size: 10px; }
+.cf-curve { fill: none; stroke: currentColor; stroke-width: 2; }
+.cf-mark { fill: currentColor; }
+.cf-label { fill: currentColor; font-family: var(--font-mono); font-size: 10px; font-weight: 600; }

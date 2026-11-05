@@ -559,7 +559,14 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
               <Stat label="Climb" value={fmt(p?.climb_mps, 1, " m/s")} />
               <Stat label="Altitude" value={fmt(p?.alt_m, 0, " m")} />
               <Stat label="Heading" value={fmt(p?.heading_deg, 0, "°")} />
-              <Stat label="Battery" value={fmt(p?.battery_pct, 0, "%")} />
+              <Stat label="Battery" value={typeof p?.pack_v === "number" ? `${fmt(p?.battery_pct, 0, "%")} · ${p.pack_v.toFixed(1)} V` : fmt(p?.battery_pct, 0, "%")} />
+              {typeof p?.air_mps === "number" ? <Stat label="Airspeed" value={fmt(p.air_mps, 1, " m/s")} /> : null}
+              {typeof p?.wind_mps === "number" ? <Stat label="Wind" value={`${fmt(p.wind_mps, 0, " m/s")} from ${fmt(p.wind_from_deg, 0, "°")}`} /> : null}
+              {typeof p?.power_w === "number" && p.armed !== false ? <Stat label="Power" value={fmt(p.power_w, 0, " W")} /> : null}
+              {typeof p?.endurance_min === "number" && typeof p?.home_min === "number" ? (
+                <Stat label="Energy" value={`${p.endurance_min.toFixed(0)} min left · ${p.home_min.toFixed(0)} min home`} />
+              ) : null}
+              {typeof p?.link_margin_db === "number" ? <Stat label="Link margin" value={`${p.link_margin_db} dB${typeof p.rssi_dbm === "number" ? ` · ${p.rssi_dbm} dBm` : ""}`} /> : null}
               <Stat label="Last sample" value={ago(current.linkAgeMs)} />
               <Stat label="Position" value={p ? `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}` : "—"} />
               <Stat label="Position error (95%)" value={typeof p?.pos_sigma_m === "number" ? `±${Math.round(2.45 * p.pos_sigma_m)} m` : "—"} />

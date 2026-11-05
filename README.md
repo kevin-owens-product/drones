@@ -14,6 +14,8 @@ cd services/ui && npm ci && npm run build && npm run demo   # http://localhost:4
 
 The demo server plays a scripted sortie, nine vehicles in the air and three on the pad, and marks every page `DEMO DATA`.
 
+Every named vehicle in the demo flies one performance model (`demo/physics.mjs`): momentum-theory power against airspeed, a 5 m/s gusting wind it crabs into and slows against, bank-limited turns, a LiPo pack that sags under load, a radio link budget, and a bingo rule that turns it for home when the reserve would not survive the plan. The flight display shows attitude, wind, power and minutes left against minutes home; the same model prices every plan's energy in the launch checks and the debrief, and the Python supervision sweep uses a port of it. All coefficients are assumptions written out in the file, not Neros figures. [Design](docs/design/physics.md).
+
 The map draws the operating picture from the demo scenario, each overlay labelled `SIM`: real terrain baked offline, survey coverage filling in, a GNSS jamming zone with the position error of the vehicle flying on VIO, link quality, and task lines that re-plan when NX-07 drops off the link about every 100 s. Drag the timeline to replay what the console received. For the fleet-scale view, run a second server with `A2E_DEMO_FLEET=300 PORT=4174 npm run demo`. Press **3D** on the map for the same picture in relief: real terrain, each vehicle at its height above ground, the jamming zone as a dome (heights ×2). [Design](docs/design/operating-picture.md).
 
 ![The Operate map with terrain, survey coverage, the jamming zone, link quality and task allocation](docs/media/operating-picture.png)
@@ -38,7 +40,7 @@ The hosted build opens on a sign-in page with four demo accounts, one per role: 
 
 First slices, each measured in sim or unit checks only, not in the field:
 
-- **Supervision at scale**: a kinematic fleet sim that sweeps vehicles per operator and finds where mission success falls off (`make test-scale`). [Design](docs/design/supervision.md), [results](docs/eval/scale.md).
+- **Supervision at scale**: a fleet sim on the performance model (wind, power curve, pack swaps) that sweeps vehicles per operator and finds where mission success falls off (`make test-scale`). [Design](docs/design/supervision.md), [results](docs/eval/scale.md).
 - **Sim gate and flywheel**: a CI scenario gate plus triage that ranks failure modes from SITL runs and logs. [Design](docs/design/sim-gate-flywheel.md).
 - **Digital thread**: birth records for each airframe, a pack-health and readiness forecast, and the airworthiness reason shown at launch. [Design](docs/design/digital-thread.md).
 - **Contested safety**: a lost-link policy, fleet runs under a jammer, and dense-crossing separation with geofence scenarios. [Design](docs/design/contested-safety.md).

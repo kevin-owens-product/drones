@@ -15,7 +15,7 @@ test("physics helpers move the right way", () => {
 test("the cold takes the standard LiPo under the reserve, so the planner moves to the bigger pack", () => {
   const warm = plan(base);
   assert.equal(warm.best.battery, "6S2200");
-  const cold = plan({ ...base, temp_c: -10 });
+  const cold = plan({ ...base, temp_c: -20 });
   const lipo = cold.options.find((o) => o.variant === "A" && o.battery === "6S2200" && o.band === "915");
   assert.equal(lipo.ok, false);
   assert.match(lipo.reason, /reserve/);

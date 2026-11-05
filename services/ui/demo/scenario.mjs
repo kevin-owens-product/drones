@@ -17,6 +17,7 @@ import { createThread } from "./thread.mjs";
 import { createInterop } from "./interop.mjs";
 import { createProgram } from "./program.mjs";
 import { createMarket } from "./market.mjs";
+import { AIRFRAMES, ASSUMED, describe as describePhysics, flyPlan, lawnmowerPath, linkBudget, orbitPath, pathLength, power, sampleAt, vioSigma, windAt, windFrom } from "./physics.mjs";
 
 export const BANNER = "UNCLASSIFIED // DEMO DATA";
 
@@ -44,7 +45,9 @@ export function createDemo(opts = {}) {
     // NX-04 orbits inside the scenario's GNSS jamming zone and navigates on VIO.
     { tail: "NX-04", kind: "orbit", x: 300, y: -600, r: 380, v: 18, alt: 90, denied: true },
     { tail: "NX-05", kind: "orbit", x: -1300, y: -700, r: 260, v: 14, alt: 80 },
-    { tail: "NX-06", kind: "transit", x: 2600, y: -1500, tx: 900, ty: 200, v: 20, alt: 150, battery: 22 },
+    // NX-06 comes back from the culvert with a pack too low to finish: the energy model calls bingo
+    // on its first sample, it turns for the station on RTL and lands with the reserve breached.
+    { tail: "NX-06", kind: "transit", x: 600, y: -900, tx: 2300, ty: -50, v: 16, alt: 150, battery: 38 },
     // NX-07 drops off the link for part of every sortie loop (see LINK_GAP).
     { tail: "NX-07", kind: "orbit", x: 1900, y: -300, r: 200, v: 12, alt: 60, gap: true },
     { tail: "NX-08", kind: "hold", x: -2400, y: -1600, alt: 0, mode: "HOLD", armed: false },
@@ -64,9 +67,11 @@ export function createDemo(opts = {}) {
 
   // Scenario overlays. All simulated, and the console labels them so.
   const STATION = { x: -2400, y: -1350 };
+  // Weather on the range: 5 m/s at 10 m from the west-north-west with gusts, more aloft (demo/physics.mjs).
+  const ENV = { wind_mps: 5, wind_from_deg: 290, gust: 0.25, phase: 1, temp_c: 18 };
+  const frameOf = (tail) => AIRFRAMES[skuForTail(tail)] ?? AIRFRAMES["ARCHER-8"];
   const JAMMING = { x: 300, y: -600, r: 650 };
-  // VIO error growth is an assumption, not a measurement: 1% of distance flown.
-  const VIO_DRIFT = 0.01;
+  // VIO error growth is an assumption, not a measurement (physics.mjs vioSigma): 1% of distance flown plus a random walk.
   const TASKS = [
     { id: "T1", label: "Culvert check", x: 2300, y: -50, reward: 10 },
     { id: "T2", label: "Gate 3", x: 1600, y: -700, reward: 8 },
@@ -144,6 +149,33 @@ export function createDemo(opts = {}) {
     return Array.isArray(win) && t >= win[0] && t < win[1];
   }
 
+  // Each named vehicle flies its plan through the performance model once per
+  // loop, at 1 Hz, and the console samples the table. Pads and parked airframes
+  // have no table. The loop is 600 s from t = 60, so the table runs to 700 s.
+  const TRAJ = new Map();
+  const LOOP_S = 700;
+  function traj(c) {
+    let table = TRAJ.get(c.tail);
+    if (table) return table;
+    const frame = frameOf(c.tail);
+    let pts;
+    let loop = true;
+    if (c.kind === "lawnmower") pts = lawnmowerPath(c);
+    else if (c.kind === "orbit") pts = orbitPath(c.x, c.y, c.r);
+    else if (c.kind === "transit") {
+      pts = [[c.x, c.y], [c.tx, c.ty]];
+      loop = false;
+    } else return null;
+    table = flyPlan(
+      frame,
+      { pts, loop, speed_mps: c.v, alt_m: c.alt, start_wh: (frame.pack_wh * (c.battery ?? 95)) / 100, station: [STATION.x, STATION.y], temp_c: ENV.temp_c },
+      ENV,
+      { dt: 1, duration_s: LOOP_S },
+    );
+    TRAJ.set(c.tail, table);
+    return table;
+  }
+
   function state(c, tNow, tp) {
     // A vehicle off the link last reported when its gap began.
     const gapWin = c.gap ? LINK_GAP : c.gapWin;
@@ -153,48 +185,88 @@ export function createDemo(opts = {}) {
     let x = c.x;
     let y = c.y;
     let hdg = 0;
-    if (c.kind === "lawnmower") [x, y, hdg] = lawnmower(c, s);
-    if (c.kind === "orbit") {
-      const a = s / c.r;
-      x = c.x + c.r * Math.cos(a);
-      y = c.y + c.r * Math.sin(a);
-      hdg = (((90 - (a * 180) / Math.PI - 90) % 360) + 360) % 360;
-    }
-    if (c.kind === "transit") {
-      const len = Math.hypot(c.tx - c.x, c.ty - c.y);
-      const f = Math.min(1, s / len);
-      x = c.x + (c.tx - c.x) * f;
-      y = c.y + (c.ty - c.y) * f;
-      hdg = ((Math.atan2(c.tx - c.x, c.ty - c.y) * 180) / Math.PI + 360) % 360;
+    const frame = frameOf(c.tail);
+    const wind = windFrom(windAt(ENV, t, c.alt ?? 10));
+    // The named fleet flies the performance model; the synthetic swarm keeps the
+    // cheap closed-form paths with the same power curve for its battery.
+    const sample = c.swarm || c.kind === "pad" || c.kind === "hold" ? null : sampleAt(traj(c), t);
+    let flown = 0;
+    let dyn = null;
+    if (sample) {
+      x = sample.x;
+      y = sample.y;
+      hdg = sample.heading_deg;
+      flown = sample.along;
+      dyn = sample;
+    } else if (c.kind === "lawnmower") {
+      [x, y, hdg] = lawnmower(c, s);
+      flown = s;
     }
     const lag = inGap ? 400 + ((tNow - gapWin[0]) / SPEED) * 1000 : 400;
     const pad = c.kind === "pad";
     const acquiring = pad && tp < c.fix;
     const denied = c.denied || within(c.deniedWin, t);
-    // 1-sigma horizontal position error. GNSS: a couple of metres. VIO: grows
-    // with distance flown since GNSS was rejected (assumed rate, see VIO_DRIFT).
-    const onVio = c.denied ? t * (c.v ?? 0) : within(c.deniedWin, t) ? (t - c.deniedWin[0]) * (c.v ?? 0) : 0;
-    const sigma = acquiring ? undefined : denied ? 1.5 + VIO_DRIFT * onVio : 1.2;
-    const battery = pad ? c.battery : c.lowAt !== undefined && t > c.lowAt ? Math.max(8, 30 - (t - c.lowAt) / 40) : Math.max(5, (c.battery ?? 88) - t / 90);
+    // 1-sigma horizontal position error. GNSS: a metre or so, worse near the
+    // jammer's edge. VIO: grows with distance flown since GNSS was rejected.
+    const onVio = c.denied ? flown : within(c.deniedWin, t) ? (t - c.deniedWin[0]) * (c.v ?? 0) : 0;
+    const edge = Math.max(0, 1 - Math.max(0, Math.hypot(x - JAMMING.x, y - JAMMING.y) - JAMMING.r) / 400);
+    const sigma = acquiring ? undefined : denied ? vioSigma(onVio) : ASSUMED.gnss_sigma_m * (1 + 3 * edge);
+    const swarmDrain = c.swarm ? (power(frame, c.v ?? 12) * t) / 3600 / frame.pack_wh * 100 : 0;
+    const battery = pad
+      ? c.battery
+      : dyn
+        ? dyn.battery_pct
+        : c.lowAt !== undefined && t > c.lowAt
+          ? Math.max(8, 30 - (t - c.lowAt) / 40)
+          : Math.max(5, (c.battery ?? 92) - swarmDrain);
+    const toStation = Math.hypot(x - STATION.x, y - STATION.y);
+    const link = pad || c.kind === "hold" ? linkBudget(toStation, 2) : linkBudget(toStation, c.alt ?? 100);
+    const landed = dyn?.phase === "landed";
+    const mode = pad
+      ? "PREFLIGHT"
+      : c.kind === "hold"
+        ? PLATFORMS.find((p) => p.tail_number === c.tail)?.airworthiness === "airworthy" ? "STANDBY" : "HOLD"
+        : dyn?.phase === "rtl"
+          ? "RTL"
+          : dyn?.phase === "land"
+            ? "LAND"
+            : landed
+              ? "LANDED"
+              : c.mode ?? (c.kind === "transit" ? "MISSION" : "MISSION");
     return {
       tail_number: c.tail,
       tenant_id: "demo",
       time: new Date(Date.now() - lag).toISOString(),
       lat: LAT0 + y / M_LAT,
       lon: LON0 + x / M_LON,
-      alt_m: pad ? 0 : c.alt + 2 * Math.sin(t / 7),
+      alt_m: pad || c.kind === "hold" ? 0 : dyn ? dyn.alt + 0.6 * Math.sin(t / 3.1) * (wind.speed / 5) : c.alt + 2 * Math.sin(t / 7),
       classification: "UNCLASSIFIED",
       caveats: [],
       heading_deg: c.kind === "hold" || pad ? undefined : hdg,
-      ground_mps: c.v ?? 0,
-      climb_mps: pad ? 0 : 0.1 * Math.sin(t / 5),
+      ground_mps: dyn ? dyn.ground_mps : c.kind === "hold" ? 0 : c.v ?? 0,
+      climb_mps: pad || c.kind === "hold" ? 0 : dyn ? dyn.climb_mps : 0.1 * Math.sin(t / 5),
       battery_pct: battery,
       // A parked airframe shows HOLD while a work order stands against it, STANDBY once it is cleared.
-      mode: pad ? "PREFLIGHT" : c.kind === "hold" ? (PLATFORMS.find((p) => p.tail_number === c.tail)?.airworthiness === "airworthy" ? "STANDBY" : "HOLD") : c.mode ?? (c.kind === "transit" ? "RTL" : "MISSION"),
-      armed: pad ? false : c.armed ?? true,
+      mode,
+      armed: pad || landed ? false : c.armed ?? true,
       nav_source: acquiring ? "none" : denied ? "vio" : "gnss",
       gnss_trusted: acquiring ? undefined : !denied,
       pos_sigma_m: sigma,
+      // From the performance model (SIM): what the airframe is doing in the air, not just where it is.
+      air_mps: dyn ? dyn.air_mps : undefined,
+      wind_mps: pad || c.kind === "hold" ? windFrom(windAt(ENV, t, 2)).speed : wind.speed,
+      wind_from_deg: wind.from,
+      roll_deg: dyn ? dyn.roll_deg : undefined,
+      pitch_deg: dyn ? dyn.pitch_deg : undefined,
+      power_w: dyn ? dyn.power_w : pad || c.kind === "hold" ? ASSUMED.avionics_w : undefined,
+      pack_v: dyn ? dyn.pack_v : undefined,
+      endurance_min: dyn && !landed ? Math.min(999, dyn.endurance_min) : undefined,
+      home_min: dyn && !landed ? dyn.home_min : undefined,
+      bingo: dyn ? dyn.bingo_at !== null : undefined,
+      forced_landing: dyn ? dyn.forced_landing : undefined,
+      rssi_dbm: inGap ? undefined : Math.round(link.rssi_dbm),
+      link_margin_db: inGap ? 0 : Math.round(link.margin_db),
+      airframe: frame.label,
     };
   }
 
@@ -242,7 +314,7 @@ export function createDemo(opts = {}) {
   const round = ([lat, lon]) => [Number(lat.toFixed(6)), Number(lon.toFixed(6))];
 
   // The lawnmower's outbound pass as waypoints, and how far along it the vehicle is.
-  function survey(c, t) {
+  function survey(c, along) {
     const leg = c.h / (c.legs - 1);
     const pts = [];
     for (let i = 0; i < c.legs; i += 1) {
@@ -252,8 +324,8 @@ export function createDemo(opts = {}) {
     }
     const total = c.w * c.legs + c.h;
     const loop = 2 * total;
-    const d = (t * c.v) % loop;
-    const along = Math.min(total, d);
+    const d = along % loop;
+    along = Math.min(total, d);
     const flown = [pts[0]];
     const ahead = [];
     let left = along;
@@ -322,12 +394,12 @@ export function createDemo(opts = {}) {
     const airborne = FLEET.filter((c) => c.kind !== "pad" && c.kind !== "hold");
     const pos = new Map(FLEET.map((c) => {
       const p = state(c, t, tp);
-      return [c.tail, { x: (p.lon - LON0) * M_LON, y: (p.lat - LAT0) * M_LAT }];
+      return [c.tail, { x: (p.lon - LON0) * M_LON, y: (p.lat - LAT0) * M_LAT, alt: p.alt_m, landed: p.mode === "LANDED" }];
     }));
     const lost = t >= LOST_AFTER && t < LINK_GAP[1];
 
     const areas = FLEET.filter((c) => c.kind === "lawnmower").map((c, i) => {
-      const sv = survey(c, t);
+      const sv = survey(c, sampleAt(traj(c), t)?.along ?? t * c.v);
       const pad = sv.swath / 2;
       const ring = [[c.x - pad, c.y + pad], [c.x + c.w + pad, c.y + pad], [c.x + c.w + pad, c.y - c.h - pad], [c.x - pad, c.y - c.h - pad]];
       return {
@@ -356,20 +428,21 @@ export function createDemo(opts = {}) {
       }
     }
 
-    // Link quality falls off with range. Each vehicle shows its station link and
-    // its two best mesh neighbours. NX-07's links read zero during its gap.
+    // Link quality from the radio budget (physics.mjs): log-distance path loss,
+    // a low-altitude penalty, and 12 dB less for the mesh radios than the station.
+    // Each vehicle shows its station link and its two best mesh neighbours. NX-07's links read zero during its gap.
     const links = [];
-    const q = (d, range) => Math.max(0, 1 - (d / range) ** 2);
+    const q = (d, alt, extra = 0) => Number(linkBudget(d, alt, extra).quality.toFixed(2));
     for (const c of airborne) {
       const a = pos.get(c.tail);
       const down = c.gap && within(LINK_GAP, t);
-      links.push({ a: "GCS", b: c.tail, quality: down ? 0 : Number(q(Math.hypot(a.x - STATION.x, a.y - STATION.y), 5200).toFixed(2)) });
+      links.push({ a: "GCS", b: c.tail, quality: down ? 0 : q(Math.hypot(a.x - STATION.x, a.y - STATION.y), a.alt) });
       const near = airborne
         .filter((o) => o.tail > c.tail)
         .map((o) => {
           const b = pos.get(o.tail);
           const off = down || (o.gap && within(LINK_GAP, t));
-          return { a: c.tail, b: o.tail, quality: off ? 0 : Number(q(Math.hypot(a.x - b.x, a.y - b.y), 2600).toFixed(2)) };
+          return { a: c.tail, b: o.tail, quality: off ? 0 : q(Math.hypot(a.x - b.x, a.y - b.y), Math.min(a.alt, b.alt), 12) };
         })
         .filter((l) => l.quality > 0.05)
         .sort((x, y) => y.quality - x.quality)
@@ -393,9 +466,14 @@ export function createDemo(opts = {}) {
       routes,
       links,
       tasks,
+      wind: (() => {
+        const w = windFrom(windAt(ENV, t, 100));
+        return { mps: Number(w.speed.toFixed(1)), from_deg: Math.round(w.from), at_m: 100, source: "SIM: steady 5 m/s at 10 m with gusts and a power-law profile" };
+      })(),
       notes: {
         allocation: "CBBA's converged assignment (sequential greedy, onboard/alloc score), from orbit centers. Re-plans when a vehicle leaves the network.",
-        drift: "VIO error assumed to grow 1% of distance flown.",
+        drift: "VIO error assumed to grow 1% of distance flown plus a random walk (physics.mjs).",
+        flight: "Named vehicles fly the performance model: wind, bank-limited turns, the power curve and the pack. Synthetic ones fly closed-form paths.",
       },
     };
   }
@@ -451,6 +529,7 @@ export function createDemo(opts = {}) {
       return { items: up.map((c) => state(c, t, tp)), withheld: 0 };
     },
     "/v1/operations/picture": picture,
+    "/v1/physics": () => ({ ...describePhysics(), env: ENV, loop_s: LOOP_S }),
     "/v1/operations/board": () => ({ items: [] }),
     // A customer sees its own accounts, never Neros staff or another customer's people.
     "/v1/users": () => ({ items: caller?.org && caller.org !== NEROS.id ? ACCOUNTS.filter((a) => a.org === caller.org) : ACCOUNTS }),

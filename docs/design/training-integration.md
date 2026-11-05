@@ -14,6 +14,8 @@ Scenario `qual-1` raises three alerts, timed from when the panel starts the sess
 | 20 s | NX-04 | GNSS rejected | confirm VIO |
 | 35 s | NX-06 | low battery | plan recovery |
 
+Scenario `qual-2` runs on the performance model's alerts (`docs/design/physics.md`): NX-06 bingo (confirm failsafe), NX-01 energy tight in rising wind (plan recovery), NX-07 link margin 7 dB (monitor), NX-06 landed with 22% (ground next sortie). Open the console with `?scenario=qual-2`.
+
 Responses are decisions recorded for scoring: monitor, confirm failsafe, confirm VIO, plan recovery, ground next sortie. None of them sends anything to a vehicle. The console monitors and advises (ADR 0016).
 
 Endpoints on the demo server:

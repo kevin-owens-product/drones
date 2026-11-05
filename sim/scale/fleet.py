@@ -1,12 +1,18 @@
-"""Kinematic fleet sim: one operator supervising N survey vehicles.
+"""Fleet sim: one operator supervising N survey vehicles.
 
-No PX4, no Docker. Vehicles fly straight lines at constant speed, survey a
-task cell for a fixed time, then move on. Exception events arrive as Poisson
-processes per vehicle. A held vehicle makes no progress until the single
-operator clears it. If the operator does not reach it before the event's
-deadline, the onboard failsafe takes over and the vehicle leaves the mission
-(or, for a task conflict, drops its current task). Orphaned tasks are
-re-allocated to the live vehicles with a Python port of onboard/alloc CBBA.
+No PX4, no Docker. Vehicles fly straight lines between task cells, survey a
+cell for a fixed time, then move on. Each flies the same performance model as
+the console demo (services/ui/demo/physics.mjs, ported below): ground speed
+against a steady wind with the airspeed held near cruise, electrical power from
+the power curve, and energy drawn from an Archer 8 class pack. When the energy
+left would not get the vehicle home with the reserve it calls bingo, flies to
+the station, and waits for the operator to swap its pack before it goes back
+out. Link, GNSS and task-conflict exceptions arrive as Poisson processes per
+vehicle. A held vehicle makes no progress until the single operator clears it.
+If the operator does not reach it before the event's deadline, the onboard
+failsafe takes over and the vehicle leaves the mission (or, for a task
+conflict, drops its current task). Orphaned tasks are re-allocated to the live
+vehicles with a Python port of onboard/alloc CBBA.
 
 The console only monitors and advises (ADR 0016). "Clearing" here is an
 acknowledgement plus a supervisory decision, not a flight command model.
@@ -96,15 +102,103 @@ def greedy_cbba(
     return paths
 
 
+# ---------------------------------------------------------------- performance model
+# A Python port of services/ui/demo/physics.mjs: same constants, same equations,
+# so the sweep and the console agree. Assumptions, not Neros data.
+G = 9.81
+RHO = 1.225
+HOVER_W_AT_1KG = 95.0
+EFFICIENCY = 0.6
+PROFILE_FRACTION = 0.18
+AVIONICS_W = 6.0
+USABLE_DEPTH = 0.85
+RESERVE = 0.2
+# Archer 8 class: 1.45 kg with an 88.8 Wh Li-ion pack, 16 m/s cruise.
+FRAME = {"mass_kg": 1.45, "pack_wh": 88.8, "cruise_mps": 16.0, "max_air_mps": 26.0, "drag_area_m2": 0.014}
+
+
+_POWER: dict[float, float] = {}
+
+
+def power(air_mps: float, climb_mps: float = 0.0, frame: dict[str, float] = FRAME) -> float:
+    """Electrical watts in flight: induced (Glauert), parasite, profile, climb, avionics. Cached per 0.1 m/s for the fleet frame."""
+    cacheable = frame is FRAME and climb_mps == 0.0
+    key = round(air_mps, 1)
+    if cacheable and key in _POWER:
+        return _POWER[key]
+    out = _power(key if cacheable else air_mps, climb_mps, frame)
+    if cacheable:
+        _POWER[key] = out
+    return out
+
+
+def _power(air_mps: float, climb_mps: float, frame: dict[str, float]) -> float:
+    m = frame["mass_kg"]
+    hover = HOVER_W_AT_1KG * m**1.5
+    d = 0.5 * RHO * frame["drag_area_m2"] * air_mps * air_mps
+    thrust = math.hypot(m * G, d)
+    vh = (EFFICIENCY * hover * (1 - PROFILE_FRACTION)) / (m * G)
+    vi = vh
+    for _ in range(8):
+        vi = vh * vh / math.hypot(air_mps, vi)
+    vi *= thrust / (m * G)
+    induced = thrust * vi / EFFICIENCY
+    parasite = d * air_mps / EFFICIENCY
+    profile = hover * PROFILE_FRACTION * (1 + 3 * (air_mps / 60) ** 2)
+    climb = (m * G * climb_mps / EFFICIENCY) if climb_mps >= 0 else m * G * climb_mps * 0.35
+    return max(AVIONICS_W, induced + parasite + profile + climb + AVIONICS_W)
+
+
+_BRS: dict[float, float] = {}
+
+
+def best_range_speed(frame: dict[str, float] = FRAME, headwind: float = 0.0) -> float:
+    """Airspeed that minimises energy per ground metre; faster into a headwind. Cached per 0.5 m/s of headwind."""
+    key = round(headwind * 2) / 2
+    if frame is FRAME and key in _BRS:
+        return _BRS[key]
+    cands = [v * 0.5 for v in range(2, int(frame["max_air_mps"] * 2) + 1) if v * 0.5 - key > 0.5]
+    best = min(cands, key=lambda v: power(v, 0.0, frame) / (v - key))
+    if frame is FRAME:
+        _BRS[key] = best
+    return best
+
+
+def ground_speed(dx: float, dy: float, wind: tuple[float, float], want: float, frame: dict[str, float] = FRAME) -> tuple[float, float]:
+    """Ground speed along (dx, dy) holding at most 1.25x cruise airspeed, and the airspeed it takes."""
+    d = math.hypot(dx, dy)
+    if d <= 0:
+        return 0.0, 0.0
+    ux, uy = dx / d, dy / d
+    w_along = ux * wind[0] + uy * wind[1]
+    w2 = wind[0] ** 2 + wind[1] ** 2
+    cap = min(frame["max_air_mps"], frame["cruise_mps"] * 1.25)
+    disc = w_along * w_along - w2 + cap * cap
+    vg_max = w_along + math.sqrt(disc) if disc > 0 else max(1.0, w_along)
+    vg = max(0.5, min(want, vg_max))
+    va = math.hypot(vg * ux - wind[0], vg * uy - wind[1])
+    return vg, va
+
+
+def wind_vector(speed: float, from_deg: float) -> tuple[float, float]:
+    a = math.radians(from_deg)
+    return (-speed * math.sin(a), -speed * math.cos(a))
+
+
 # ---------------------------------------------------------------- fleet sim
 # Model parameters. These are assumptions for the sweep, not field data.
 EVENTS = {
     # name: (rate per vehicle-hour, mean operator service s, failsafe deadline s, lost_on_timeout)
     "link_lost": (0.6, 45.0, 120.0, True),
     "gnss_rejected": (0.4, 60.0, 90.0, True),
-    "low_battery": (0.3, 30.0, 180.0, True),
     "task_conflict": (0.5, 40.0, 240.0, False),
 }
+# A pack swap is not a Poisson event: it happens when the energy model says so.
+# Ground crew, not the supervising operator, swap packs: one crew member per five
+# vehicles (at least one), each swap taking this long (mean, exponential). There
+# is no deadline; the vehicle sits on the pad until a crew member is free.
+SWAP_SERVICE_S = 150.0
+CREW_PER_VEHICLES = 5
 
 
 @dataclass
@@ -112,11 +206,14 @@ class Params:
     n: int = 10
     tasks_per_vehicle: int = 4
     survey_s: float = 300.0
-    window_s: float = 2400.0
+    window_s: float = 3600.0
     density_km2_per_vehicle: float = 0.4
     rate_scale: float = 1.0
     seed: int = 0
     dt: float = 2.0
+    wind_mps: float = 5.0
+    wind_from_deg: float = 290.0
+    start_soc: float = 0.95
 
 
 @dataclass
@@ -130,6 +227,10 @@ class Vehicle:
     held_since: float = 0.0
     flight_s: float = 0.0
     next_event: float = math.inf
+    energy_wh: float = 0.0
+    going_home: bool = False
+    swaps: int = 0
+    energy_used_wh: float = 0.0
 
 
 @dataclass
@@ -146,6 +247,8 @@ class Result:
     vehicle_hours: float
     operator_busy_s: float
     elapsed_s: float
+    pack_swaps: int = 0
+    energy_wh: float = 0.0
 
 
 def run(p: Params) -> Result:
@@ -153,7 +256,29 @@ def run(p: Params) -> Result:
     side = 1000.0 * math.sqrt(p.density_km2_per_vehicle * p.n)
     m = p.n * p.tasks_per_vehicle
     tasks = [(rng.uniform(0, side), rng.uniform(0, side), 1.0) for _ in range(m)]
-    vs = [Vehicle(rng.uniform(0, side), rng.uniform(0, side)) for _ in range(p.n)]
+    vs = [Vehicle(rng.uniform(0, side), rng.uniform(0, side), energy_wh=FRAME["pack_wh"] * p.start_soc) for _ in range(p.n)]
+    station = (side / 2.0, side / 2.0)
+    wind = wind_vector(p.wind_mps, p.wind_from_deg)
+    floor_wh = FRAME["pack_wh"] * (1 - USABLE_DEPTH)
+    reserve_wh = FRAME["pack_wh"] * RESERVE
+    p_hover = power(0.0)
+    swaps = 0
+    energy_used = 0.0
+    crew_free = [0.0] * max(1, p.n // CREW_PER_VEHICLES)  # when each crew member is next free
+    swap_queue: list[int] = []  # vehicles on the pad waiting for a pack, first come first served
+    swap_busy = 0.0
+
+    def home_wh(v: Vehicle) -> tuple[float, float]:
+        """Energy and time to reach the station from here at best-range speed against the wind."""
+        dx, dy = station[0] - v.x, station[1] - v.y
+        dist = math.hypot(dx, dy)
+        if dist <= 0:
+            return 0.0, 0.0
+        headwind = -(dx * wind[0] + dy * wind[1]) / dist
+        v_air = best_range_speed(FRAME, headwind)
+        vg = max(2.0, v_air - headwind)
+        secs = dist / vg
+        return power(v_air) * secs / 3600.0 + p_hover * 25 / 3600.0, secs
     total_rate = sum(e[0] for e in EVENTS.values()) * p.rate_scale / 3600.0
     names = list(EVENTS)
     weights = [EVENTS[k][0] for k in names]
@@ -191,18 +316,34 @@ def run(p: Params) -> Result:
         if serving is None:
             while queue:
                 dl, i = heapq.heappop(queue)
-                if vs[i].alive and vs[i].held:
+                if vs[i].alive and vs[i].held and vs[i].held != "pack_swap":
                     svc = rng.expovariate(1.0 / EVENTS[vs[i].held][1])
                     serving = (i, t + svc)
                     break
         if serving:
             busy += p.dt
+        # ground crew: hand fresh packs to vehicles on the pad
+        for k, free_at in enumerate(crew_free):
+            if free_at <= t and swap_queue:
+                j = swap_queue.pop(0)
+                svc = rng.expovariate(1.0 / SWAP_SERVICE_S)
+                crew_free[k] = t + svc
+                vs[j].held_since = t + svc  # ready again when the swap is done
+        swap_busy += sum(p.dt for f in crew_free if f > t)
         # vehicles
         for i, v in enumerate(vs):
             if not v.alive:
                 continue
-            if v.path or v.held:
+            if (v.path or v.held) and v.held != "pack_swap":
                 v.flight_s += p.dt
+            if v.held == "pack_swap":
+                # On the pad with a flat pack until the crew hands over a fresh one.
+                if i not in swap_queue and v.held_since <= t:
+                    v.held = None
+                    v.energy_wh = FRAME["pack_wh"] * p.start_soc
+                    v.swaps += 1
+                    swaps += 1
+                continue
             if v.held:
                 kind = v.held
                 if (serving is None or serving[0] != i) and t - v.held_since >= EVENTS[kind][2]:
@@ -215,21 +356,48 @@ def run(p: Params) -> Result:
                     else:
                         release(i, False)
                 continue
-            if t >= v.next_event and v.path:
+            if t >= v.next_event and v.path and not v.going_home:
                 kind = rng.choices(names, weights)[0]
                 events += 1
                 v.held, v.held_since = kind, t
                 heapq.heappush(queue, (t + EVENTS[kind][2], i))
                 v.next_event = draw_next(t)
                 continue
-            if not v.path:
+            if not v.path and not v.going_home:
                 continue
-            tx, ty, _ = tasks[v.path[0]]
+            # Bingo: the usable energy left would not get it home with the reserve.
+            if not v.going_home and v.path:
+                need, _ = home_wh(v)
+                if v.energy_wh - floor_wh - need < reserve_wh:
+                    v.going_home = True
+            if v.going_home:
+                tx, ty = station
+            else:
+                tx, ty, _ = tasks[v.path[0]]
             d = math.hypot(tx - v.x, ty - v.y)
-            step = SPEED_MPS * p.dt
-            if d > step:
+            if v.going_home or d > 1.0:
+                if v.going_home:
+                    headwind = -((tx - v.x) * wind[0] + (ty - v.y) * wind[1]) / d
+                    want = max(2.0, best_range_speed(FRAME, headwind) - headwind)
+                else:
+                    want = SPEED_MPS
+                vg, va = ground_speed(tx - v.x, ty - v.y, wind, want)
+            else:
+                vg, va = 0.0, math.hypot(*wind)
+            watts = power(va)
+            v.energy_wh = max(0.0, v.energy_wh - watts * p.dt / 3600.0)
+            v.energy_used_wh += watts * p.dt / 3600.0
+            energy_used += watts * p.dt / 3600.0
+            step = vg * p.dt
+            if d > max(step, 1.0):
                 v.x += (tx - v.x) / d * step
                 v.y += (ty - v.y) / d * step
+            elif v.going_home:
+                # Landed at the station: a pack swap waits for the operator, with no deadline and nothing lost.
+                v.x, v.y = tx, ty
+                v.going_home = False
+                v.held, v.held_since = "pack_swap", math.inf
+                swap_queue.append(i)
             else:
                 v.x, v.y = tx, ty
                 v.work_left -= p.dt
@@ -252,13 +420,13 @@ def run(p: Params) -> Result:
         t += p.dt
 
     return Result(p.n, len(done) == m, len(done), m, events, interventions, timeouts, lost,
-                  reallocs, sum(v.flight_s for v in vs) / 3600.0, busy, t)
+                  reallocs, sum(v.flight_s for v in vs) / 3600.0, busy, t, swaps, energy_used)
 
 
-def sweep(ns: list[int], seeds: int, rate_scale: float = 1.0) -> list[dict[str, float]]:
+def sweep(ns: list[int], seeds: int, rate_scale: float = 1.0, wind_mps: float = Params.wind_mps) -> list[dict[str, float]]:
     rows = []
     for n in ns:
-        rs = [run(Params(n=n, seed=s, rate_scale=rate_scale)) for s in range(seeds)]
+        rs = [run(Params(n=n, seed=s, rate_scale=rate_scale, wind_mps=wind_mps)) for s in range(seeds)]
         vh = sum(r.vehicle_hours for r in rs)
         rows.append({
             "n": n,
@@ -270,6 +438,8 @@ def sweep(ns: list[int], seeds: int, rate_scale: float = 1.0) -> list[dict[str, 
             "timeouts_per_run": sum(r.timeouts for r in rs) / len(rs),
             "lost_per_run": sum(r.vehicles_lost for r in rs) / len(rs),
             "operator_util": sum(r.operator_busy_s for r in rs) / sum(r.elapsed_s for r in rs),
+            "swaps_per_vehicle": sum(r.pack_swaps for r in rs) / (len(rs) * n),
+            "wh_per_task": sum(r.energy_wh for r in rs) / max(1, sum(r.tasks_done for r in rs)),
             # one operator per run, on shift for the whole window
             "sorties_per_op_hour": sum(r.n - r.vehicles_lost for r in rs) / (len(rs) * Params().window_s / 3600.0),
         })
@@ -279,14 +449,14 @@ def sweep(ns: list[int], seeds: int, rate_scale: float = 1.0) -> list[dict[str, 
 def to_markdown(rows: list[dict[str, float]], seeds: int) -> str:
     out = [
         "| Vehicles per operator | Runs | Mission success | Tasks done | Exceptions / veh-h | "
-        "Interventions / veh-h | Failsafe timeouts / run | Vehicles lost / run | Operator busy | "
+        "Interventions / veh-h | Pack swaps / vehicle | Wh / task | Failsafe timeouts / run | Vehicles lost / run | Operator busy | "
         "Effective sorties / operator-h |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for r in rows:
         out.append(
             f"| {r['n']} | {r['runs']} | {r['success']:.0%} | {r['tasks_done']:.1%} | {r['events_per_vh']:.2f} | "
-            f"{r['interventions_per_vh']:.2f} | {r['timeouts_per_run']:.1f} | {r['lost_per_run']:.1f} | "
+            f"{r['interventions_per_vh']:.2f} | {r['swaps_per_vehicle']:.1f} | {r['wh_per_task']:.1f} | {r['timeouts_per_run']:.1f} | {r['lost_per_run']:.1f} | "
             f"{r['operator_util']:.0%} | {r['sorties_per_op_hour']:.1f} |"
         )
     base = rows[0]["success"]
@@ -304,9 +474,10 @@ def main() -> None:
     ap.add_argument("--n", default="5,10,20,30,40,50,100")
     ap.add_argument("--seeds", type=int, default=10)
     ap.add_argument("--rate-scale", type=float, default=1.0)
+    ap.add_argument("--wind", type=float, default=Params.wind_mps, help="steady wind at the range, m/s")
     a = ap.parse_args()
     ns = [int(x) for x in a.n.split(",")]
-    print(to_markdown(sweep(ns, a.seeds, a.rate_scale), a.seeds))
+    print(to_markdown(sweep(ns, a.seeds, a.rate_scale, a.wind), a.seeds))
 
 
 if __name__ == "__main__":

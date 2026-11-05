@@ -47,3 +47,26 @@ test("attrition: report served as baked, hold recorded once, nothing without a b
   assert.equal(post({ attribute: "esc_lot", value: "nope" }).status, 404);
   assert.equal(createDemo().handle("GET", new URL("/v1/attrition", "http://x")).status, 404);
 });
+
+test("the performance model: NX-06 calls bingo and turns for home, the others report energy, wind and link", () => {
+  const items = get(createDemo(), "/v1/telemetry/live").items;
+  const low = items.find((i) => i.tail_number === "NX-06");
+  assert.equal(low.bingo, true);
+  assert.equal(low.mode, "RTL");
+  assert.ok(low.endurance_min < low.home_min + 3);
+  const ok = items.find((i) => i.tail_number === "NX-01");
+  assert.ok(ok.air_mps > 0 && ok.wind_mps > 0 && ok.power_w > 50 && ok.pack_v > 20 && ok.link_margin_db > 0);
+  assert.ok(Math.abs(ok.heading_deg - ok.heading_deg) < 1e-9);
+  const physics = get(createDemo(), "/v1/physics");
+  assert.ok(physics.airframes["ARCHER-8"].hover_w > physics.airframes["ARCHER-5"].hover_w);
+  assert.ok(physics.curves["ARCHER-8"].length > 20);
+});
+
+test("launch checks price a plan's energy against the pack, and refuse one that cannot fly", () => {
+  const demo = createDemo();
+  const who = { display_name: "Demo Mission Commander", roles: ["mission_commander", "planner"] };
+  const checks = demo.handle("GET", new URL("/v1/missions/M-1034/readiness", "http://x"), "", who).body.checks;
+  assert.ok(checks.some((c) => c.level === "no-go" && /energy: the \d+-minute plan needs/.test(c.detail)));
+  const fine = demo.handle("GET", new URL("/v1/missions/M-1032/readiness", "http://x"), "", who).body.checks;
+  assert.ok(fine.some((c) => c.level === "go" && /energy: .* lands near \d+%/.test(c.detail)));
+});

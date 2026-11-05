@@ -8,13 +8,15 @@
 // changes its state on the board and writes the audit log: no vehicle is
 // commanded from here.
 
+import { AIRFRAMES, ASSUMED, coldFactor, power, vioSigma, windAt } from "./physics.mjs";
+
 const MIN = 60_000;
 const SIM = "Simulated replay (SIM): scripted plan flown by the demo kinematics, not a field log.";
 
-/** Speeds by model, m/s. Assumptions for the demo, not measured. */
-const CRUISE = { "ARCHER-5": 14, "ARCHER-8": 16, "ARCHER-10": 15 };
-/** Battery used per minute airborne, percent. Assumption. */
-const DRAIN = { "ARCHER-5": 2.4, "ARCHER-8": 1.9, "ARCHER-10": 1.7 };
+/** Speeds by model, m/s, from the performance model (demo/physics.mjs). */
+const CRUISE = Object.fromEntries(Object.entries(AIRFRAMES).map(([sku, f]) => [sku, f.cruise_mps]));
+/** Weather the replays were flown in: the same range wind the live sortie uses. */
+const WEATHER = { wind_mps: 5, wind_from_deg: 290, gust: 0.25, phase: 1 };
 
 export const TEAM = { id: "11111111-1111-4111-8111-111111111104", level: "team", name: "Team North (SIM)" };
 
@@ -69,27 +71,28 @@ export function createMissions(o) {
         step("mission.execute", "Demo Operator", 15, "Launched from the GCS pad"),
       ],
       objectives: [
-        obj("search", "A", "NX-01", 0, 24),
-        obj("rtb", null, "NX-01", 26, 4),
-        obj("search", "B", "NX-02", 1, 24),
-        obj("rtb", null, "NX-02", 27, 4),
-        obj("search", "C", "NX-03", 2, 24),
-        obj("rtb", null, "NX-03", 28, 4),
-        obj("search", "D", "NX-09", 1, 20, 100),
-        obj("rtb", null, "NX-09", 23, 4),
-        obj("loiter", "T4", "NX-04", 2, 20, 90),
-        obj("rtb", null, "NX-04", 24, 5),
-        obj("loiter", "T3", "NX-05", 1, 26, 140),
-        obj("rtb", null, "NX-05", 28, 4),
-        obj("loiter", "T2", "NX-07", 3, 20, 70),
-        obj("rtb", null, "NX-07", 25, 5),
-        obj("transit", "T1", "NX-06", 2, 6, 150),
-        obj("rtb", null, "NX-06", 10, 6),
+        obj("search", "A", "NX-01", 0, 14),
+        obj("rtb", null, "NX-01", 16, 4),
+        obj("search", "B", "NX-02", 1, 14),
+        obj("rtb", null, "NX-02", 17, 4),
+        obj("search", "C", "NX-03", 2, 14),
+        obj("rtb", null, "NX-03", 18, 4),
+        obj("search", "D", "NX-09", 1, 8, 100),
+        obj("rtb", null, "NX-09", 11, 4),
+        obj("loiter", "T4", "NX-04", 2, 8, 90),
+        obj("rtb", null, "NX-04", 12, 5),
+        obj("loiter", "T3", "NX-05", 1, 10, 140),
+        obj("rtb", null, "NX-05", 12, 4),
+        obj("loiter", "T2", "NX-07", 3, 7, 70),
+        obj("rtb", null, "NX-07", 12, 5),
+        obj("transit", "T1", "NX-06", 2, 2, 150),
+        obj("rtb", null, "NX-06", 6, 6),
       ],
       keepouts: [],
+      start_pct: { "NX-06": 52 },
       incidents: {
         "NX-07": { linkGaps: [[410, 650]] },
-        "NX-06": { abort: { t: 470, why: "Battery 22% at the culvert, below the 25% return reserve. Returned on RTL." } },
+        "NX-06": { abort: { t: 470, why: "Launched on a part-used pack (52%). Bingo on the way back from the culvert: energy left under the 20% reserve for the flight home against the wind. RTL at best-range speed." } },
       },
       scripted: [
         { t: 455, tail: "NX-05", kind: "replan", severity: "info", label: "CBBA re-plan: Gate 3 watch moved from NX-07 to NX-05 while NX-07 is off the link. Consensus in 3 rounds." },
@@ -100,7 +103,7 @@ export function createMissions(o) {
     {
       id: "M-1032",
       name: "Culvert and Gate 3 check",
-      summary: "Inspect the culvert after last night's rain, then hold on Gate 3 for fifteen minutes. Two vehicles, one person flying.",
+      summary: "Inspect the culvert after last night's rain while a second vehicle holds on Gate 3 for four minutes. Two vehicles, one person flying; the culvert is a 10 km round trip, so each gets one task.",
       state: "approved",
       created_by: "Demo Planner",
       planned_start: NOW + 40 * MIN,
@@ -111,11 +114,10 @@ export function createMissions(o) {
         step("mission.approve", "Demo Mission Commander", 120, "Approved; check NX-05 ESC lot before launch"),
       ],
       objectives: [
-        obj("transit", "T1", "NX-05", 0, 8, 60),
-        obj("loiter", "T2", "NX-05", 10, 15, 80),
-        obj("rtb", null, "NX-05", 26, 4),
-        obj("loiter", "T2", "NX-07", 2, 15, 70),
-        obj("rtb", null, "NX-07", 18, 4),
+        obj("transit", "T1", "NX-05", 0, 1, 60),
+        obj("rtb", null, "NX-05", 7, 4),
+        obj("loiter", "T2", "NX-07", 2, 4, 70),
+        obj("rtb", null, "NX-07", 11, 4),
       ],
       keepouts: [{ name: "Water tank access road", lat: ll(1900, -300)[0], lon: ll(1900, -300)[1], radius_km: 0.15, floor_m: 0, ceiling_m: 60 }],
     },
@@ -129,11 +131,11 @@ export function createMissions(o) {
       operators: 1,
       history: [step("mission.draft", "Demo Planner", 70), step("mission.review", "Demo Planner", 60, "Needs a commander: crosses the jamming zone")],
       objectives: [
-        obj("transit", "T4", "NX-04", 0, 4, 90),
-        obj("loiter", "T3", "NX-04", 6, 20, 140),
-        obj("rtb", null, "NX-04", 27, 4),
-        obj("loiter", "T3", "NX-09", 0, 25, 140),
-        obj("rtb", null, "NX-09", 26, 4),
+        obj("transit", "T4", "NX-04", 0, 2, 90),
+        obj("loiter", "T3", "NX-04", 4, 3, 140),
+        obj("rtb", null, "NX-04", 8, 4),
+        obj("loiter", "T3", "NX-09", 0, 9, 140),
+        obj("rtb", null, "NX-09", 10, 4),
       ],
       keepouts: [],
     },
@@ -161,6 +163,7 @@ export function createMissions(o) {
       name: "Night survey, Area A and west pasture",
       summary: "Night survey at 8 °C. NX-07 lost the link for four minutes, NX-11 came home early on a sagging pack, and NX-08 struck a prop on recovery.",
       state: "closed",
+      temp_c: 8,
       created_by: "Demo Planner",
       planned_start: NOW - 2 * 24 * 60 * MIN - 5 * 60 * MIN,
       operators: 2,
@@ -172,35 +175,36 @@ export function createMissions(o) {
         step("mission.close", "Demo Operator", 2 * 24 * 60 + 4 * 60, "Debriefed; NX-08 to maintenance"),
       ],
       objectives: [
-        obj("search", "A", "NX-01", 0, 22),
-        obj("rtb", null, "NX-01", 24, 4),
-        obj("search", "A", "NX-02", 1, 22),
-        obj("rtb", null, "NX-02", 25, 4),
-        obj("search", "D", "NX-09", 0, 22, 100),
-        obj("rtb", null, "NX-09", 24, 4),
-        obj("loiter", "T3", "NX-07", 1, 24, 140),
-        obj("rtb", null, "NX-07", 26, 4),
-        obj("search", "D", "NX-11", 2, 20, 100),
-        obj("rtb", null, "NX-11", 23, 4),
-        obj("loiter", "T2", "NX-08", 2, 22, 70),
-        obj("rtb", null, "NX-08", 25, 4),
+        obj("search", "A", "NX-01", 0, 9),
+        obj("rtb", null, "NX-01", 11, 4),
+        obj("search", "A", "NX-02", 1, 9),
+        obj("rtb", null, "NX-02", 12, 4),
+        obj("search", "D", "NX-09", 0, 8, 100),
+        obj("rtb", null, "NX-09", 10, 4),
+        obj("loiter", "T3", "NX-07", 1, 8, 140),
+        obj("rtb", null, "NX-07", 10, 4),
+        obj("search", "D", "NX-11", 2, 8, 100),
+        obj("rtb", null, "NX-11", 11, 4),
+        obj("loiter", "T4", "NX-08", 2, 5, 70),
+        obj("rtb", null, "NX-08", 9, 4),
       ],
       keepouts: [],
+      start_pct: { "NX-11": 88 },
       incidents: {
-        "NX-07": { linkGaps: [[620, 860]] },
-        "NX-11": { abort: { t: 760, why: "Pack sagged to 3.41 V/cell at 8 °C; returned with 31% showing. Configure predicted 19 min at this temperature." } },
+        "NX-07": { linkGaps: [[420, 660]] },
+        "NX-11": { abort: { t: 560, why: "Pack sagged to 3.41 V/cell at 8 °C from an 88% start; bingo called with about 20% showing. The loadout planner predicted 12 min at this temperature." } },
         "NX-08": { hardLanding: "Hard landing on recovery: 2.6 g at touchdown, prop 3 struck the pad edge." },
       },
       scripted: [
-        { t: 640, tail: "NX-09", kind: "replan", severity: "info", label: "CBBA re-plan: ridge relay handed to NX-09 while NX-07 was off the link." },
-        { t: 780, tail: "NX-11", kind: "operator", severity: "warn", label: "Operator approved early return for NX-11; Area D coverage finished by NX-09." },
+        { t: 500, tail: "NX-09", kind: "replan", severity: "info", label: "CBBA re-plan: ridge relay handed to NX-09 while NX-07 was off the link." },
+        { t: 580, tail: "NX-11", kind: "operator", severity: "warn", label: "Operator approved early return for NX-11; Area D coverage finished by NX-09." },
         { t: 2080, tail: "NX-08", kind: "report", severity: "warn", label: "Maintainer restricted NX-08: hover check before next sortie.", link: "#fleet" },
       ],
     },
     {
       id: "M-1027",
       name: "GNSS-denied trial 3",
-      summary: "Fly NX-04 through the jamming zone to the culvert and back on VIO; NX-05 holds the ridge relay. Measures VIO error at the GNSS handover.",
+      summary: "Fly NX-04 into the jamming zone to the road junction and back on VIO; NX-05 holds the ridge relay. Measures VIO error at the GNSS handover.",
       state: "closed",
       created_by: "Demo Planner",
       planned_start: NOW - 5 * 24 * 60 * MIN - 3 * 60 * MIN,
@@ -213,11 +217,10 @@ export function createMissions(o) {
         step("mission.close", "Demo Operator", 5 * 24 * 60 + 2 * 60),
       ],
       objectives: [
-        obj("loiter", "T1", "NX-04", 0, 8, 90),
-        obj("loiter", "T4", "NX-04", 12, 8, 90),
-        obj("rtb", null, "NX-04", 22, 5),
-        obj("loiter", "T3", "NX-05", 0, 24, 140),
-        obj("rtb", null, "NX-05", 25, 4),
+        obj("loiter", "T4", "NX-04", 0, 4, 90),
+        obj("rtb", null, "NX-04", 8, 5),
+        obj("loiter", "T3", "NX-05", 0, 8, 140),
+        obj("rtb", null, "NX-05", 10, 4),
       ],
       keepouts: [],
       scripted: [{ t: 300, tail: "NX-04", kind: "operator", severity: "info", label: "Operator marked the VIO handover for the denial map." }],
@@ -238,12 +241,12 @@ export function createMissions(o) {
         step("mission.close", "Bravo operator (SIM)", 8 * 24 * 60 + 60, "Loss reported; airframe recovered for autopsy"),
       ],
       objectives: [
-        obj("loiter", "T1", "BR-23", 0, 14, 50),
-        obj("rtb", null, "BR-23", 16, 5),
-        obj("loiter", "T1", "BR-28", 1, 14, 50),
-        obj("rtb", null, "BR-28", 17, 5),
-        obj("search", "C", "BR-46", 0, 16),
-        obj("rtb", null, "BR-46", 18, 5),
+        obj("loiter", "T1", "BR-23", 0, 2, 50),
+        obj("rtb", null, "BR-23", 8, 5),
+        obj("loiter", "T1", "BR-28", 1, 2, 50),
+        obj("rtb", null, "BR-28", 9, 5),
+        obj("search", "C", "BR-46", 0, 5),
+        obj("rtb", null, "BR-46", 10, 5),
       ],
       keepouts: [],
       incidents: { "BR-28": { lost: { t: 640, why: "ESC desync on motor 3, uncommanded yaw, descended into the creek bed. ESC lot ESC-2611." } } },
@@ -327,13 +330,59 @@ export function createMissions(o) {
     // VIO exposure: fly the plan through the same kinematics the debrief uses.
     for (const tail of tails) {
       const { inside, drift } = exposure(m, tail);
-      if (inside > 50) add("caution", `${tail} flies ~${(inside / 1000).toFixed(1)} km inside the GNSS jamming zone on VIO; expect up to ${Math.round(drift)} m position error before GNSS returns (assumed 1% of distance).`);
+      if (inside > 50) add("caution", `${tail} flies ~${(inside / 1000).toFixed(1)} km inside the GNSS jamming zone on VIO; expect up to ${Math.round(drift)} m position error before GNSS returns (assumed: 1% of distance plus a random walk).`);
+    }
+    // Energy: the plan flown through the performance model against the pack, in the range wind.
+    for (const tail of tails) {
+      if (!o.platforms.some((x) => x.tail_number === tail)) continue;
+      const e = energy(m, tail);
+      const start = o.padBattery[tail] ?? 95;
+      if (e.need > (e.usable * start) / 100) add("no-go", `${tail} energy: the ${e.minutes}-minute plan needs ${e.need} Wh; the ${e.frame.label} pack gives ${Math.round((e.usable * start) / 100)} Wh usable from ${start}% in ${WEATHER.wind_mps} m/s wind (SIM). Shorten the plan or split it.`);
+      else if (e.landed_pct < e.floor_pct + e.reserve_pct) add("caution", `${tail} energy: lands near ${e.landed_pct}% after ${e.need} Wh, inside the ${e.reserve_pct}% reserve in ${WEATHER.wind_mps} m/s wind (SIM). Upwind legs peak at ${e.peak} W.`);
+      else add("go", `${tail} energy: ${e.need} of ${Math.round((e.usable * start) / 100)} Wh usable; lands near ${e.landed_pct}% (performance model, SIM).`);
     }
     for (const k of m.keepouts) add("go", `Keep-out "${k.name}" loaded (${k.radius_km} km, ${k.floor_m}-${k.ceiling_m} m).`);
     const drafter = m.created_by;
     if (m.state === "review") add("go", `Two-person rule: drafted by ${drafter}; someone else approves.`);
     add("go", "Payload: sensors only. No release or arming path exists (ADR-0016).");
     return { go: !checks.some((c) => c.level === "no-go"), checks };
+  }
+
+  /** Electrical power for a step of the replay: airspeed against the wind, with the guidance holding near cruise airspeed on upwind legs. */
+  function stepWatts(frame, gx, gy, t, alt, climbRate) {
+    const [wx, wy] = windAt(WEATHER, t, alt || 60);
+    const air = Math.min(frame.cruise_mps * 1.15, Math.hypot(gx - wx, gy - wy));
+    return power(frame, air, climbRate);
+  }
+
+  /**
+   * Fly the plan through the performance model before launch: energy needed
+   * against the usable energy of the airframe's pack at the forecast temperature.
+   */
+  function energy(m, tail) {
+    const sku = skuOf(tail);
+    const frame = AIRFRAMES[sku] ?? AIRFRAMES["ARCHER-8"];
+    const { segs, end } = segments(m, tail, 0);
+    const temp = m.temp_c ?? 18;
+    const usable = frame.pack_wh * ASSUMED.usable_depth * coldFactor(temp);
+    let need = 0;
+    let peak = 0;
+    let prev = null;
+    const DT = 5;
+    for (let t = 0; t <= end; t += DT) {
+      const p = sample(segs, t);
+      const seg = segs.find((s) => t >= s.t0 && t < s.t1) ?? segs.at(-1);
+      if (prev) {
+        const climbRate = t < 25 ? (seg.alt || 60) / 25 : end - t < 25 ? -(seg.alt || 60) / 25 : 0;
+        const w = stepWatts(frame, (p[0] - prev[0]) / DT, (p[1] - prev[1]) / DT, t, seg.alt, climbRate);
+        peak = Math.max(peak, w);
+        need += (w * DT) / 3600;
+      }
+      prev = p;
+    }
+    const start = o.padBattery[tail] ?? 95;
+    const landed = Math.max(0, start - (100 * need) / frame.pack_wh);
+    return { frame, need: Math.round(need * 10) / 10, usable: Math.round(usable * 10) / 10, peak: Math.round(peak), landed_pct: Math.round(landed), minutes: Math.round(end / 60), reserve_pct: Math.round(ASSUMED.reserve * 100), floor_pct: Math.round((1 - ASSUMED.usable_depth * coldFactor(temp)) * 100) };
   }
 
   function exposure(m, tail) {
@@ -348,7 +397,7 @@ export function createMissions(o) {
         const d = prev ? Math.hypot(p[0] - prev[0], p[1] - prev[1]) : 0;
         inside += d;
         run += d;
-        drift = Math.max(drift, 1.5 + 0.01 * run);
+        drift = Math.max(drift, vioSigma(run));
       } else run = 0;
       prev = p;
     }
@@ -458,16 +507,28 @@ export function createMissions(o) {
       let linkS = 0;
       const gaps = x.linkGaps ?? [];
       let prev = null;
-      const startBatt = o.padBattery[tail] ?? 98 - (i % 3);
+      const startBatt = m.start_pct?.[tail] ?? 96 - (i % 3);
+      // Energy comes off the pack by the power curve at the airspeed each leg needs against the wind.
+      const frame = AIRFRAMES[sku] ?? AIRFRAMES["ARCHER-8"];
+      let wh = (frame.pack_wh * startBatt) / 100;
+      let peakW = 0;
+      let whUsed = 0;
       for (let t = launch; t <= Math.min(stop, elapsed) + 1e-6; t += DT) {
         const [px, py] = sample(segs, t);
         const seg = segs.find((s) => t >= s.t0 && t < s.t1) ?? segs.at(-1);
         const vio = inJamming(px, py);
         if (prev && vio) vioRun += Math.hypot(px - prev[0], py - prev[1]);
         if (vio) {
-          drift = 1.5 + 0.01 * vioRun;
+          drift = vioSigma(vioRun);
           maxDrift = Math.max(maxDrift, drift);
           vioS += DT;
+        }
+        if (prev) {
+          const climbRate = t - launch < 25 ? (seg.alt || 60) / 25 : seg.phase === "recover" && stop - t < 25 ? -(seg.alt || 60) / 25 : 0;
+          const w = stepWatts(frame, (px - prev[0]) / DT, (py - prev[1]) / DT, t, seg.alt, climbRate) * (x.abort ? 1.15 : 1) * (m.temp_c !== undefined ? 1 / coldFactor(m.temp_c) : 1);
+          peakW = Math.max(peakW, w);
+          wh -= (w * DT) / 3600;
+          whUsed += (w * DT) / 3600;
         }
         if (vio && !wasVio) ev(t, tail, "gnss", "warn", "GNSS rejected (jamming, SIM). Navigating on VIO.", "#denial");
         if (!vio && wasVio) {
@@ -480,7 +541,7 @@ export function createMissions(o) {
         const climb = Math.min(1, (t - launch) / 25);
         const landing = seg.phase === "recover" ? Math.max(0, Math.min(1, (stop - t) / 25)) : 1;
         const alt = Math.round((seg.alt || 60) * climb * landing);
-        const batt = Math.max(5, startBatt - ((t - launch) / 60) * (DRAIN[sku] ?? 2) * (x.abort ? 1.6 : 1));
+        const batt = Math.max(5, (100 * wh) / frame.pack_wh);
         pts.push([Math.round(t), Math.round(px), Math.round(py), alt, Math.round(batt), vio ? 1 : 0, link]);
         prev = [px, py];
       }
@@ -488,7 +549,7 @@ export function createMissions(o) {
         if (a < elapsed) ev(a, tail, "link", "warn", "Link lost. Vehicle continues its last plan on its own.");
         if (b < elapsed) ev(b, tail, "link", "info", `Link restored after ${Math.round((b - a) / 60)} min ${Math.round((b - a) % 60)} s.`);
       }
-      tracks.push({ tail, sku, outcome: m.state === "active" && Math.min(stop, elapsed) < stop ? "airborne" : outcome, points: pts, max_vio_m: Number(maxDrift.toFixed(1)), vio_s: vioS, link_lost_s: linkS, flight_s: Math.max(0, Math.min(stop, elapsed) - launch) });
+      tracks.push({ tail, sku, outcome: m.state === "active" && Math.min(stop, elapsed) < stop ? "airborne" : outcome, points: pts, max_vio_m: Number(maxDrift.toFixed(1)), vio_s: vioS, link_lost_s: linkS, flight_s: Math.max(0, Math.min(stop, elapsed) - launch), energy_wh: Number(whUsed.toFixed(1)), peak_w: Math.round(peakW), landed_pct: Math.max(0, Math.round((100 * wh) / frame.pack_wh)) });
     });
     for (const s of m.scripted ?? []) if (s.t <= elapsed) ev(s.t, s.tail, s.kind, s.severity, s.label, s.link);
     const shown = events.filter((e) => e.t_s <= elapsed).sort((a, b) => a.t_s - b.t_s || a.tail.localeCompare(b.tail));
@@ -501,6 +562,8 @@ export function createMissions(o) {
     const opHours = (m.operators * duration) / 3600;
     const stats = {
       sorties: tracks.length,
+      energy_wh: Number(tracks.reduce((s, t) => s + t.energy_wh, 0).toFixed(1)),
+      wind_mps: WEATHER.wind_mps,
       effective,
       aborted,
       lost,
@@ -517,7 +580,10 @@ export function createMissions(o) {
 
     const findings = [];
     if (stats.max_vio_m > 0)
-      findings.push({ title: `VIO error reached ${stats.max_vio_m} m inside the jamming zone`, detail: "Modelled at the assumed 1% of distance flown. The denial map uses these passes to brief the zone for the next plan.", link: "#denial", cta: "Denial map" });
+      findings.push({ title: `VIO error reached ${stats.max_vio_m} m inside the jamming zone`, detail: "Modelled as 1% of distance flown plus a random walk (assumed, physics.mjs). The denial map uses these passes to brief the zone for the next plan.", link: "#denial", cta: "Denial map" });
+    const thin = tracks.filter((t) => t.outcome !== "lost" && t.landed_pct < 30);
+    if (thin.length)
+      findings.push({ title: `${thin.length} airframe${thin.length > 1 ? "s" : ""} landed under 30%`, detail: `${thin.map((t) => `${t.tail} ${t.landed_pct}%`).join(", ")}. Flown in ${WEATHER.wind_mps} m/s with gusts; the upwind legs cost up to ${Math.max(...tracks.map((t) => t.peak_w))} W. Plan the next sortie with the wind in the loadout planner.`, link: "#configure", cta: "Loadout planner" });
     if (stats.link_lost_s > 0)
       findings.push({ title: `${Math.round(stats.link_lost_s / 60)} min with a vehicle off the link`, detail: "The vehicle kept flying its last plan and CBBA re-assigned its task to a connected neighbour. Nobody had to re-task by hand.", link: "#operate", cta: "Operate" });
     if (aborted)
@@ -618,7 +684,7 @@ export function createMissions(o) {
       const pl = place(t.place);
       if (!pl) continue;
       for (const tail of t.tails ?? []) {
-        objectives.push(obj(KIND[t.kind] ?? "transit", pl, tail, offset, t.minutes ?? (t.kind === "inspect" ? 6 : 20)));
+        objectives.push(obj(KIND[t.kind] ?? "transit", pl, tail, offset, t.minutes ?? (t.kind === "inspect" ? 5 : 8)));
         used.add(tail);
       }
       offset += 2;

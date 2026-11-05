@@ -7,6 +7,18 @@
 export const RESPONSES = ["monitor", "confirm_failsafe", "confirm_vio", "plan_recovery", "ground_next_sortie"];
 
 export const SCENARIOS = {
+  // Energy, wind and link: the alerts the performance model raises. The expected
+  // responses follow the console's own rule: bingo is the vehicle's call to
+  // confirm, tight energy is a plan to change, a thin link is watched.
+  "qual-2": {
+    title: "Qualification 2: wind, energy, link",
+    alerts: [
+      { id: "b1", at_s: 5, tail: "NX-06", kind: "bingo", text: "NX-06 bingo: 5 min of energy, 3 min to home against 6 m/s. It has turned for the station on RTL.", correct: "confirm_failsafe" },
+      { id: "b2", at_s: 20, tail: "NX-01", kind: "energy_tight", text: "NX-01 energy tight: 4 min spare after the flight home. Wind is up to 8 m/s at 120 m; the upwind legs are costing 320 W.", correct: "plan_recovery" },
+      { id: "b3", at_s: 35, tail: "NX-07", kind: "link_margin", text: "NX-07 link margin 7 dB at 4.3 km and 60 m. One hill or one more kilometre drops it.", correct: "monitor" },
+      { id: "b4", at_s: 50, tail: "NX-06", kind: "landed", text: "NX-06 landed at the station with 22%. Pack swap before it flies again.", correct: "ground_next_sortie" },
+    ],
+  },
   "qual-1": {
     title: "Qualification 1: link, GNSS, battery",
     alerts: [
