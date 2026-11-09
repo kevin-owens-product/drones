@@ -52,7 +52,7 @@ Keep the filled-in copy (phone, address, revenue, pipeline) on your own machine.
 
 ## Kevin's steps
 
-1. **Decide how this relates to Neros.** See "Before you send" below. This is the one step that could cost more than it gains.
+1. **Settle affiliation questions.** See "Before you send" below.
 2. **Check the SAM registration is active.** Sign in at sam.gov, open the entity for UEI Q5QZKYEU6CZ8, and confirm: status Active, purpose "All Awards" (not "Financial Assistance only"), NAICS 513210 and 541511 listed with small business status, and representations and certifications complete (including FAR 52.204-24/26 on covered telecommunications). The entity did not show in SAM's public search on 9 Nov 2026, which often just means it opted out of public display or activation is still propagating.
 3. **Fill the placeholders** in a private copy: your title, e-mail, phone, address, date; one sentence on your background; any other team member; ROM figures; traction, revenue and pipeline; company formation, ownership and runway; OCI statement.
 4. **Set the ROM.** A worked starting point: 1.5 FTE for 6 months at about 1,000 hours per FTE and a $185 loaded rate is about $280K, plus about $10K travel, so about $290K firm-fixed-price, paid across five milestones (for example 15/20/20/25/20%). Adjust to what you can staff.
@@ -63,7 +63,7 @@ Keep the filled-in copy (phone, address, revenue, pipeline) on your own machine.
 
 ## Before you send
 
-- **Neros.** The live site and demo name Neros and its product line, and say the platform was built for Neros. The brief does not mention Neros, and it must not suggest any Neros affiliation, data or endorsement. Evaluators may research the company and find the site. If you are interviewing with Neros, a Product Exec, Co. bid in the same market could read as a competing venture or as using their name; it could also be a strong talking point if you tell them first. If you join Neros, the bid, any award, and the IP become questions for your employment agreement. Decide this before sending.
+- **Affiliation.** The brief must not suggest any affiliation with, data from, or endorsement by any other company. The demo site names other companies' products; evaluators may look at it, so check what it says before sending.
 - **Honesty of claims.** Every capability in the brief runs today, but on simulated data. The brief says so and claims TRL 4. Do not add field numbers that do not exist.
 - **Export control.** The brief is unclassified and has no weapons content (ADR-0016). It describes software, not controlled technical data, but review it once with ITAR/EAR in mind before sending.
 - **Data storage.** The CSO requires Government data to stay in U.S. jurisdiction. The brief proposes installing on Government hosts, which meets this without a commercial cloud. Do not propose the Render-hosted demo for Government data.
