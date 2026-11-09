@@ -1,0 +1,18 @@
+html { font-family: "Times New Roman", "Liberation Serif", Times, serif; font-size: 12pt; line-height: 1.22; color: #000; }
+body { margin: 0; max-width: none; }
+header#title-block-header { display: none; }
+h1 { font-size: 14pt; margin: 0 0 6pt; }
+h2 { font-size: 12pt; margin: 10pt 0 4pt; }
+p, li { margin: 0 0 5pt; }
+ul { margin: 0 0 5pt; padding-left: 16pt; }
+table { border-collapse: collapse; width: 100%; font-size: 12pt; margin: 4pt 0 8pt; }
+th, td { border: 1px solid #555; padding: 2pt 4pt; vertical-align: top; text-align: left; }
+figure { margin: 4pt 0 6pt; }
+figure img { width: 100%; }
+figcaption { font-size: 12pt; font-style: italic; }
+.titlepage { page-break-after: always; }
+.titlepage > p:first-child { font-size: 12pt; border: 1px solid #000; padding: 6pt; }
+.titlepage h1 { font-size: 20pt; margin-top: 18pt; }
+.titlepage h2 { font-size: 14pt; }
+h1.restricted:first-of-type { page-break-before: auto; }
+hr { page-break-after: always; border: 0; }
