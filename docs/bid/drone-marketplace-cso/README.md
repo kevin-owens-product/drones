@@ -22,7 +22,7 @@ Also checked on 9 Nov 2026 and not chosen: the open DoD SBIR/STTR topics (84 top
 
 | Requirement | Where it is met | Status |
 |---|---|---|
-| One PDF, at most 5 pages at 12-point font (or 15 slides) | `build.sh` prints 12-point Times on US Letter and checks page count | Draft is 4 body pages, leaving room for Kevin's details |
+| One PDF, at most 5 pages at 12-point font (or 15 slides) | `build.sh` prints 12-point Times on US Letter and checks page count | 5 body pages with two screenshots: at the limit, so trim before adding text |
 | No inserted textboxes, pop-ups or links counted | The brief has no links | Done |
 | Title page (not counted): company, title, date, POC name, e-mail, phone, address, CAGE, UEI | Title page | Needs POC title, e-mail, phone, address, date |
 | Title page: AOI and Government POC if known | Title page | Done |
