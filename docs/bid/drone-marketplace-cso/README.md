@@ -26,7 +26,7 @@ Also checked on 9 Nov 2026 and not chosen: the open DoD SBIR/STTR topics (84 top
 | No inserted textboxes, pop-ups or links counted | The brief has no links | Done |
 | Title page (not counted): company, title, date, POC name, e-mail, phone, address, CAGE, UEI | Title page | Needs POC title, e-mail, phone, address, date |
 | Title page: AOI and Government POC if known | Title page | Done |
-| Title page: proposed NAICS and size standard | 513210 Software Publishers ($47.0M), alternate 541511 ($34.0M) | Confirm both are on the SAM registration |
+| Title page: proposed NAICS and size standard | 541511 Custom Computer Programming ($34.0M), alternate 541512 ($34.0M) | Done: both are on the SAM registration, marked small |
 | Executive summary, one page | Section 1 | Done |
 | Solution: unique technical aspects, innovation, capability gap, scale, feasibility, team | Section 2 | Needs team sentence |
 | Pilot of commercial tech or development; TRL; path to maturity; proprietary aspects | Section 2 | Done (TRL 4, honest) |
@@ -53,7 +53,7 @@ Keep the filled-in copy (phone, address, revenue, pipeline) on your own machine.
 ## Kevin's steps
 
 1. **Settle affiliation questions.** See "Before you send" below.
-2. **Check the SAM registration is active.** Sign in at sam.gov, open the entity for UEI Q5QZKYEU6CZ8, and confirm: status Active, purpose "All Awards" (not "Financial Assistance only"), NAICS 513210 and 541511 listed with small business status, and representations and certifications complete (including FAR 52.204-24/26 on covered telecommunications). The entity did not show in SAM's public search on 9 Nov 2026, which often just means it opted out of public display or activation is still propagating.
+2. **SAM registration: checked 9 Nov 2026.** Active until 23 Oct 2027, purpose All Awards, reps and certs complete (FAR 52.204-26 answered "does not"), small under every listed NAICS including 541511 and 541512. 513210 (Software Publishers) is not on the registration; the brief uses 541511 instead. Renew before 23 Oct 2027.
 3. **Fill the placeholders** in a private copy: your title, e-mail, phone, address, date; one sentence on your background; any other team member; ROM figures; traction, revenue and pipeline; company formation, ownership and runway; OCI statement.
 4. **Set the ROM.** A worked starting point: 1.5 FTE for 6 months at about 1,000 hours per FTE and a $185 loaded rate is about $280K, plus about $10K travel, so about $290K firm-fixed-price, paid across five milestones (for example 15/20/20/25/20%). Adjust to what you can staff.
 5. **Confirm the license position.** The code is in a public GitHub repository with no license file. The IP statement claims commercial software developed at private expense under a Product Exec, Co. license. Make sure the code is owned by Product Exec, Co. (assign it if it was written personally) and decide whether the repository stays public.

@@ -30,7 +30,7 @@ Solution Brief submitted under the Department of War Drone Marketplace Commercia
 | **Address** | [[street, city, state, ZIP]] |
 | **Date** | [[submission date]] |
 | **Program / Government POC** | PMO UAS, CPE Aviation (SFAE-AVN-U). Individual POC not known. |
-| **Proposed NAICS** | 513210, Software Publishers (size standard $47.0M). Alternate: 541511, Custom Computer Programming Services ($34.0M). |
+| **Proposed NAICS** | 541511, Custom Computer Programming Services (size standard $34.0M). Alternate: 541512, Computer Systems Design Services ($34.0M). |
 | **Business size** | Small business under the proposed NAICS. |
 | **Proposed instrument** | Fixed-price prototype OT (10 U.S.C. 4022) or FAR Part 12 firm-fixed-price. |
 
@@ -98,7 +98,7 @@ We propose a fixed-price, 6-month prototype with one formation that already flie
 
 **Commercial traction.** [[State honestly: revenue to date, paying customers or pilots, letters of interest, and the sales pipeline with stage and value. If pre-revenue, say so and state the pipeline.]]
 
-**Corporate and financial stability.** Product Exec, Co. is registered in SAM.gov (UEI Q5QZKYEU6CZ8, CAGE 26U91). [[Year formed, state of incorporation, ownership (U.S.-owned, no foreign ownership or control), funding source and runway for the prototype period.]] The company has no actual or potential organizational conflict of interest. [[If that is not true, describe it here and notify the KO/AO; see README.]]
+**Corporate and financial stability.** Product Exec, Co. is a Delaware corporation formed in August 2025 and holds an active SAM.gov registration for all awards (UEI Q5QZKYEU6CZ8, CAGE 26U91), with representations and certifications complete. [[Ownership (U.S.-owned, no foreign ownership or control), funding source and runway for the prototype period.]] The company has no actual or potential organizational conflict of interest. [[If that is not true, describe it here and notify the KO/AO; see README.]]
 
 ---
 
