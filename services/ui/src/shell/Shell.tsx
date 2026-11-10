@@ -127,6 +127,9 @@ export function Shell(props: {
       ...(hasTour ? [{ id: "tour", label: "Walk the demo", group: "Help", run: () => setTour(true) }] : []),
       { id: "whats-new", label: "What's new", group: "Help", run: () => window.open("/help/#whats-new", "_blank", "noopener") },
       { id: "help-center", label: "Help center", group: "Help", run: () => window.open("/help/", "_blank", "noopener") },
+      ...(import.meta.env.VITE_STATIC_DEMO === "1"
+        ? [{ id: "reset-demo", label: "Reset the demo data", group: "Session", run: () => void import("../staticDemo").then((m) => m.resetDemoData()) }]
+        : []),
       { id: "logout", label: "Log out", group: "Session", run: onLogout },
       ...entities,
     ],

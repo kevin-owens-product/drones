@@ -34,4 +34,4 @@ Sharing is the customer's choice. With it off, Neros sees no Attrition data and 
 
 - **ADR-0016.** Strike SKUs never enter a build, a request or a shipment; `demo/ops.test.mjs` checks it.
 - **Roles.** Neros actions need `org: neros` and the admin or `ops_lead` role. Customer requests and receipts need the mission commander, maintainer or admin role; operators can view. `ops_lead` is demo-only: the API's role enum is a Postgres type and is not changed here.
-- **SIM.** Customers, requests, stock, POs and shipments are simulated and labelled. State lives in the browser tab: signing out and in keeps it, reloading the page starts the scenario over.
+- **SIM.** Customers, requests, stock, POs and shipments are simulated and labelled. State lives in the browser tab: signing out and in keeps it, and so does a reload, because the hosted demo replays the tab's accepted actions from sessionStorage. A new tab starts fresh, and "Reset the demo data" in ⌘K clears it.
