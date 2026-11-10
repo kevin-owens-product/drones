@@ -2,6 +2,8 @@ FROM timescale/timescaledb:2.17.2-pg16
 
 # Compile PostGIS against this image's Postgres. The Alpine postgis package
 # targets a different major version and will not load.
+# The parallel build occasionally races on a generated .sql file; a serial
+# make finishes whatever the parallel pass left undone.
 # STUB: pgaudit is not packaged for this base image.
 USER root
 RUN apk add --no-cache geos proj json-c libxml2 protobuf-c \
@@ -18,7 +20,7 @@ RUN apk add --no-cache geos proj json-c libxml2 protobuf-c \
     && tar -xzf /tmp/postgis.tar.gz -C /tmp \
     && cd /tmp/postgis-3.5.2 \
     && ./configure --with-pgconfig=/usr/local/bin/pg_config --without-raster \
-    && make -j"$(nproc)" with_llvm=no \
+    && { make -j"$(nproc)" with_llvm=no || make with_llvm=no; } \
     && make install with_llvm=no \
     && cd / \
     && rm -rf /tmp/postgis-3.5.2 /tmp/postgis.tar.gz \
