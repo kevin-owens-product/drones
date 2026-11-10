@@ -79,6 +79,15 @@ The table at the top of this page predates that gate. A rerun of v2 before and a
 - **These runs are slower than the table at the top.** They kept up with 77 to 85% of real time against about 96%, and seeds 2 and 3 dropped the lock with or without the gate. Compare the two columns with each other, not with that table, until the full trial is rerun at full speed.
 - **Known limit.** A target that drives right over a parked look-alike and hands over with no jump is not refused.
 
+**A second rerun with the gate merged did not repeat that.** v1 and v2, same five seeds, 90 s, at half sim speed ([raw rows](../eval/sitl_track_gate_rerun.jsonl)):
+
+| Tracker | Held the target | Ended on a look-alike | Dropped the lock |
+| --- | --- | --- | --- |
+| v1 | 0 of 5 | 1 of 5 | 4 of 5 |
+| v2 with the gate | 3 of 5 | 2 of 5 | 0 of 5 |
+
+v2 matches the table at the top: 3 of 5 held, and 2 of 5 on a look-alike. The gate refused 0 frames in seed 1 and 4 in seed 4, so neither swap began with a jump the gate could see. Halving the sim speed did not help the harness keep up: these runs kept up with 86% of real time. **On this evidence, the gate stops some swaps but not the usual kind.** Trace seeds 1 and 4 before claiming any improvement.
+
 On Docker Desktop for Mac, PX4's MAVLink does not reach a harness on the host. Run the harness on Docker's network from `deploy/sitl/runner.Dockerfile`:
 
 ```bash
