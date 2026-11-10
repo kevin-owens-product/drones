@@ -15,6 +15,7 @@ interface Queue {
   areas: { area: string; count: number }[];
   customers: { id: string; name: string; sharing: boolean; open_requests: number }[];
 }
+const DONE_KEY = "a2e-ops-done";
 interface Done { at: string; text: string; ok: boolean }
 
 const SEVERITY_LABEL = { high: "Now", medium: "Today", low: "This week" } as const;
@@ -34,7 +35,26 @@ export function OpsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (banne
   const [fault, setFault] = useState("");
   const [area, setArea] = useState("All");
   const [busy, setBusy] = useState("");
-  const [done, setDone] = useState<Done[]>([]);
+  // Kept for the tab, so switching workspace or page doesn't wipe the record of what you did.
+  const [done, setDoneState] = useState<Done[]>(() => {
+    try {
+      const raw = sessionStorage.getItem(DONE_KEY);
+      return raw ? (JSON.parse(raw) as Done[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  function setDone(next: (d: Done[]) => Done[]) {
+    setDoneState((d) => {
+      const out = next(d);
+      try {
+        sessionStorage.setItem(DONE_KEY, JSON.stringify(out));
+      } catch {
+        /* not kept */
+      }
+      return out;
+    });
+  }
   const canAct = viewer.roles.some((r) => r === "admin" || r === "ops_lead");
 
   function load() {

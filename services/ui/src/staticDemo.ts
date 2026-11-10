@@ -89,6 +89,43 @@ async function gate(method: string, url: URL, raw: string): Promise<{ status: nu
   return null;
 }
 
+// What a visitor did this tab: every accepted change (approve, ship, hold, request…)
+// is kept in sessionStorage and replayed when the page loads, so a reload keeps the
+// story. A new tab starts fresh; "Reset the demo data" in ⌘K clears it.
+const ACTIONS_KEY = "a2e-demo-actions";
+const MAX_ACTIONS = 400;
+type Action = { m: string; p: string; r: string; u: string | null; t: number };
+// Training runs on wall-clock time and the session routes are the gate's own.
+const replayable = (path: string) => !path.startsWith("/v1/session/") && !path.startsWith("/v1/training/");
+
+function loadActions(): Action[] {
+  try {
+    const raw = sessionStorage.getItem(ACTIONS_KEY);
+    const list = raw ? (JSON.parse(raw) as Action[]) : [];
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveActions(list: Action[]): void {
+  try {
+    sessionStorage.setItem(ACTIONS_KEY, JSON.stringify(list.slice(-MAX_ACTIONS)));
+  } catch {
+    /* storage full or blocked: this reload starts over, which is still correct */
+  }
+}
+
+export function resetDemoData(): void {
+  try {
+    sessionStorage.removeItem(ACTIONS_KEY);
+    sessionStorage.removeItem("a2e-ops-done");
+  } catch {
+    /* nothing kept */
+  }
+  window.location.reload();
+}
+
 export function installStaticDemo(): void {
   const params = new URLSearchParams(window.location.search);
   const demo = createDemo({
@@ -99,6 +136,17 @@ export function installStaticDemo(): void {
     readme,
     assetBase: `${import.meta.env.BASE_URL}demo-assets/`,
   });
+  const actions = loadActions();
+  // Replay at the time each action happened, so ids built from the clock (Brief proposals) match again.
+  const clock = Date.now;
+  try {
+    for (const x of actions) {
+      Date.now = () => x.t;
+      demo.handle(x.m, new URL(x.p, window.location.origin), x.r, x.u ? (DEMO_USERS[x.u] ?? null) : null);
+    }
+  } finally {
+    Date.now = clock;
+  }
   const real = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const href = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
@@ -107,7 +155,12 @@ export function installStaticDemo(): void {
       const method = init?.method ?? "GET";
       const raw = typeof init?.body === "string" ? init.body : "";
       const who = signedIn();
-      const out = (await gate(method, url, raw)) ?? demo.handle(method, url, raw, who ? (DEMO_USERS[who] ?? null) : null);
+      const gated = await gate(method, url, raw);
+      const out = gated ?? demo.handle(method, url, raw, who ? (DEMO_USERS[who] ?? null) : null);
+      if (!gated && method === "POST" && out.status < 300 && replayable(url.pathname)) {
+        actions.push({ m: method, p: `${url.pathname}${url.search}`, r: raw, u: who, t: Date.now() });
+        saveActions(actions);
+      }
       return new Response(JSON.stringify(out.body), {
         status: out.status,
         headers: { "content-type": "application/json", "X-Classification-Banner": BANNER },
