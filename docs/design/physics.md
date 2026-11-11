@@ -67,8 +67,8 @@ speed, endurance and still-air range.
 
 - Coefficients are assumptions. The first flight log from a real airframe should replace
   `hover_w_at_1kg`, `drag_area_m2` and `cell_r_ohm`, and the bench (`sim/bench`) is where to measure them.
-- No terrain in the link model (the heightmap exists but is not sampled), no rotor downwash, no
-  battery temperature rise, no motor saturation. Gusts are deterministic sinusoids, not turbulence.
+- The live sortie's link ignores terrain and its pack has no temperature; the physics check
+  (`docs/design/physics-check.md`) adds both, and thrust limits, for plans before launch. No rotor downwash. Gusts are deterministic sinusoids, not turbulence.
 - The synthetic swarm (`?fleet=300`) keeps closed-form paths and only takes its battery drain from
   the power curve, so it stays cheap in the browser.
 - The debrief holds the planned ground track and prices it; it does not re-fly the plan through

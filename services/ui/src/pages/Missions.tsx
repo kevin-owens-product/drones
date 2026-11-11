@@ -36,6 +36,7 @@ interface Check {
   pass: boolean;
   detail: string;
   level?: "go" | "caution" | "no-go";
+  area?: string;
 }
 
 interface HistoryStep {
@@ -874,7 +875,22 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
               <section className="panel">
                 <div className="panel-head">
                   <h2>Launch checks</h2>
-                  <span className={nogo.length ? "pill pill-warn" : "pill pill-ok"}>{nogo.length ? `No-go · ${nogo.length}` : caution.length ? `Go · ${caution.length} caution` : "Go"}</span>
+                  <span className="ms-check-head">
+                    <a
+                      className="btn btn-quiet"
+                      href="#physics"
+                      onClick={() => {
+                        try {
+                          sessionStorage.setItem("a2e-physics-mission", selected.id);
+                        } catch {
+                          /* the check opens on its default plan */
+                        }
+                      }}
+                    >
+                      Physics check
+                    </a>
+                    <span className={nogo.length ? "pill pill-warn" : "pill pill-ok"}>{nogo.length ? `No-go · ${nogo.length}` : caution.length ? `Go · ${caution.length} caution` : "Go"}</span>
+                  </span>
                 </div>
                 {checks.length === 0 ? (
                   <p className="empty">No launch check yet.</p>
@@ -893,6 +909,11 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
                       })}
                   </ul>
                 )}
+                {checks.some((c) => c.area === "physics" && c.level !== "go") ? (
+                  <p className="meta">
+                    Terrain, cold-pack and thrust findings come from the <a href="#physics" onClick={() => sessionStorage.setItem("a2e-physics-mission", selected.id)}>physics check</a>, which has the fixes.
+                  </p>
+                ) : null}
                 {checks.some((c) => /held lot|ESC-2611/.test(c.detail)) ? (
                   <p className="meta">
                     Lot status comes from <a href="#attrition">Attrition</a>; airworthiness from <a href="#fleet">Fleet</a>.

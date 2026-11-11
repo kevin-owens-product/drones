@@ -4,6 +4,7 @@ What shipped, newest first, by release. Each line names the pull request. Everyt
 
 ## Unreleased
 
+- Physics check: every plan flown through line of sight over the range's real terrain (with an EW emitter), an electro-thermal pack model and thrust headroom in gusts; findings become fixes that re-plan the mission (relay site, altitude, band, preheat, airframe swap) and launch-check cautions
 - Guided walk for a first visit, ⌘K finds tails and plans, axe accessibility gate in CI (#41)
 - The demo's access rules as a generated matrix and a test; unknown routes answer 404; the ops lead can hold a lot from Attrition
 - Every page except the two homes loads on first open: the console's entry script drops from 1.75 MB to 0.33 MB

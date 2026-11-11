@@ -34,7 +34,7 @@ What it does not claim: the demo has one scripted fleet and sortie, which each c
 | `/v1/telemetry/live` | 200 · 9 | 200 · 9 | 200 · 9 | 200 · 9 | 200 · 9 | 200 · 9 | 200 · 9 |
 | `/v1/operations/picture` | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `/v1/physics` | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
-| `/v1/missions` | 200 · 8 | 200 · 8 | 200 · 8 | 200 · 8 | 200 · 8 | 200 · 8 | 200 · 8 |
+| `/v1/missions` | 200 · 9 | 200 · 9 | 200 · 9 | 200 · 9 | 200 · 9 | 200 · 9 | 200 · 9 |
 | `/v1/intent` | 200 · 4 | 200 · 4 | 200 · 4 | 200 · 4 | 200 · 4 | 200 · 4 | 200 · 4 |
 | `/v1/configure` | 200 | 200 | 200 | 200 | 200 | 200 | 200 · 1 withheld |
 | `/v1/denial-map` | 200 | 200 | 200 | 200 | 200 | 200 | 200 |

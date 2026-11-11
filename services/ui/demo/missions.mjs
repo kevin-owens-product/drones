@@ -9,6 +9,7 @@
 // commanded from here.
 
 import { AIRFRAMES, ASSUMED, coldFactor, power, vioSigma, windAt } from "./physics.mjs";
+import { createPhysicsCheck } from "./plancheck.mjs";
 
 const MIN = 60_000;
 const SIM = "Simulated replay (SIM): scripted plan flown by the demo kinematics, not a field log.";
@@ -46,11 +47,11 @@ export function createMissions(o) {
 
   // ---- seed --------------------------------------------------------------
   // Objectives name a place; the store keeps lat/lon like the real API does.
-  function obj(kind, where, tail, offset, duration, alt = 110) {
+  function obj(kind, where, tail, offset, duration, alt = 110, extra = {}) {
     const p = typeof where === "string" ? place(where) : where;
     const [lat, lon] = kind === "rtb" ? ll(S.x, S.y) : ll(p.x, p.y);
     const label = kind === "rtb" ? "Recover at GCS" : p.label;
-    return { kind, label, tail, lat, lon, alt_m: kind === "rtb" ? 0 : alt, offset_min: offset, duration_min: duration };
+    return { kind, label, tail, lat, lon, alt_m: kind === "rtb" ? 0 : alt, offset_min: offset, duration_min: duration, ...extra };
   }
   const step = (action, by, minsAgo, note = "") => ({ action, by, at: new Date(NOW - minsAgo * MIN).toISOString(), note });
 
@@ -81,7 +82,7 @@ export function createMissions(o) {
         obj("rtb", null, "NX-09", 11, 4),
         obj("loiter", "T4", "NX-04", 2, 8, 90),
         obj("rtb", null, "NX-04", 12, 5),
-        obj("loiter", "T3", "NX-05", 1, 10, 140),
+        obj("loiter", "T3", "NX-05", 1, 10, 140, { relay: true }),
         obj("rtb", null, "NX-05", 12, 4),
         obj("loiter", "T2", "NX-07", 3, 7, 70),
         obj("rtb", null, "NX-07", 12, 5),
@@ -107,6 +108,7 @@ export function createMissions(o) {
       state: "approved",
       created_by: "Demo Planner",
       planned_start: NOW + 40 * MIN,
+      forecast: { temp_c: 11, wind_mps: 6, wind_from_deg: 290, gust_mps: 11, ew: false },
       operators: 1,
       history: [
         step("mission.draft", "Demo Planner", 190),
@@ -128,13 +130,14 @@ export function createMissions(o) {
       state: "review",
       created_by: "Demo Planner",
       planned_start: NOW + 3 * 60 * MIN,
+      forecast: { temp_c: 14, wind_mps: 5, wind_from_deg: 290, gust_mps: 9, ew: true },
       operators: 1,
       history: [step("mission.draft", "Demo Planner", 70), step("mission.review", "Demo Planner", 60, "Needs a commander: crosses the jamming zone")],
       objectives: [
         obj("transit", "T4", "NX-04", 0, 2, 90),
         obj("loiter", "T3", "NX-04", 4, 3, 140),
         obj("rtb", null, "NX-04", 8, 4),
-        obj("loiter", "T3", "NX-09", 0, 9, 140),
+        obj("loiter", "T3", "NX-09", 0, 9, 140, { relay: true }),
         obj("rtb", null, "NX-09", 10, 4),
       ],
       keepouts: [],
@@ -146,6 +149,8 @@ export function createMissions(o) {
       state: "draft",
       created_by: "Demo Mission Commander",
       planned_start: null,
+      temp_c: -6,
+      forecast: { wind_mps: 7, wind_from_deg: 300, gust_mps: 12, ew: false },
       operators: 1,
       history: [step("mission.draft", "Demo Mission Commander", 25)],
       objectives: [
@@ -155,6 +160,25 @@ export function createMissions(o) {
         obj("rtb", null, "NX-11", 31, 4),
         obj("search", "B", "NX-12", 0, 20),
         obj("rtb", null, "NX-12", 21, 4),
+      ],
+      keepouts: [],
+    },
+    {
+      id: "M-1035",
+      name: "Dawn survey, Area C and the culvert",
+      summary: "Survey Area C at first light and look at the culvert again before the wind picks up. It is -10 °C at the pad and the packs spent the night in the trailer.",
+      state: "draft",
+      created_by: "Demo Planner",
+      planned_start: null,
+      temp_c: -10,
+      forecast: { wind_mps: 8, wind_from_deg: 300, gust_mps: 14, ew: false },
+      operators: 1,
+      history: [step("mission.draft", "Demo Planner", 15, "Drafted for tomorrow's first light")],
+      objectives: [
+        obj("search", "C", "NX-06", 0, 10, 110),
+        obj("rtb", null, "NX-06", 12, 4),
+        obj("transit", "T1", "NX-07", 1, 3, 60),
+        obj("rtb", null, "NX-07", 9, 4),
       ],
       keepouts: [],
     },
@@ -260,6 +284,8 @@ export function createMissions(o) {
   const skuOf = (tail) => SKU[tail] ?? o.skuForTail(tail);
   let nextId = 1036;
 
+  const physics = createPhysicsCheck({ segments, sample, skuOf, tailsOf: (m) => tailsOf(m), station: S, jamming: J, platforms: o.platforms, padBattery: o.padBattery, heldTails: o.heldTails, places: o.places, toLL: o.toLL, fromLL: o.fromLL });
+
   // ---- reads --------------------------------------------------------------
   const tailsOf = (m) => [...new Set(m.objectives.map((x) => x.tail).filter(Boolean))];
   const lastBy = (m, action) => [...m.history].reverse().find((h) => h.action === action && !h.note.startsWith("Refused"));
@@ -344,6 +370,8 @@ export function createMissions(o) {
     for (const k of m.keepouts) add("go", `Keep-out "${k.name}" loaded (${k.radius_km} km, ${k.floor_m}-${k.ceiling_m} m).`);
     const drafter = m.created_by;
     if (m.state === "review") add("go", `Two-person rule: drafted by ${drafter}; someone else approves.`);
+    // Terrain link, cold pack and thrust headroom: cautions with the fixes on the physics check.
+    for (const c of physics.launchChecks(m)) checks.push({ pass: c.level !== "no-go", ...c });
     add("go", "Payload: sensors only. No release or arming path exists (ADR-0016).");
     return { go: !checks.some((c) => c.level === "no-go"), checks };
   }
@@ -699,6 +727,43 @@ export function createMissions(o) {
     return out.body.id;
   }
 
+  /** A fix from the physics check. A changed plan in review or approved goes back to draft: a second person sees it again. */
+  function replan(m, msg, who) {
+    const actor = who?.display_name ?? "Demo Planner";
+    if (m.state === "active" || m.state === "closed") return { status: 409, body: { detail: "not_editable" } };
+    if (who && !o.can(who.roles, "mission.draft")) {
+      o.audit.append({ actor, action: "mission.replan", resource_type: "mission", resource_id: m.name, decision: "deny", reason_codes: ["role_denied"] });
+      return { status: 403, body: { detail: "role_denied" } };
+    }
+    const ask = msg.forecast && typeof msg.forecast === "object" ? msg.forecast : {};
+    const out = physics.apply(m, String(msg.fix ?? ""), ask);
+    if (!out) return { status: 409, body: { detail: "fix_unavailable" } };
+    let note = out.note;
+    const was = m.state;
+    if (out.changes_plan && was !== "draft") {
+      m.state = "draft";
+      note += `; back to draft from ${was}, so it needs review and approval again`;
+    }
+    m.history.push({ action: "mission.replan", by: actor, at: new Date().toISOString(), note: `Physics check: ${note}` });
+    o.audit.append({ actor, action: "mission.replan", resource_type: "mission", resource_id: m.name, detail: `${m.id}: ${note}` });
+    return { status: 200, body: { id: m.id, state: m.state, note } };
+  }
+
+  /** Put the forecast the planner checked against on the plan, so launch checks use it too. */
+  function saveForecast(m, msg, who) {
+    const actor = who?.display_name ?? "Demo Planner";
+    if (m.state === "active" || m.state === "closed") return { status: 409, body: { detail: "not_editable" } };
+    if (who && !o.can(who.roles, "mission.draft")) return { status: 403, body: { detail: "role_denied" } };
+    const f = physics.forecastOf(m, msg);
+    m.forecast = { wind_mps: f.wind_mps, wind_from_deg: f.wind_from_deg, gust_mps: f.gust_mps, ew: f.ew };
+    m.temp_c = f.temp_c;
+    m.history.push({ action: "mission.forecast", by: actor, at: new Date().toISOString(), note: `Forecast set: ${f.temp_c} °C, wind ${f.wind_mps} m/s gusting ${f.gust_mps}${f.ew ? ", EW emitter on" : ""}` });
+    o.audit.append({ actor, action: "mission.forecast", resource_type: "mission", resource_id: m.name, detail: `${m.id} forecast ${f.temp_c} °C, ${f.wind_mps}/${f.gust_mps} m/s, EW ${f.ew ? "on" : "off"}` });
+    return { status: 200, body: { id: m.id, forecast: f } };
+  }
+
+  const scrub = (x) => JSON.parse(JSON.stringify(x, (k, v) => (k === "_apply" ? undefined : v)));
+
   function exportDebrief(msg, who) {
     const actor = who?.display_name ?? "Demo Operator";
     const m = missions.find((x) => x.id === msg.mission_id);
@@ -756,7 +821,7 @@ export function createMissions(o) {
         const now = Date.now();
         return { status: 200, body: { source: "Demo plans (SIM)", items: missions.map(row), range: rangeInfo(), generated_at: new Date(now).toISOString() } };
       }
-      const hit = path.match(/^\/v1\/missions\/([^/]+)(?:\/(objectives|readiness|transition|debrief|history))?$/);
+      const hit = path.match(/^\/v1\/missions\/([^/]+)(?:\/(objectives|readiness|transition|debrief|history|physics|forecast))?$/);
       if (!hit) return null;
       const m = missions.find((x) => x.id === decodeURIComponent(hit[1]));
       if (!m) return { status: 404, body: { detail: "not_found" } };
@@ -781,6 +846,9 @@ export function createMissions(o) {
         return { status: 200, body: { items: m.objectives, keepouts: m.keepouts, planned_start: m.planned_start ? new Date(m.planned_start).toISOString() : null } };
       }
       if (sub === "readiness") return { status: 200, body: readiness(m) };
+      if (sub === "physics" && method === "GET") return { status: 200, body: { ...scrub(physics.run(m, Object.fromEntries(url.searchParams))), range: rangeInfo() } };
+      if (sub === "physics" && method === "POST") return replan(m, json(raw) ?? {}, who);
+      if (sub === "forecast" && method === "POST") return saveForecast(m, json(raw) ?? {}, who);
       if (sub === "history") return { status: 200, body: { items: m.history } };
       if (sub === "transition" && method === "POST") return transition(m, String((json(raw) ?? {}).action ?? ""), who);
       if (sub === "debrief") {

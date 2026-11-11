@@ -25,6 +25,7 @@ export const CUSTOMER_NAV: readonly NavItem[] = [
   item("operate", "Operate", "Fly"),
   item("brief", "Brief", "Fly", ["lead"]),
   item("missions", "Missions", "Fly", ["lead", "operator"]),
+  item("physics", "Physics check", "Fly", ["lead", "operator"]),
   item("debrief", "Debrief", "Fly"),
   item("configure", "Loadout planner", "Fly", ["lead", "operator"]),
   item("denial", "GNSS denial map", "Fly", ["lead", "operator"]),
@@ -61,6 +62,7 @@ export const NEROS_NAV: readonly NavItem[] = [
   item("reports", "Field reports", "Learn"),
   item("eval", "Evidence", "Learn"),
   item("configure", "Loadout planner", "Learn"),
+  item("physics", "Physics check", "Learn"),
 ];
 
 /** Every page a workspace has, whether or not this role's rail shows it. */
