@@ -510,3 +510,9 @@
   padding: 8px 10px;
   font: inherit;
 }
+
+.ms-check-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}

@@ -11,6 +11,7 @@ export type Section =
   | "reports"
   | "denial"
   | "configure"
+  | "physics"
   | "brief"
   | "receiving"
   | "accountability"

@@ -1,0 +1,280 @@
+/* Physics check (#physics): findings with fixes, then link, pack and thrust panels. */
+.ph-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 20px;
+  margin-bottom: 16px;
+}
+.ph-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  min-width: 150px;
+}
+.ph-controls label strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.ph-controls select {
+  max-width: 100%;
+  min-width: 260px;
+}
+.ph-controls .dm-check {
+  flex-direction: row;
+  align-items: center;
+}
+.ph-whatif {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--warn);
+  font-size: 12px;
+}
+.ph-v-go {
+  color: var(--ok);
+}
+.ph-v-caution {
+  color: var(--warn);
+}
+.ph-v-no-go {
+  color: var(--danger);
+}
+.ph-outcome {
+  margin: 16px 0 0;
+  padding: 10px 14px;
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  font-size: 13px;
+}
+.page.ph-page > .panel,
+.page.ph-page > .panel:first-of-type,
+.ph-page > .ph-grid,
+.ph-page > .grid-stats {
+  flex: 0 0 auto;
+}
+.ph-findings {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.ph-finding {
+  border-left: 3px solid var(--line-strong);
+  padding: 4px 0 4px 12px;
+}
+.ph-sev-no-go {
+  border-left-color: var(--danger);
+}
+.ph-sev-caution {
+  border-left-color: var(--warn);
+}
+.ph-finding-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+}
+.ph-area {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.ph-title {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.ph-title:hover {
+  color: var(--accent);
+}
+.ph-detail {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.ph-fixes {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.ph-fixes li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  font-size: 13px;
+}
+.ph-fix-detail {
+  color: var(--muted);
+}
+.ph-grid {
+  align-items: start;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.ph-map .rm-map {
+  width: 100%;
+  height: 340px;
+  display: block;
+}
+.ph-emitter {
+  fill: rgba(255, 107, 91, 0.25);
+  stroke: var(--danger);
+  vector-effect: non-scaling-stroke;
+}
+.ph-profile {
+  margin: 12px 0 0;
+}
+.ph-profile svg {
+  width: 100%;
+  height: 150px;
+  display: block;
+  background: var(--surface-2);
+}
+.ph-ground {
+  fill: rgba(135, 148, 163, 0.35);
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+.ph-los {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+.ph-fresnel {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.2;
+  stroke-dasharray: 5 4;
+  opacity: 0.7;
+}
+.ph-cold {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+.ph-warm {
+  fill: none;
+  stroke: var(--warn);
+  stroke-width: 2;
+}
+.ph-cutoff {
+  stroke: var(--danger);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+}
+.ph-table {
+  margin-top: 12px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.ph-table th,
+.ph-table td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.ph-table tbody tr {
+  cursor: pointer;
+}
+.ph-row-sel {
+  background: var(--accent-soft);
+}
+.ph-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.ph-bars li {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 4px 10px;
+  align-items: center;
+  font-size: 12px;
+}
+.ph-bar {
+  position: relative;
+  height: 10px;
+  background: var(--surface-2);
+}
+.ph-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: currentColor;
+}
+.ph-bar-mark {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 1px;
+  background: var(--text);
+}
+.ph-bar-value {
+  grid-column: 2;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.ph-envelope {
+  margin: 16px 0 0;
+}
+.ph-env-grid {
+  position: relative;
+  height: 180px;
+  background: var(--surface-2);
+}
+.ph-env-cell {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid var(--surface);
+  color: var(--text);
+}
+.ph-env-cell.ph-v-go {
+  background: rgba(63, 214, 154, 0.28);
+}
+.ph-env-cell.ph-v-caution {
+  background: rgba(244, 180, 67, 0.32);
+}
+.ph-env-cell.ph-v-no-go {
+  background: rgba(255, 107, 91, 0.36);
+}
+.ph-env-now {
+  outline: 2px solid var(--text);
+  outline-offset: -2px;
+  z-index: 1;
+  font-weight: 700;
+}
+@media (max-width: 640px) {
+  .ph-controls select {
+    min-width: 0;
+    width: 100%;
+  }
+  .ph-fixes li {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
