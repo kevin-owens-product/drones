@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import type { Viewer } from "../shell/types";
+import { Envelope, ThrustBars, type EnvelopeGrid } from "./physics-parts";
 import "./insights.css";
 
 type Jamming = "none" | "light" | "heavy";
@@ -52,6 +53,85 @@ interface Physics {
   source: string;
   airframes: Record<string, Airframe>;
   curves?: Record<string, [number, number][]>;
+}
+
+interface Tonight {
+  source: string;
+  conditions: { temp_c: number; wind_mps: number; gust_mps: number; elev_m: number };
+  pad_window_min: number;
+  airframes: {
+    sku: string;
+    airframe: string;
+    pack: string;
+    cutoff_v: number;
+    sortie_min: number;
+    thrust: { verdict: string; headroom: number; tilt_gust_deg: number; gust_mps: number; density_altitude_m: number };
+    max_wind_mps: number;
+    spare_lift_kg: number;
+    cold: { climb_out_punch_v: number | null; collapse: boolean; cutoff_min: number | null };
+    preheat: { needed: boolean; launch_c: number | null; out_c: number | null; warm_min: number | null; cutoff_min: number | null };
+  }[];
+  envelope: EnvelopeGrid & { sku: string };
+}
+
+/** Each airframe in the planner's air: thrust against a gust, the wind it still flies in, and what a cold pack does on the climb-out. */
+function TonightPanel({ t, sku, setSku }: { t: Tonight; sku: string; setSku: (s: string) => void }) {
+  const c = t.conditions;
+  return (
+    <section className="panel" data-testid="loadout-tonight">
+      <div className="panel-head">
+        <h2>
+          Packs and thrust at {c.temp_c} °C, {c.wind_mps} m/s
+        </h2>
+        <span className="pill pill-warn">SIM</span>
+      </div>
+      <ThrustBars rows={t.airframes.map((a) => ({ tail: a.airframe.replace("Archer ", "A-"), headroom: a.thrust.headroom, verdict: a.thrust.verdict, detail: `${Math.round(a.thrust.headroom * 100)}% thrust in hand in a ${a.thrust.gust_mps} m/s gust · tilt ${a.thrust.tilt_gust_deg}° · flies in up to ${a.max_wind_mps} m/s` }))} />
+      <div className="table-wrap" tabIndex={0}>
+        <table>
+          <thead>
+            <tr>
+              <th>Airframe</th>
+              <th>Pack</th>
+              <th>Climb-out on a cold pack</th>
+              <th>Preheat</th>
+              <th>Standard sortie</th>
+              <th>Spare lift</th>
+            </tr>
+          </thead>
+          <tbody>
+            {t.airframes.map((a) => (
+              <tr key={a.sku}>
+                <td>{a.airframe}</td>
+                <td>{a.pack}</td>
+                <td className="mono" style={{ color: (a.cold.climb_out_punch_v ?? 9) < a.cutoff_v ? "var(--danger)" : undefined }}>
+                  {a.cold.collapse || (a.cold.climb_out_punch_v ?? 9) < 2.5 ? "Voltage collapses" : `${a.cold.climb_out_punch_v} V/cell`} (cutoff {a.cutoff_v} V)
+                </td>
+                <td>{a.preheat.needed ? (a.preheat.launch_c === null ? "Warmer is not enough" : `To ${a.preheat.out_c} °C, ${a.preheat.warm_min} min in the warmer`) : "Not needed"}</td>
+                <td className="mono">{(a.preheat.needed ? a.preheat.cutoff_min : a.cold.cutoff_min) !== null ? `Cutoff at ${a.preheat.needed ? a.preheat.cutoff_min : a.cold.cutoff_min} of ${a.sortie_min} min` : `Holds ${a.sortie_min} min`}</td>
+                <td className="mono">{a.spare_lift_kg} kg</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="meta ph-inline-select">
+        <label>
+          Envelope for{" "}
+          <select value={sku} onChange={(e) => setSku(e.target.value)} aria-label="Envelope airframe">
+            {t.airframes.map((a) => (
+              <option key={a.sku} value={a.sku}>
+                {a.airframe}
+              </option>
+            ))}
+          </select>
+        </label>
+      </p>
+      <Envelope e={t.envelope} />
+      <p className="meta ins-note">
+        A standard sortie climbs to 100 m and cruises for 80% of the airframe's endurance, at the range's {c.elev_m} m elevation (density altitude {t.airframes[0]?.thrust.density_altitude_m ?? 0} m). A cold pack runs out of voltage before energy: resistance rises about 3x by -10 °C, so a full climb pulls the cells under the cutoff. Preheat times assume a heated bag at 40 °C and {t.pad_window_min} minutes on the pad. Thrust falls with air density and the square of pack voltage; gusts are Dryden 3σ, and 30% in hand is the go line. A plan gets the same checks against its own route and terrain on Missions.
+      </p>
+    </section>
+  );
 }
 
 const CURVE_COLORS = ["#7dffc4", "#6cb4ff", "#ffb86b"];
@@ -108,6 +188,8 @@ export function ConfigurePage({ onBanner }: { viewer: Viewer; onBanner: (banner:
   const [r, setR] = useState<Result | null>(null);
   const [physics, setPhysics] = useState<Physics | null>(null);
   const [fault, setFault] = useState("");
+  const [tonight, setTonight] = useState<Tonight | null>(null);
+  const [sku, setSku] = useState("ARCHER-8");
 
   useEffect(() => {
     void api<Physics>("/v1/physics")
@@ -124,6 +206,13 @@ export function ConfigurePage({ onBanner }: { viewer: Viewer; onBanner: (banner:
       })
       .catch((error: unknown) => setFault(error instanceof Error ? error.message : "configure failed"));
   }, [m]);
+
+  useEffect(() => {
+    const q = new URLSearchParams({ temp_c: String(m.temp_c), wind_mps: String(m.wind_mps), sku });
+    void api<Tonight>(`/v1/envelope?${q}`)
+      .then((res) => setTonight(res.body))
+      .catch(() => setTonight(null));
+  }, [m.temp_c, m.wind_mps, sku]);
 
   const num = (k: keyof typeof m, label: string, min: number, max: number, step: number, unit: string) => (
     <label className="cf-field">
@@ -205,6 +294,7 @@ export function ConfigurePage({ onBanner }: { viewer: Viewer; onBanner: (banner:
               </div>
             </section>
           ) : null}
+          {tonight ? <TonightPanel t={tonight} sku={sku} setSku={setSku} /> : null}
           <section className="panel">
             <div className="panel-head">
               <h2>Every option</h2>
@@ -244,7 +334,7 @@ export function ConfigurePage({ onBanner }: { viewer: Viewer; onBanner: (banner:
             <p className="meta ins-note">
               Ranked feasible first, then fewest relays, then price. Power comes from the shared performance model (momentum theory plus a drag area scaled with mass) at {r.assumptions.cruise_mps} m/s airspeed, flown into the wind one way. Packs give{" "}
               {Math.round((r.assumptions.usable_depth ?? 0) * 100)}% of rated energy, 7.5% less per 10 °C below 20 °C, and must keep a {Math.round((r.assumptions.reserve ?? 0) * 100)}% reserve. Links need{" "}
-              {r.assumptions.link_margin_db} dB of margin over free-space loss with a clutter allowance; jamming costs each band an assumed number of dB. Video bandwidth, terrain masking and pack ageing are not modelled.
+              {r.assumptions.link_margin_db} dB of margin over free-space loss with a clutter allowance; jamming costs each band an assumed number of dB. Terrain masking is checked against each plan's route on Missions; pack ageing is not modelled.
               These are textbook approximations, not measured figures.
             </p>
           </section>

@@ -3,6 +3,8 @@ import { api } from "../api";
 import { planLabel, type PlanAssignment } from "../plans";
 import { can, inCustomerView } from "../shell/workspace";
 import { Donut, TileGrid, type Tone } from "../viz/viz";
+import type { PhysicsCheck } from "./physics-parts";
+import "./physics.css";
 
 interface Viewer {
   id: string;
@@ -104,6 +106,87 @@ interface MaintenanceRow {
   tail_number: string;
   summary: string;
   status: string;
+}
+
+/** The selected tail's next planned sortie, flown through terrain, pack and thrust: what to do on the pad. */
+function NextSortie({ tail }: { tail: string }) {
+  const [state, setState] = useState<{ plan: { id: string; name: string; state: string }; check: PhysicsCheck } | null | "none">(null);
+  useEffect(() => {
+    let stopped = false;
+    setState(null);
+    void (async () => {
+      try {
+        const listed = await api<{ items: { id: string; name: string; state: string; tails?: string[]; planned_start?: string | null }[] }>("/v1/missions");
+        const plan = listed.body.items
+          .filter((m) => (m.tails ?? []).includes(tail) && ["draft", "review", "approved"].includes(m.state))
+          .sort((a, b) => String(a.planned_start ?? "").localeCompare(String(b.planned_start ?? "")))[0];
+        if (!plan) {
+          if (!stopped) setState("none");
+          return;
+        }
+        const check = await api<PhysicsCheck>(`/v1/missions/${encodeURIComponent(plan.id)}/physics`);
+        if (!stopped) setState({ plan, check: check.body });
+      } catch {
+        if (!stopped) setState("none");
+      }
+    })();
+    return () => {
+      stopped = true;
+    };
+  }, [tail]);
+  if (state === null || state === "none") return null;
+  const t = state.check.tails.find((x) => x.tail === tail);
+  if (!t) return null;
+  const f = state.check.forecast;
+  const pre = t.pack.preheat;
+  const findings = state.check.findings.filter((x) => x.tail === tail);
+  return (
+    <div className="birth" data-testid="next-sortie">
+      <h3>
+        Next sortie <span className="meta">{state.plan.id}</span>
+      </h3>
+      <p className="meta">
+        {state.plan.name}, {f.temp_c} °C and {f.wind_mps} m/s gusting {f.gust_mps}
+        {f.ew ? ", EW emitter on" : ""}.
+      </p>
+      <ul className="objective-list">
+        <li>
+          <strong>Pack</strong>
+          <span className={pre.needed && !pre.done ? "ph-v-caution" : "meta"}>
+            {pre.done ? `Preheat planned: out of the warmer at ${pre.out_c} °C, launch within 5 min` : pre.needed ? (pre.launch_c === null ? `${t.pack.label} sags under the cutoff even warmed: swap or wait` : `Preheat ${t.pack.label} to ${pre.out_c} °C, about ${pre.warm_min} min in the warmer`) : `${t.pack.label} holds the ${t.pack.cutoff_v} V cutoff cold`}
+          </span>
+        </li>
+        <li>
+          <strong>Link</strong>
+          <span className={t.link.video_lost_s || t.link.c2_lost_s ? "ph-v-caution" : "meta"}>
+            {t.link.video_lost_s ? `No video for ${Math.round(t.link.video_lost_s / 60) || 1} min behind ${t.link.cause === "jamming" ? "the jammer" : "terrain"}` : "Video holds over the terrain"}
+            {t.link.c2_min_db !== null ? `, worst control margin ${t.link.c2_min_db} dB` : ""}
+          </span>
+        </li>
+        <li>
+          <strong>Thrust</strong>
+          <span className={t.thrust.verdict === "go" ? "meta" : "ph-v-caution"}>
+            {Math.round(t.thrust.headroom * 100)}% in hand in a {t.thrust.gust_mps} m/s gust, flies in up to {t.thrust.max_wind_mps} m/s
+          </span>
+        </li>
+      </ul>
+      <p className="meta">
+        {findings.length ? `${findings.length} finding${findings.length > 1 ? "s" : ""} with fixes on the plan. ` : ""}
+        <a
+          href="#missions"
+          onClick={() => {
+            try {
+              sessionStorage.setItem("a2e-mission-id", state.plan.id);
+            } catch {
+              /* the plan list still opens */
+            }
+          }}
+        >
+          Open the plan
+        </a>
+      </p>
+    </div>
+  );
 }
 
 export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (banner: string) => void }) {
@@ -356,6 +439,7 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
                 const plan = plans.find((item) => item.tail_number === selected.tail_number);
                 return plan ? <p><span className="pill pill-ok pill-plan">{planLabel(plan.state, plan.mission_name)}</span></p> : <p className="meta">Standby</p>;
               })()}
+              <NextSortie tail={selected.tail_number} />
               {openMaintenance.map((item) => (
                 <p key={item.id}>
                   <span className="pill pill-warn">{item.id} open</span> {item.summary}{" "}

@@ -516,3 +516,34 @@
   align-items: center;
   gap: 8px;
 }
+
+/* The plan map can show routes or the video link over the terrain. */
+.ms-seg {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+}
+.ms-seg button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.ms-seg button + button {
+  border-left: 1px solid var(--line-strong);
+}
+.ms-seg button.is-on {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.ms-subhead {
+  margin: 16px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.ms-ph-findings {
+  margin-bottom: 12px;
+}

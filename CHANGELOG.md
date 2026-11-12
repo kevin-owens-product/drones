@@ -4,6 +4,7 @@ What shipped, newest first, by release. Each line names the pull request. Everyt
 
 ## Unreleased
 
+- The physics check moves into the pages where its decisions are made: conditions, findings with fixes, the video link over the terrain and packs and thrust on each plan in Missions; packs and the thrust envelope per airframe in the Loadout planner; control and video coverage layers on the Denial map; the next sortie's pad needs on Airframes. The separate page is gone and its link opens Missions
 - Physics check: every plan flown through line of sight over the range's real terrain (with an EW emitter), an electro-thermal pack model and thrust headroom in gusts; findings become fixes that re-plan the mission (relay site, altitude, band, preheat, airframe swap) and launch-check cautions
 - Guided walk for a first visit, ⌘K finds tails and plans, axe accessibility gate in CI (#41)
 - The demo's access rules as a generated matrix and a test; unknown routes answer 404; the ops lead can hold a lot from Attrition

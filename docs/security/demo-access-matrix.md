@@ -37,7 +37,9 @@ What it does not claim: the demo has one scripted fleet and sortie, which each c
 | `/v1/missions` | 200 · 9 | 200 · 9 | 200 · 9 | 200 · 9 | 200 · 9 | 200 · 9 | 200 · 9 |
 | `/v1/intent` | 200 · 4 | 200 · 4 | 200 · 4 | 200 · 4 | 200 · 4 | 200 · 4 | 200 · 4 |
 | `/v1/configure` | 200 | 200 | 200 | 200 | 200 | 200 | 200 · 1 withheld |
+| `/v1/envelope` | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `/v1/denial-map` | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
+| `/v1/coverage` | 200 | 200 | 200 | 200 | 200 | 200 | 200 |
 | `/v1/maintenance` | 200 · 2 | 200 · 2 | 200 · 2 | 200 · 2 | 200 · 2 | 200 · 2 | 200 · 2 |
 
 ### Fleet

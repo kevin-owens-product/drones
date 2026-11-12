@@ -1,4 +1,4 @@
-/* Physics check (#physics): findings with fixes, then link, pack and thrust panels. */
+/* Terrain link, cold pack and thrust pieces, on Missions, the loadout planner, the denial map and Airframes. */
 .ph-controls {
   display: flex;
   flex-wrap: wrap;
@@ -48,12 +48,6 @@
   border: 1px solid var(--accent);
   background: var(--accent-soft);
   font-size: 13px;
-}
-.page.ph-page > .panel,
-.page.ph-page > .panel:first-of-type,
-.ph-page > .ph-grid,
-.ph-page > .grid-stats {
-  flex: 0 0 auto;
 }
 .ph-findings {
   list-style: none;
@@ -277,4 +271,12 @@
     flex-direction: column;
     align-items: stretch;
   }
+}
+.ph-inline-select {
+  margin-top: 16px;
+}
+.page .ph-inline-select select {
+  width: auto;
+  min-width: 140px;
+  margin-left: 6px;
 }

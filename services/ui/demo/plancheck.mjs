@@ -458,10 +458,10 @@ export function createPhysicsCheck(c) {
   function launchChecks(m) {
     const r = run(m, {}, false);
     const out = [];
-    for (const fd of r.findings) out.push({ level: "caution", detail: `${fd.title}: ${firstSentence(fd.detail)} The physics check has ${fd.fixes.length ? "a fix" : "the detail"}.`, area: "physics" });
+    for (const fd of r.findings) out.push({ level: "caution", detail: `${fd.title}: ${firstSentence(fd.detail)}`, area: "physics", finding: fd.id });
     const warmed = r.tails.filter((t) => t.pack.preheat.done);
-    for (const t of warmed) out.push({ level: "go", detail: `${t.tail} pack preheat planned: out of the warmer at ${t.pack.preheat.out_c} °C, launch within ${PACK.pad_window_min} min (physics check).`, area: "physics" });
-    if (!r.findings.length && r.tails.length) out.push({ level: "go", detail: `Physics check: links hold over the terrain, packs hold the cutoff, thrust headroom ${Math.round(Math.min(...r.tails.map((t) => t.thrust.headroom)) * 100)}% or better at ${r.forecast.temp_c} °C and ${r.forecast.wind_mps} m/s (SIM).`, area: "physics" });
+    for (const t of warmed) out.push({ level: "go", detail: `${t.tail} pack preheat planned: out of the warmer at ${t.pack.preheat.out_c} °C, launch within ${PACK.pad_window_min} min.`, area: "physics" });
+    if (!r.findings.length && r.tails.length) out.push({ level: "go", detail: `Terrain, packs and thrust: links hold over the terrain, packs hold the cutoff, thrust headroom ${Math.round(Math.min(...r.tails.map((t) => t.thrust.headroom)) * 100)}% or better at ${r.forecast.temp_c} °C and ${r.forecast.wind_mps} m/s (SIM).`, area: "physics" });
     return out;
   }
 

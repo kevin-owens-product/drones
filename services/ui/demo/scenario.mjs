@@ -6,7 +6,10 @@ import { createCompany } from "./company.mjs";
 import { createOps, NEROS } from "./ops.mjs";
 import { plan as planConfig } from "./configure.mjs";
 import { nameOf, skuForTail } from "./supply.mjs";
-import { denialPicture } from "./denial.mjs";
+import { AREA as DENIAL_AREA, denialPicture } from "./denial.mjs";
+import { coverage } from "./coverage.mjs";
+import { airframesTonight } from "./tonight.mjs";
+import { ground as groundAt } from "./rf.mjs";
 import { PLACES, propose } from "./intent.mjs";
 import { createMissions } from "./missions.mjs";
 import { parseEvalTable } from "./evalrows.mjs";
@@ -959,6 +962,16 @@ export function createDemo(opts = {}) {
         const num = (k, d) => (Number.isFinite(Number(q.get(k))) && q.get(k) !== null ? Number(q.get(k)) : d);
         const jam = ["none", "light", "heavy"].includes(q.get("jamming") ?? "") ? q.get("jamming") : "none";
         return { status: 200, body: planConfig({ range_km: num("range_km", 3), wind_mps: num("wind_mps", 4), temp_c: num("temp_c", 20), loiter_min: num("loiter_min", 5), jamming: jam }) };
+      }
+      if (url.pathname === "/v1/envelope") {
+        const q = url.searchParams;
+        const num = (k, d, lo, hi) => (q.get(k) !== null && Number.isFinite(Number(q.get(k))) ? Math.max(lo, Math.min(hi, Number(q.get(k)))) : d);
+        const wind = num("wind_mps", 4, 0, 20);
+        return { status: 200, body: airframesTonight({ temp_c: num("temp_c", 20, -30, 45), wind_mps: wind, gust_mps: Math.max(wind, num("gust_mps", wind, 0, 30)), elev_m: groundAt(STATION.x, STATION.y), sku: q.get("sku") ?? undefined }) };
+      }
+      if (url.pathname === "/v1/coverage") {
+        const q = url.searchParams;
+        return { status: 200, body: coverage(STATION, DENIAL_AREA, { link: q.get("link") ?? "c2", band: q.get("band") ?? "915", agl_m: Number(q.get("agl_m") ?? 100), ew: q.get("ew") === "1" || q.get("ew") === "true" }) };
       }
       if (url.pathname === "/v1/denial-map") return { status: 200, body: denialPicture(Number(url.searchParams.get("passes") ?? 4)) };
       if (url.pathname.startsWith("/v1/training/")) {

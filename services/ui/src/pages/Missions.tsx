@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { api } from "../api";
 import { MissionRoute } from "./MissionRoute";
 import { RangeMap, colorFor, toMetres, type MapPath, type RangeFrame } from "./RangeMap";
+import { EmitterMark, linkLayer, type Fix, type PhysicsCheck } from "./physics-parts";
+import { ConditionsPanel, LinkDetail, PacksThrustPanel, PhysicsFindings, type Ask } from "./plan-physics";
 import "./plan.css";
 
 interface Viewer {
@@ -37,6 +39,7 @@ interface Check {
   detail: string;
   level?: "go" | "caution" | "no-go";
   area?: string;
+  finding?: string;
 }
 
 interface HistoryStep {
@@ -70,6 +73,8 @@ interface Objective {
   alt_m: number;
   offset_min: number;
   duration_min: number;
+  /** A vehicle on station to relay the radio links (added by a terrain fix). */
+  relay?: boolean;
 }
 
 interface KeepOut {
@@ -297,6 +302,12 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
   const [history, setHistory] = useState<HistoryStep[]>([]);
   const [fault, setFault] = useState("");
   const [busy, setBusy] = useState(false);
+  // The plan flown through terrain, packs and thrust, at the saved forecast or a what-if.
+  const [phys, setPhys] = useState<PhysicsCheck | null>(null);
+  const [ask, setAsk] = useState<Ask>({});
+  const [physTail, setPhysTail] = useState("");
+  const [mapMode, setMapMode] = useState<"routes" | "link">("routes");
+  const [physNote, setPhysNote] = useState("");
 
   async function loadMissions(): Promise<MissionRow[]> {
     const listed = await api<{ items: MissionRow[]; range?: RangeFrame | null }>("/v1/missions");
@@ -387,6 +398,11 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
   }
 
   function choose(mission: MissionRow) {
+    if (mission.id !== selectedId) {
+      setAsk({});
+      setPhys(null);
+      setPhysNote("");
+    }
     setSelectedId(mission.id);
     setDraftName(mission.name);
     setDraftSummary(mission.summary ?? "");
@@ -414,6 +430,7 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
             alt_m: Number(item.alt_m ?? 120),
             offset_min: Number(item.offset_min ?? 0),
             duration_min: Number(item.duration_min ?? 30),
+            ...(item.relay ? { relay: true } : {}),
           })),
       );
       const ready = await api<{ go: boolean; checks: Check[] }>(`/v1/missions/${encodeURIComponent(missionId)}/readiness`);
@@ -429,6 +446,64 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
       setHistory(Array.isArray(h.body.items) ? h.body.items : []);
     } catch {
       setHistory([]);
+    }
+  }
+
+  const askQuery = useMemo(() => {
+    const q = new URLSearchParams();
+    if (ask.temp_c !== undefined) q.set("temp_c", String(ask.temp_c));
+    if (ask.wind_mps !== undefined) q.set("wind_mps", String(ask.wind_mps));
+    if (ask.gust_mps !== undefined) q.set("gust_mps", String(ask.gust_mps));
+    if (ask.ew !== undefined) q.set("ew", ask.ew ? "1" : "0");
+    return q.toString();
+  }, [ask]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    let stopped = false;
+    void api<PhysicsCheck>(`/v1/missions/${encodeURIComponent(selectedId)}/physics${askQuery ? `?${askQuery}` : ""}`)
+      .then((r) => {
+        if (stopped) return;
+        setPhys(r.body);
+        setPhysTail((t) => (r.body.tails.some((x) => x.tail === t) ? t : (r.body.findings[0]?.tail ?? r.body.tails[0]?.tail ?? "")));
+      })
+      .catch(() => {
+        if (!stopped) setPhys(null);
+      });
+    return () => {
+      stopped = true;
+    };
+    // Launch checks reload after every change to the plan, so the physics follows them.
+  }, [selectedId, askQuery, checks]);
+
+  async function applyFix(mission: MissionRow, fix: Fix) {
+    setBusy(true);
+    setPhysNote("");
+    try {
+      const r = await api<{ state: string; note: string }>(`/v1/missions/${encodeURIComponent(mission.id)}/physics`, { method: "POST", body: JSON.stringify({ fix: fix.id, forecast: ask }) });
+      reportBanner.current(r.banner);
+      setPhysNote(`${r.body.note}.`);
+      await loadMissions();
+      await loadObjectives(mission.id);
+    } catch (error) {
+      setPhysNote(error instanceof Error && error.message === "role_denied" ? "Your role cannot change a plan. Planners and mission commanders can." : `That fix could not be applied (${error instanceof Error ? error.message : "error"}).`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveForecast(mission: MissionRow) {
+    if (!phys) return;
+    setBusy(true);
+    try {
+      await api(`/v1/missions/${encodeURIComponent(mission.id)}/forecast`, { method: "POST", body: JSON.stringify(phys.forecast) });
+      setAsk({});
+      setPhysNote(`Forecast saved: launch checks now use ${phys.forecast.temp_c} °C and ${phys.forecast.wind_mps} m/s gusting ${phys.forecast.gust_mps}.`);
+      await loadObjectives(mission.id);
+    } catch (error) {
+      setPhysNote(error instanceof Error && error.message === "role_denied" ? "Your role cannot change a plan's forecast." : "The forecast could not be saved.");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -562,7 +637,11 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
       }))
     : [];
   const nogo = checks.filter((c) => (c.level ? c.level === "no-go" : !c.pass));
-  const caution = checks.filter((c) => c.level === "caution");
+  // With the plan's physics loaded, its findings (with their fixes) stand in for the physics caution lines.
+  const physLive = phys !== null;
+  const shownChecks = physLive ? checks.filter((c) => !(c.area === "physics" && c.level === "caution")) : checks;
+  const caution = [...shownChecks.filter((c) => c.level === "caution"), ...(phys?.findings ?? [])];
+  const editablePlan = selected ? selected.state !== "closed" && selected.state !== "active" : false;
   const stepAllowed = selectedStep ? roleCan(viewer.roles, selectedStep.action) : false;
   // Editing a draft is the planner's job; everyone else reads it.
   const canEdit = ["planner", "mission_commander", "admin"].some((role) => viewer.roles.includes(role));
@@ -661,9 +740,32 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
                 <h2>
                   {selected.name} <span className="meta mono">{selected.id}</span>
                 </h2>
-                <span className={pillClass(selected.state)}>{columnLabel(selected.state)}</span>
+                <span className="ms-check-head">
+                  {phys && range && inRange && phys.tails.length ? (
+                    <span className="ms-seg" role="group" aria-label="Map shows">
+                      <button type="button" className={mapMode === "routes" ? "is-on" : ""} aria-pressed={mapMode === "routes"} onClick={() => setMapMode("routes")}>
+                        Routes
+                      </button>
+                      <button type="button" className={mapMode === "link" ? "is-on" : ""} aria-pressed={mapMode === "link"} onClick={() => setMapMode("link")}>
+                        Video link
+                      </button>
+                    </span>
+                  ) : null}
+                  <span className={pillClass(selected.state)}>{columnLabel(selected.state)}</span>
+                </span>
               </div>
-              {range && inRange ? (
+              {range && inRange && mapMode === "link" && phys ? (
+                <>
+                  <RangeMap range={range} {...linkLayer(phys, physTail)} label="Plan map: each vehicle's planned track coloured by video link margin over the terrain">
+                    <EmitterMark emitter={phys.emitter} />
+                  </RangeMap>
+                  <p className="ins-legend">
+                    <span className="ins-key" style={{ background: "var(--ok)" }} /> Video holds 10 dB or more <span className="ins-key" style={{ background: "var(--warn)" }} /> Under 10 dB <span className="ins-key" style={{ background: "var(--danger)" }} /> No video · C2 on{" "}
+                    {phys.bands.find((b) => b.id === phys.band)?.label}
+                  </p>
+                  <LinkDetail check={phys} tail={physTail} setTail={setPhysTail} />
+                </>
+              ) : range && inRange ? (
                 <RangeMap
                   range={range}
                   paths={planPaths}
@@ -696,6 +798,7 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
               </div>
               <Schedule objectives={objectives} tails={tails} />
             </section>
+            {phys && phys.tails.length ? <PacksThrustPanel check={phys} tail={physTail} setTail={setPhysTail} /> : null}
             <section className="panel">
               <div className="panel-head">
                 <h2>Objectives</h2>
@@ -709,6 +812,7 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
                     <li key={`${objective.kind}-${index}`}>
                       <strong style={{ color: colorFor(tails, objective.tail) }}>
                         {objective.tail || "Unassigned"} · {OBJECTIVE_KINDS.find((item) => item[0] === objective.kind)?.[1]}
+                        {objective.relay ? " · relay" : ""}
                       </strong>
                       <span>{objective.label || "Untitled"}</span>
                       <span className="meta">
@@ -871,34 +975,25 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
                 <p className="empty">Closed. The replay is on Debrief.</p>
               )}
             </section>
+            {phys && phys.tails.length && editablePlan ? <ConditionsPanel check={phys} ask={ask} setAsk={setAsk} canSave={canEdit} busy={busy} onSave={() => void saveForecast(selected)} /> : null}
             {selected.state !== "closed" && selected.state !== "active" ? (
               <section className="panel">
                 <div className="panel-head">
                   <h2>Launch checks</h2>
-                  <span className="ms-check-head">
-                    <a
-                      className="btn btn-quiet"
-                      href="#physics"
-                      onClick={() => {
-                        try {
-                          sessionStorage.setItem("a2e-physics-mission", selected.id);
-                        } catch {
-                          /* the check opens on its default plan */
-                        }
-                      }}
-                    >
-                      Physics check
-                    </a>
-                    <span className={nogo.length ? "pill pill-warn" : "pill pill-ok"}>{nogo.length ? `No-go · ${nogo.length}` : caution.length ? `Go · ${caution.length} caution` : "Go"}</span>
-                  </span>
+                  <span className={nogo.length ? "pill pill-warn" : "pill pill-ok"}>{nogo.length ? `No-go · ${nogo.length}` : caution.length ? `Go · ${caution.length} caution` : "Go"}</span>
                 </div>
-                {checks.length === 0 ? (
-                  <p className="empty">No launch check yet.</p>
-                ) : (
-                  <ul className="ms-checks">
-                    {[...checks]
-                      .sort((a, b) => ["no-go", "caution", "go"].indexOf(a.level ?? (a.pass ? "go" : "no-go")) - ["no-go", "caution", "go"].indexOf(b.level ?? (b.pass ? "go" : "no-go")))
-                      .map((check) => {
+                {physNote ? (
+                  <p className="ph-outcome" role="status">
+                    {physNote}
+                  </p>
+                ) : null}
+                {shownChecks.length === 0 && !phys?.findings.length ? <p className="empty">No launch check yet.</p> : null}
+                {/* What blocks or warns first, then the physics findings with their fixes, then what passes. */}
+                <ul className="ms-checks">
+                  {[...shownChecks]
+                    .filter((c) => (c.level ?? (c.pass ? "go" : "no-go")) !== "go")
+                    .sort((a, b) => ["no-go", "caution"].indexOf(a.level ?? (a.pass ? "go" : "no-go")) - ["no-go", "caution"].indexOf(b.level ?? (b.pass ? "go" : "no-go")))
+                    .map((check) => {
                         const level = check.level ?? (check.pass ? "go" : "no-go");
                         return (
                           <li key={check.detail}>
@@ -907,11 +1002,34 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
                           </li>
                         );
                       })}
-                  </ul>
-                )}
-                {checks.some((c) => c.area === "physics" && c.level !== "go") ? (
+                </ul>
+                {phys ? (
+                  <PhysicsFindings
+                    check={phys}
+                    state={selected.state}
+                    canFix={canEdit}
+                    busy={busy}
+                    onApply={(fix) => void applyFix(selected, fix)}
+                    onFocus={(fd) => {
+                      setPhysTail(fd.tail);
+                      if (fd.area === "link") setMapMode("link");
+                    }}
+                  />
+                ) : null}
+                <ul className="ms-checks">
+                  {shownChecks.filter((c) => (c.level ?? (c.pass ? "go" : "no-go")) === "go").map((check) => {
+                        const level = check.level ?? (check.pass ? "go" : "no-go");
+                        return (
+                          <li key={check.detail}>
+                            <span className={`ms-lv ms-lv-${level}`}>{level}</span>
+                            <span>{check.detail}</span>
+                          </li>
+                        );
+                      })}
+                </ul>
+                {phys?.findings.length ? (
                   <p className="meta">
-                    Terrain, cold-pack and thrust findings come from the <a href="#physics" onClick={() => sessionStorage.setItem("a2e-physics-mission", selected.id)}>physics check</a>, which has the fixes.
+                    Terrain, cold-pack and thrust findings fly this plan in the conditions above (SIM). A fix to a plan in review or approved sends it back to draft. {canEdit ? "" : "Planners and mission commanders apply fixes."}
                   </p>
                 ) : null}
                 {checks.some((c) => /held lot|ESC-2611/.test(c.detail)) ? (
