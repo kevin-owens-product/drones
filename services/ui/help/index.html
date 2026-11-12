@@ -33,7 +33,7 @@
           </div>
           <div class="quick">
             <a href="#start"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 12h14M13 6l6 6-6 6" /></svg><b>Getting started</b><span>Sign in and find your way in five minutes.</span></a>
-            <a href="#operate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8" /><path d="M12 4v4M12 16v4M4 12h4M16 12h4" /></svg><b>Fly and supervise</b><span>Operate, launch readiness, Brief and Debrief.</span></a>
+            <a href="#operate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8" /><path d="M12 4v4M12 16v4M4 12h4M16 12h4" /></svg><b>Fly and supervise</b><span>Operate, launch readiness, Brief, Missions and Debrief.</span></a>
             <a href="#fleet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="5" width="16" height="14" rx="2" /><path d="M4 10h16M9 5v14" /></svg><b>Keep the record</b><span>Airframes, holds, configuration, readiness.</span></a>
             <a href="#queue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M4 12h10M4 17h7" /></svg><b>Run operations</b><span>Work queue, quotes, bids, surge, fix loop.</span></a>
           </div>
@@ -54,7 +54,8 @@
           <a href="#launch">Launch readiness</a>
           <a href="#contested">Jamming, VIO and lost link</a>
           <a href="#brief">Brief and two-person approval</a>
-          <a href="#debrief">Missions, replay and debrief</a>
+          <a href="#debrief">Missions, launch checks and debrief</a>
+          <a href="#loadout">Loadout planner</a>
           <h4>Keep the record</h4>
           <a href="#fleet">Airframes and birth records</a>
           <a href="#holds">Quality holds and work orders</a>
@@ -86,7 +87,7 @@
               <li>Open the <a href="/#home">console</a> and sign in with the account you were given (see <a href="#accounts">demo accounts</a>).</li>
               <li>A customer account opens on <b>Operate</b>. A manufacturer account opens on the <b>Work queue</b>.</li>
               <li>Press <kbd>⌘K</kbd> (or <kbd>Ctrl K</kbd>) to jump to any vehicle, plan, page or filter. Press <kbd>?</kbd> for the shortcut sheet. <b>Walk the demo</b> in ⌘K opens a guided walk through the loop; it opens by itself on a first visit from an invite link.</li>
-              <li>Take an action, then sign out and sign in as the other side to see its effect. Demo state lives in your browser tab, so it carries across accounts. Reloading starts the scenario over.</li>
+              <li>Take an action, then sign out and sign in as the other side to see its effect. Demo state lives in your browser tab, so it carries across accounts and survives a reload. A new tab starts fresh, and <b>Reset the demo data</b> in ⌘K clears it.</li>
             </ol>
             <div class="callout">Every page shows <code>UNCLASSIFIED // DEMO DATA</code> in the banner, and every simulated figure carries a <code>SIM</code> label.</div>
             <a class="btn btn-sm go" href="/#operate">Open Operate →</a>
@@ -97,6 +98,7 @@
             <h2>What's new</h2>
             <p>The newest things in the console, with the full list in the repository's <a href="https://github.com/kevin-owens-product/drones/blob/cursor/a2e-mission-cloud/CHANGELOG.md">CHANGELOG.md</a>.</p>
             <ul class="steps">
+              <li><b>Each role's journey, tested end to end.</b> A bot for every demo account walked its journey from this site through sign-in and pressed every button on every page, on a laptop and a phone. What it found is fixed: a customer no longer sees other customers on Releasability, an allied tenant sees its fleet as its own, a button your role cannot use is greyed out with the reason instead of failing, empty tables say what to do next, and drawers and the palette close with <kbd>Esc</kbd>.</li>
               <li><b>Energy, radio shadow and pack ageing.</b> Debrief shows where each vehicle's energy went (lift, drag, climb, wind, cold) and its link margin over the terrain along the flown track. Operate has a Radio shadow layer for where the control link goes thin behind terrain. Stockpile health charts each stored pack's capacity and what a storage charge or a cooler store buys.</li>
               <li><b>Wind over terrain, camera height and wear.</b> Missions has a Wind view on the plan map: where the terrain speeds the forecast wind up and where the air sinks on a lee slope, with what that costs each vehicle. Brief shows what each camera sees of each task by height, and a commander can set the height before approving. Airframes shows each tail's wear by how it was flown, not only its hours, and lets a maintainer ground it for a check.</li>
               <li><b>Terrain, cold packs and thrust, on the pages that use them.</b> Each plan in Missions is flown through the terrain between it and the GCS, a battery that sags in the cold and the thrust left in a gust, in the conditions you set; findings sit in Launch checks with a fix (a relay on the ridge, a higher leg, a band the jammer misses, a pack preheat, a different airframe) that goes into the plan. The Loadout planner shows packs and thrust for every airframe, the Denial map shows where the control and video links hold, and Airframes shows what a tail's next sortie needs on the pad.</li>
@@ -151,6 +153,7 @@
               <li><span class="tag tag-sitl">PX4 SITL</span> PX4 v1.18 flies in SIH with its own EKF2, and the onboard code closes the loop over MAVLink.</li>
               <li><span class="tag tag-unit">Unit check</span> The onboard C module runs open loop against a synthetic or recorded stream.</li>
               <li><span class="tag tag-sim">SIM</span> Demo scenario data: fleets, customers, orders, prices, lots, losses and training records.</li>
+              <li><span class="tag tag-sim">SIM</span> The physics: power, battery, wind over terrain, radio links, thrust, camera optics, pack ageing and wear. The terrain is real (SRTM); every coefficient is an assumption written out in the source, not a Neros figure or a flight-test result.</li>
             </ul>
             <p>Manufacturer catalog items appear as published. Other vendors appear under generic labels, never real product names. Prices are planning assumptions, not anyone's price list.</p>
           </article>
@@ -163,6 +166,8 @@
               <li><b>The list sorts by need.</b> Vehicles that need you rise to the top with the reason: link lost, GNSS rejected by the spoof gate, low battery, grounded.</li>
               <li><b>The map works air-gapped.</b> Terrain is baked offline. Overlays show survey coverage, the jamming zone, each VIO error circle, link quality and the current task allocation. Every overlay is labeled <code>SIM</code>.</li>
               <li><b>3D</b> shows the same picture in relief, each vehicle at its height above ground and the jamming zone as a dome (heights ×2).</li>
+              <li><b>Radio shadow.</b> Each vehicle's link quality is its margin to the ground station over the terrain, not distance alone. The <b>Radio shadow</b> layer shades where control at 100 m goes thin or is lost behind a ridge.</li>
+              <li><b>Bingo.</b> Every vehicle flies one performance model: power against airspeed, a pack that sags under load, a gusting wind. When the reserve would not survive the rest of the plan it turns for home, and the list says how many minutes it has left against minutes home. In the demo NX-06 bingoes and lands.</li>
               <li><b>Replay.</b> Drag the timeline, or use <kbd>←</kbd> <kbd>→</kbd>, to see what the console received at any moment.</li>
               <li><b>Field report.</b> Select a vehicle and press <kbd>R</kbd> to file what you saw. Reports feed the fleet's record.</li>
             </ul>
@@ -210,7 +215,7 @@
             <h2>Jamming, VIO and lost link</h2>
             <p><b>GNSS rejected.</b> When the spoof gate rejects GNSS, the vehicle navigates on visual-inertial odometry. The map draws its position error as a circle that grows with distance flown (an assumed 1% in the demo). NX-04 orbits inside the jamming zone to show it.</p>
             <p><b>Lost link.</b> A vehicle that stops reporting goes stale after 20 seconds and rises to the top of the list. Its tasks go back to the fleet, and the remaining vehicles re-plan with CBBA. NX-07 drops off the link about every 100 seconds in the demo.</p>
-            <p><b>Denial map.</b> The Denial map page builds a picture of where GNSS was denied or rejected from repeated passes, so the next plan can route around it.</p>
+            <p><b>Denial map.</b> The Denial map page builds a picture of where GNSS was denied or rejected from repeated passes, so the next plan can route around it. Its <b>Control link</b> and <b>Video link</b> layers show the margin from the ground-station mast to every 200 m cell at the height, band and jammer state you choose.</p>
             <a class="btn btn-sm go" href="/#denial">Open the Denial map →</a>
           </article>
 
@@ -222,16 +227,32 @@
               <li>The console proposes a plan: areas, vehicles, reserves, and which vehicles it left out and why (low battery, grounded, on hold).</li>
               <li>A planner or mission commander approves it. The person who wrote the brief cannot approve their own plan.</li>
             </ol>
+            <p><b>Camera height.</b> Before approving, the commander sees what each assigned camera gets of each task at each height: pixels on a person, the width of a survey strip, the ground hidden behind trees and buildings, and the video margin back to the station. The height they pick is filed with the plan.</p>
             <p>The parser is a fixed grammar that runs offline. There is no language model in the loop, so the same words always give the same plan.</p>
             <div class="callout warn">Operators can read a Brief but cannot approve one. The refusal is written to the audit log.</div>
             <a class="btn btn-sm go" href="/#brief">Open Brief →</a>
           </article>
 
-          <article class="article" id="debrief" data-tags="missions plans debrief replay export timeline launch checks">
-            <div class="meta"><span class="tag">Fly</span></div>
-            <h2>Missions, replay and debrief</h2>
-            <p><b>Missions</b> lists every plan with its launch checks, tied to the same fleet record as Operate. <b>Debrief</b> replays a mission deterministically and exports the timeline with its marking.</p>
+          <article class="article" id="debrief" data-tags="missions plans debrief replay export timeline launch checks physics wind terrain energy cold pack thrust video link conditions fixes">
+            <div class="meta"><span class="tag">Fly</span><span class="tag">Commander</span></div>
+            <h2>Missions, launch checks and debrief</h2>
+            <p><b>Missions</b> lists every plan by stage (draft, review, approved, active, closed) with its launch checks, tied to the same fleet record as Operate. Pick a plan to see why it is a go or a no-go.</p>
+            <ul>
+              <li><b>Conditions at launch.</b> Set the air temperature, wind, wind direction, gusts and whether an EW emitter is on. It is a what-if until a planner saves it, and every check below re-runs in that air.</li>
+              <li><b>Launch checks with fixes.</b> Besides the fleet record (a grounded tail, a low pack, a two-person rule), each plan is flown through the terrain, a pack that sags in the cold and the thrust left in a gust. A finding comes with a fix you can apply: a relay on the ridge, a higher leg, a band the jammer misses, a pack preheat, a bigger pack or a different airframe. Applying it changes the plan, and the checks run again.</li>
+              <li><b>The plan map.</b> Switch between <b>Routes</b>, <b>Video link</b> (the link colored over the terrain, with the worst terrain profile) and <b>Wind</b> (where the terrain speeds the forecast wind up, where the air sinks on a lee slope, and what that costs each tail).</li>
+              <li><b>Packs and thrust.</b> Each tail's cell voltage through the sortie, preheat advice and thrust in hand.</li>
+            </ul>
+            <p>In the demo, M-1034 (Road junction overwatch) is the no-go to open: a low pack, a grounded tail and plans that need more energy than the packs give.</p>
+            <p><b>Debrief</b> replays a mission deterministically and exports the timeline with its marking. <b>Where the energy went</b> splits each tail's watt-hours into lift, blades, drag, climb, wind and cold, and the link margin is plotted over the terrain along the flown track, so you can tell whether a drop-out was the terrain.</p>
             <a class="btn btn-sm go" href="/#missions">Open Missions →</a>
+          </article>
+          <article class="article" id="loadout" data-tags="loadout planner configure battery pack band variant thrust envelope cold preheat gust">
+            <div class="meta"><span class="tag">Fly</span><span class="tag">Commander</span></div>
+            <h2>Loadout planner</h2>
+            <p>Pick the airframe variant, battery and radio band for a mission and see the margins before anything is ordered or flown: endurance with reserve, link range and how each choice holds up in the cold.</p>
+            <p><b>Packs and thrust</b> shows every airframe in the planner's temperature and wind: cold climb-out voltage, preheat time, cutoff on a standard sortie, thrust in a gust, the strongest wind it can still go in, and spare lift. The power curves come from the same performance model the live sortie flies.</p>
+            <a class="btn btn-sm go" href="/#configure">Open the Loadout planner →</a>
           </article>
 
           <article class="article" id="fleet" data-tags="fleet airframes birth record serial bench eol end of line lots firmware calibration">
@@ -239,6 +260,8 @@
             <h2>Airframes and birth records</h2>
             <p>Every airframe has a birth record from the end-of-line bench: its serial, the lot of every major part, its calibrations, its firmware hash and the bench test result. The record decides airworthiness, so a failed hover test grounds the serial before it ships.</p>
             <p>Field events attach to the same serial: receiving, sorties, swaps, reports, losses. That is what lets the attrition autopsy find a bad lot.</p>
+            <p><b>Wear by flight load.</b> A tail flown hard wears faster than its hours say. For the selected tail the page shows each motor's bearing life and the arm fatigue from hard landings against a flat hours schedule, and a maintainer can ground it for a check.</p>
+            <p><b>Next sortie.</b> What the tail's next plan needs on the pad: preheat, link and thrust, with a link to the plan.</p>
             <a class="btn btn-sm go" href="/#fleet">Open Airframes →</a>
           </article>
 
@@ -272,6 +295,7 @@
             <div class="meta"><span class="tag">Record</span></div>
             <h2>Stockpile health</h2>
             <p>Pack age, charge and storage temperature per serial. An over-age or retired pack holds its airframe from ready; rotating the pack restores it. Holds feed the readiness count on All vendors.</p>
+            <p>A pack also loses capacity on the shelf. The page models calendar ageing for each stored pack from its charge and storage temperature, and charts what a storage charge or a cooler store would buy.</p>
             <a class="btn btn-sm go" href="/#stockpile">Open Stockpile health →</a>
           </article>
 
@@ -349,11 +373,11 @@
             <div class="meta"><span class="tag">FAQ</span></div>
             <h2>Frequently asked questions</h2>
             <h3>How do I reset the demo?</h3>
-            <p>Reload the page. The scenario starts over; your sign-in lasts 12 hours.</p>
+            <p>Press <kbd>⌘K</kbd> and choose <b>Reset the demo data</b>, or open a new tab. A reload keeps what you did, so you can come back to it; your sign-in lasts 12 hours.</p>
             <h3>Why did an action say "role_denied"?</h3>
             <p>Your role cannot do it. That is the point of the demo: sign in as the role that can, and the refusal stays in the audit log.</p>
             <h3>Does it work on a phone?</h3>
-            <p>Yes for reading and acting on queues. The Operate screen is built for a laptop or a ground-station display.</p>
+            <p>Yes for reading and acting on queues, plans and the fleet: the menu folds into a drawer and the guided walk starts folded so it does not cover the page. The Operate screen is built for a laptop or a ground-station display.</p>
             <h3>Is this a Neros product?</h3>
             <p>No. It is an independent concept by Kevin Owens. Manufacturer catalog items appear as published; everything else is simulated.</p>
             <h3>Where is the API?</h3>

@@ -4,14 +4,29 @@ What shipped, newest first, by release. Each line names the pull request. Everyt
 
 ## Unreleased
 
-- Physics in three more decisions: Missions flies each plan through the wind the terrain makes of the forecast (speed-up over crests, lee wake, sinking air on lee slopes), with a Wind view on the plan map, a wind direction in the conditions and findings that offer a height or a bigger pack; Brief shows what each assigned camera sees of each task by height (pixels on a person, strip coverage or ground hidden behind obstacles, video margin) and files the height the commander picks; Airframes shows wear by flight load per tail (bearing life per motor, arm fatigue from hard landings) against a flat hours schedule, with a ground-for-check action
-- More physics where decisions are made: Operate prices each station link over the terrain and can shade the radio shadow on the live map; Debrief splits every tail's energy by where it went (lift, blades, drag, climb, wind, cold) and plots link margin over the terrain along the flown track, saying whether a drop-out was the terrain; Stockpile health models calendar ageing of each stored pack and charts what a storage charge or a cooler store buys
-- The physics check moves into the pages where its decisions are made: conditions, findings with fixes, the video link over the terrain and packs and thrust on each plan in Missions; packs and the thrust envelope per airframe in the Loadout planner; control and video coverage layers on the Denial map; the next sortie's pad needs on Airframes. The separate page is gone and its link opens Missions
-- Physics check: every plan flown through line of sight over the range's real terrain (with an EW emitter), an electro-thermal pack model and thrust headroom in gusts; findings become fixes that re-plan the mission (relay site, altitude, band, preheat, airframe swap) and launch-check cautions
+- Documentation rebuilt against the current build: README, help center (Missions and launch checks, a Loadout planner guide, physics on Operate, Brief, Airframes, Stockpile and the Denial map), the product page's Plan tab and screenshots, the developer explorer's Physics routes, and a script that retakes every screenshot (`services/ui/e2e/docs/shots.mjs`)
+
+## Physics in the pages (2026-11-12)
+
+- Persona journey swarm: a bot per demo account walks the site, sign-in and every button on every page at laptop and phone widths; its findings fixed (a customer no longer sees other customers on Releasability, an allied tenant sees its fleet as its own, role-refused buttons are disabled with the reason, empty tables link to the next step, drawers and the palette close with Esc, the guided walk can fold) (#52)
+- Wind over terrain on Missions (a Wind view on the plan map, wind direction in the conditions, findings that offer a height or a bigger pack); camera height on Brief (what each camera sees of each task by height, filed before approval); wear by flight load on Airframes (bearing life per motor, arm fatigue from hard landings, ground for a check) (#51)
+- Physics in Operate (station links over terrain, a Radio shadow layer), Debrief (where each tail's energy went, link margin over the flown track) and Stockpile health (calendar ageing per stored pack, what a storage charge or a cooler store buys) (#50)
+- The physics check moves into the pages where its decisions are made: conditions, findings with fixes, the video link over the terrain and packs and thrust on each plan in Missions; packs and the thrust envelope in the Loadout planner; control and video coverage on the Denial map; the next sortie on Airframes. `#physics` now opens Missions (#49)
+- Physics check: plans flown through line of sight over the range's real terrain with an EW emitter, an electro-thermal pack model and thrust headroom in gusts; findings become fixes that re-plan the mission (#48)
+
+## Tracker, bid and demo state (2026-11-09)
+
+- Second closed-loop tracker rerun with the motion gate: v2 still ends on a parked look-alike in 2 of 5 runs, recorded as an open problem (#47)
+- The hosted demo keeps your actions across a reload; a new tab or ⌘K "Reset the demo data" starts fresh (#46)
+- PostGIS image build retries serially when the parallel make races (#45)
+- Army Drone Marketplace CSO solution brief and submission plan (#44)
+- Tracker motion gate: refuse a match that stops or jumps while the target is moving, and hand back to the operator (#23)
+
+## Enhancement sweep (2026-11-05)
+
 - Guided walk for a first visit, ⌘K finds tails and plans, axe accessibility gate in CI (#41)
-- The demo's access rules as a generated matrix and a test; unknown routes answer 404; the ops lead can hold a lot from Attrition
-- Every page except the two homes loads on first open: the console's entry script drops from 1.75 MB to 0.33 MB
-- This changelog, and a What's new page in the help center
+- The demo's access rules as a generated matrix and a test; unknown routes answer 404; the ops lead can hold a lot from Attrition (#42)
+- Every page except the two homes loads on first open: the console's entry script drops from 1.75 MB to 0.33 MB; this changelog, and a What's new page in the help center (#43)
 
 ## Performance model (2026-11-04)
 

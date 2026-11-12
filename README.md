@@ -1,8 +1,10 @@
 # Drone Mission Cloud
 
-Flight software and an autonomy testbed for small quadcopters. Simulated vehicles fly through PX4 and Betaflight, a MAVLink gateway, and one ground-control screen. The same loop measures GPS-denied navigation, operator-designated visual tracking, and multi-vehicle tasking.
+Flight software, an autonomy testbed and a fleet platform for small quadcopters. Simulated vehicles fly through PX4 and Betaflight, a MAVLink gateway, and one ground-control screen. The same loop measures GPS-denied navigation, operator-designated visual tracking, and multi-vehicle tasking.
 
-![The Operate screen: vehicles that need the operator first, a tactical picture, the flight display, and the event timeline](docs/media/operate.gif)
+Around that loop sits one platform with two sides: the manufacturer runs its operations from a work queue, and each customer runs its own fleet, plans against the physics, keeps the per-serial record and asks the maker for resupply. Everything in the hosted demo at drones.productexec.co is simulated and labelled `SIM`.
+
+![The Operate screen: vehicles that need the operator first, the map with its layers, the flight display for NX-06 after its bingo, and the event timeline](docs/media/operate.png)
 
 The console is one Operate screen. Vehicles that need the operator sort to the top with the reason (link lost, GNSS rejected by the spoof gate, low battery). The tactical picture is a local metric plane that needs no map tiles, so it works air-gapped. `⌘K` jumps to any vehicle, page, or filter, and `J`/`K`, `F`, `A`, `L`, and `/` drive it from the keyboard. It monitors; it does not send flight commands.
 
@@ -12,13 +14,34 @@ To see it without the stack:
 cd services/ui && npm ci && npm run build && npm run demo   # http://localhost:4173
 ```
 
-The demo server plays a scripted sortie, nine vehicles in the air and three on the pad, and marks every page `DEMO DATA`.
+The demo server plays a scripted sortie, nine vehicles in the air and three on the pad, and marks every page `DEMO DATA`. The local server signs you in as a commander who is also a maintainer and shows every page; the hosted build signs in by role (below).
 
 Every named vehicle in the demo flies one performance model (`demo/physics.mjs`): momentum-theory power against airspeed, a 5 m/s gusting wind it crabs into and slows against, bank-limited turns, a LiPo pack that sags under load, a radio link budget, and a bingo rule that turns it for home when the reserve would not survive the plan. The flight display shows attitude, wind, power and minutes left against minutes home; the same model prices every plan's energy in the launch checks and the debrief, and the Python supervision sweep uses a port of it. All coefficients are assumptions written out in the file, not Neros figures. [Design](docs/design/physics.md).
 
-The map draws the operating picture from the demo scenario, each overlay labelled `SIM`: real terrain baked offline, survey coverage filling in, a GNSS jamming zone with the position error of the vehicle flying on VIO, link quality, and task lines that re-plan when NX-07 drops off the link about every 100 s. Drag the timeline to replay what the console received. For the fleet-scale view, run a second server with `A2E_DEMO_FLEET=300 PORT=4174 npm run demo`. Press **3D** on the map for the same picture in relief: real terrain, each vehicle at its height above ground, the jamming zone as a dome (heights ×2). [Design](docs/design/operating-picture.md).
+The map draws the operating picture from the demo scenario, each overlay labelled `SIM`: real terrain baked offline, survey coverage filling in, a GNSS jamming zone with the position error of the vehicle flying on VIO, link quality priced over the terrain (with a Radio shadow layer for where control at 100 m goes thin), and task lines that re-plan when NX-07 drops off the link about every 100 s. Drag the timeline to replay what the console received. For the fleet-scale view, run a second server with `A2E_DEMO_FLEET=300 PORT=4174 npm run demo`. Press **3D** on the map for the same picture in relief: real terrain, each vehicle at its height above ground, the jamming zone as a dome (heights ×2). [Design](docs/design/operating-picture.md).
 
 ![The Operate map with terrain, survey coverage, the jamming zone, link quality and task allocation](docs/media/operating-picture.png)
+
+### Physics where the decision is made
+
+![Missions: plan M-1034's Wind view, the forecast wind over the range's terrain with what it costs each tail, beside its conditions and launch checks](docs/media/missions-wind.png)
+
+The performance model, a terrain radio model, an electro-thermal pack model, a thrust envelope, wind over terrain, camera optics, pack ageing and wear by flight load each show up on the page where someone acts on them. There is no separate physics page.
+
+| Page | What it adds | Route |
+| --- | --- | --- |
+| Missions (selected plan) | Conditions at launch (temperature, wind and direction, gusts, EW emitter); findings in Launch checks, each with a fix that re-plans (relay, height, band, preheat, airframe); Routes, Video link and Wind views of the plan map; packs and thrust per tail | `GET/POST /v1/missions/{id}/physics` |
+| Brief | What each assigned camera sees of each task by height (pixels on a person, strip width, ground hidden, video margin); the commander sets the height before approval | `POST /v1/intent/height` |
+| Loadout planner | Packs and thrust per airframe in the planner's temperature and wind | `GET /v1/envelope` |
+| Denial map | Control link and Video link coverage beside the GNSS layer | `GET /v1/coverage` |
+| Operate | Station links over terrain, Radio shadow layer, bingo and RTL from the performance model | `GET /v1/physics` |
+| Debrief | Where each tail's energy went (lift, blades, drag, climb, wind, cold); link margin over the terrain along the flown track | |
+| Airframes | Next sortie's pad needs; wear by flight load (bearing life per motor, arm fatigue) against a flat hours schedule, with ground-for-check | `GET /v1/wear` |
+| Stockpile health | Calendar ageing per stored pack, and what a storage charge or a cooler store buys | |
+
+The terrain is real (SRTM); every coefficient is an assumption written out in `services/ui/demo/*.mjs`, not a Neros figure or a flight-test result. [Performance model](docs/design/physics.md), [physics in the pages](docs/design/physics-check.md).
+
+![Airframes: wear by flight load for one tail, bearing life per motor and arm fatigue against a flat hours schedule](docs/media/airframes-wear.png)
 
 ### Product site, help and developers
 
@@ -28,7 +51,22 @@ The hosted build also publishes a product site at `/product/`, a help center at 
 
 `npm run build:static` builds a version with no server: the same scenario code (`demo/scenario.mjs`) answers the console's API calls in the browser. `render.yaml` (a Render Blueprint) builds and publishes it at drones.productexec.co. Add `?fleet=300` to the URL for the fleet-scale view.
 
-The hosted build opens on a sign-in page with four demo accounts, one per role: `admin`, `commander` (mission commander and planner), `operator` and `maintainer`. Passwords are shared out of band; `src/staticDemo.ts` holds only salted SHA-256 hashes. The check runs in the browser because there is no server, so it keeps casual visitors and search engines out (the page is also `noindex`) but is not a security boundary. The local `npm run demo` still signs you in automatically.
+The hosted build opens on a sign-in page with six demo accounts:
+
+| Account | Workspace | Lands on |
+| --- | --- | --- |
+| `admin` | Neros, with a switch to the customer view | Work queue |
+| `ops` | Neros operations (ops lead) | Work queue |
+| `commander` | Customer A, mission commander and planner | Operate |
+| `operator` | Customer A, operator | Operate |
+| `maintainer` | Customer A, maintainer | Airframes |
+| `allied` | Customer C, an allied tenant: withheld fields never reach the browser | Operate |
+
+The left rail is shaped by role: each person sees the pages their work runs through, grouped (Fly, Fleet, Supply, Learn for a customer; Deliver, Make, Sell, Learn for Neros), with counts of what is waiting on them. Every other page in the workspace is one `⌘K` away, and a button the role cannot use is disabled with the reason. A first visit from an invite link opens a guided walk through the loop. The generated [access matrix](docs/security/demo-access-matrix.md) is what a test holds the demo's rules to.
+
+![The Neros work queue: every open item with the action that clears it](docs/media/work-queue.png)
+
+Passwords are shared out of band, or as a one-link `?invite=` that signs in and removes the token from the address bar; `src/staticDemo.ts` holds only salted SHA-256 hashes. The check runs in the browser because there is no server, so it keeps casual visitors and search engines out (the page is also `noindex`) but is not a security boundary. Demo state lives in the browser tab: it carries across sign-ins and survives a reload, and a new tab or `⌘K` "Reset the demo data" starts fresh. The local `npm run demo` still signs you in automatically.
 
 ### Launch readiness
 
@@ -81,6 +119,8 @@ make test
 ```
 
 `make test` is the unit suite. `make ci` is lint, OPA, and that suite.
+
+The console has its own checks in `services/ui`: `npm run e2e` (Playwright, including an axe accessibility gate on fifteen pages), `node --test demo/*.test.mjs` for the scenario engine and access rules, and the persona journey swarm (`e2e/swarm/README.md`), a bot per demo account that walks the site, signs in and presses every button on every page at laptop and phone widths. `node e2e/docs/shots.mjs` retakes the screenshots in this README, the product site and the help center from the current build.
 
 ## Results
 
