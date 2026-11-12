@@ -11,6 +11,8 @@ import { coverage } from "./coverage.mjs";
 import { airframesTonight } from "./tonight.mjs";
 import { RF, ground as groundAt, hop as rfHop } from "./rf.mjs";
 import { PLACES, propose } from "./intent.mjs";
+import { OPTICS, lookFor, relaysOf } from "./optics.mjs";
+import { describeWear, logFor, verdictOf, wearFor } from "./wear.mjs";
 import { createMissions } from "./missions.mjs";
 import { parseEvalTable } from "./evalrows.mjs";
 import { FLEET_SHARE, fileReport, seedReports, triage } from "./fieldvoice.mjs";
@@ -651,8 +653,14 @@ export function createDemo(opts = {}) {
       return b ? { tail: c.tail, x, y, available: true, busy: `flying ${b.id} (${b.name})` } : { tail: c.tail, x, y, available: true };
     });
   }
+  /** A proposal with what each assigned camera sees of each task, by height (demo/optics.mjs). */
+  function withLook(p) {
+    const placeOf = (id) => PLACES.find((x) => x.id === id);
+    const relays = relaysOf(p.plan, placeOf);
+    return { ...p, plan: p.plan.map((t) => ({ ...t, look: lookFor(t, placeOf(t.place), skuForTail, STATION, relays) })) };
+  }
   function intent(method, url, raw) {
-    if (method !== "POST") return { status: 200, body: { items: proposals.slice().reverse() } };
+    if (method !== "POST") return { status: 200, body: { items: proposals.slice().reverse().map(withLook) } };
     let msg = {};
     try {
       msg = JSON.parse(raw);
@@ -665,7 +673,20 @@ export function createDemo(opts = {}) {
       p.at = new Date().toISOString();
       proposals.push(p);
       audit.append({ actor: caller?.display_name ?? "operator", action: "brief.propose", resource_type: "proposal", resource_id: p.id, detail: String(msg.brief ?? "").slice(0, 80) });
-      return { status: 200, body: p };
+      return { status: 200, body: withLook(p) };
+    }
+    if (url.pathname === "/v1/intent/height") {
+      // The height a task's vehicle flies at, set against what its camera sees from there, before a commander approves.
+      const p = proposals.find((x) => x.id === msg.id);
+      if (!p) return { status: 404, body: { error: "no such proposal" } };
+      if (p.status !== "awaiting approval") return { status: 409, body: { error: `proposal is ${p.status}` } };
+      const t = p.plan[Number(msg.task)];
+      const tail = String(msg.tail ?? "");
+      const alt = Math.round(Number(msg.alt_m) / OPTICS.step_m) * OPTICS.step_m;
+      if (!t || !(t.tails ?? []).includes(tail) || !(alt >= OPTICS.min_alt_m && alt <= OPTICS.max_alt_m)) return { status: 400, body: { error: "task, tail or height" } };
+      t.alt_m = { ...(t.alt_m ?? {}), [tail]: alt };
+      audit.append({ actor: caller?.display_name ?? "operator", action: "brief.height", resource_type: "proposal", resource_id: p.id, detail: `${tail} ${t.label} at ${alt} m` });
+      return { status: 200, body: withLook(p) };
     }
     if (url.pathname === "/v1/intent/approve") {
       const p = proposals.find((x) => x.id === msg.id);
@@ -683,7 +704,7 @@ export function createDemo(opts = {}) {
       p.decided_at = new Date().toISOString();
       if (typeof msg.note === "string" && msg.note.trim()) p.decision_note = msg.note.trim().slice(0, 300);
       if (p.status === "approved") p.mission_id = missions.fromProposal(p, caller);
-      return { status: 200, body: p };
+      return { status: 200, body: withLook(p) };
     }
     return { status: 404, body: { error: "unknown" } };
   }
@@ -984,6 +1005,21 @@ export function createDemo(opts = {}) {
         const [la0, lo0] = toLL(0, 0);
         const [la1, lo1] = toLL(grid.cell_m / 2, grid.cell_m / 2);
         return { status: 200, body: { ...grid, half_deg: [Math.abs(la1 - la0), Math.abs(lo1 - lo0)], cells: grid.cells.map((c) => ({ ...c, ll: round(toLL(c.x, c.y)) })) } };
+      }
+      if (url.pathname === "/v1/wear") {
+        // Wear by flight load for the named tails (the synthetic swarm has no log). NX-08's prop strike is in its log as a hard arrival.
+        const one = (tail) => {
+          const sku = skuForTail(tail);
+          const w = wearFor(tail, sku, logFor(tail, sku, { strike: tail === "NX-08" }));
+          return w ? { ...w, verdict: verdictOf(w) } : null;
+        };
+        const tail = url.searchParams.get("tail");
+        if (tail) {
+          const w = FLEET.some((c) => c.tail === tail) ? one(tail) : null;
+          return w ? { status: 200, body: { ...w, ...describeWear() } } : { status: 404, body: { detail: "no flight log for that tail" } };
+        }
+        const items = FLEET.map((c) => one(c.tail)).filter(Boolean).map((w) => ({ tail: w.tail, state: w.state, worst: w.worst, frame_pct: w.frame.fatigue_pct, hours: w.hours, load_factor: w.load_factor }));
+        return { status: 200, body: { items, ...describeWear() } };
       }
       if (url.pathname === "/v1/denial-map") return { status: 200, body: denialPicture(Number(url.searchParams.get("passes") ?? 4)) };
       if (url.pathname.startsWith("/v1/training/")) {

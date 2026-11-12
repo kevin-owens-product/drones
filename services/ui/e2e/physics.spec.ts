@@ -68,3 +68,37 @@ test("stockpile projects a pack's capacity and what a storage charge buys", asyn
   await second.click();
   await expect(fade).toContainText(serial);
 });
+
+test("the plan map shows the wind over the terrain and what it costs each tail", async ({ page }) => {
+  await page.goto("/#missions");
+  const root = page.getByTestId("missions");
+  await root.getByRole("button", { name: /Road junction overwatch/ }).click();
+  await root.getByRole("slider", { name: "Wind speed" }).fill("12");
+  await root.getByLabel("Wind direction").selectOption({ label: "E" });
+  await expect(root.getByTestId("physics-findings").locator(".ph-finding", { hasText: "sinking air" }).first()).toBeVisible();
+  await root.getByRole("button", { name: "Wind", exact: true }).click();
+  await expect(root.locator(".ph-wind-sink").first()).toBeVisible();
+  await expect(root.getByTestId("plan-wind")).toContainText("Road junction");
+});
+
+test("a brief shows what each camera sees by height, and the height can be set before approval", async ({ page }) => {
+  await page.goto("/#brief");
+  const brief = page.getByTestId("brief");
+  await brief.getByRole("button", { name: /Brief: Observe gate 3/ }).click();
+  await expect(brief.getByTestId("ladder-NX-10")).toContainText("cannot recognise a person");
+  const eo = brief.getByTestId("ladder-NX-07");
+  await expect(eo.locator(".br-rung.is-set")).toContainText("150");
+  await eo.getByRole("button", { name: /NX-07 at 100 m/ }).click();
+  await expect(eo.locator(".br-rung.is-set")).toContainText("100");
+  await expect(eo).toContainText("Set to 100 m");
+});
+
+test("an airframe shows its wear by flight load and the maintainer's call", async ({ page }) => {
+  await page.goto("/#fleet");
+  await expect(page.locator("#fleet tr", { hasText: "NX-01" }).getByTestId("wear-flag")).toContainText("M3 bearing");
+  await page.locator("#fleet tr", { hasText: "NX-01" }).click();
+  const wear = page.getByTestId("wear");
+  await expect(wear).toContainText("spin-check");
+  await expect(wear.getByTestId("wear-chart")).toBeVisible();
+  await expect(wear.getByRole("button", { name: /Ground NX-01 for a motor check/ })).toBeVisible();
+});

@@ -8,6 +8,8 @@
 //           self-heating, and what preheating buys (demo/pack.mjs).
 //   Thrust  headroom against gusts in tonight's air density on tonight's
 //           pack voltage (demo/envelope.mjs).
+//   Wind    what the terrain makes of the forecast wind along each track:
+//           speed-up over crests, the lee wake and sinking air (demo/windfield.mjs).
 //
 // A fix changes the plan (an altitude, a relay, a band, a different airframe),
 // so a plan in review or approved goes back to draft and needs a second person
@@ -18,6 +20,7 @@ import { AIRFRAMES, power, windAt } from "./physics.mjs";
 import { BANDS, EMITTER, RF, VIDEO, ground, hop, linkAt, profileChart, relaySites } from "./rf.mjs";
 import { PACK, PACKS, preheat } from "./pack.mjs";
 import { ENVELOPE, TWR, density, envelopeGrid, headroom, maxWind, powerAtThrust } from "./envelope.mjs";
+import { TERRAIN_WIND, localWind, windGrid } from "./windfield.mjs";
 
 export const SOURCE = "Physics check (SIM): plan flown through the terrain radio, electro-thermal pack and thrust models. Textbook relations, assumed coefficients, SRTM/NED terrain; not field data.";
 const DT = 10;
@@ -35,6 +38,8 @@ export function forecastOf(m, ask = {}) {
   if (t !== undefined) f.temp_c = t;
   if (w !== undefined) f.wind_mps = w;
   if (g !== undefined) f.gust_mps = g;
+  const from = num(ask.wind_from_deg, 0, 359);
+  if (from !== undefined) f.wind_from_deg = Math.round(from);
   if (ask.ew !== undefined && ask.ew !== null && ask.ew !== "") f.ew = ask.ew === true || ask.ew === "1" || ask.ew === "true";
   f.gust_mps = Math.max(f.gust_mps, f.wind_mps);
   return f;
@@ -80,16 +85,27 @@ export function createPhysicsCheck(c) {
       const alt = seg.alt || 60;
       const climb = t < 25 ? alt / 25 : end - t < 25 ? -alt / 25 : 0;
       let watts = hoverW;
+      let flat = hoverW;
       let air = 0;
+      // What the terrain makes of the forecast wind here: a factor on its speed, and air that rises or sinks with the slope.
+      const lw = f.wind_mps > 0 ? localWind(p[0], p[1], alt, f.wind_mps, f.wind_from_deg) : null;
+      const k = lw ? lw.speed_mps / Math.max(0.1, lw.free_mps) : 1;
+      const vert = lw ? lw.vertical_mps : 0;
       if (prev) {
         const [wx, wy] = windAt(env, t, alt);
         const gx = (p[0] - prev[0]) / DT;
         const gy = (p[1] - prev[1]) / DT;
         // The guidance slows upwind rather than chase ground speed: airspeed holds near cruise (as the launch energy check does).
-        air = Math.min(frame.cruise_mps * 1.15, Math.hypot(gx - wx, gy - wy));
-        watts = power(frame, air, climb);
-      } else watts = power(frame, 0, climb);
-      pts.push({ t, x: p[0], y: p[1], agl: alt, phase: seg.phase, label: seg.label, watts, air, punch_w: punch });
+        const cap = frame.cruise_mps * 1.15;
+        air = Math.min(cap, Math.hypot(gx - wx * k, gy - wy * k));
+        // Holding height in sinking air is a climb through it.
+        watts = power(frame, air, climb - vert);
+        flat = power(frame, Math.min(cap, Math.hypot(gx - wx, gy - wy)), climb);
+      } else {
+        watts = power(frame, 0, climb - vert);
+        flat = power(frame, 0, climb);
+      }
+      pts.push({ t, x: p[0], y: p[1], agl: alt, phase: seg.phase, label: seg.label, watts, air, punch_w: punch, flat_w: flat, wind_k: k, wind: lw ? lw.speed_mps : 0, vert, wake: Boolean(lw?.wake), sigma_wake: lw?.sigma_wake_mps ?? 0 });
       prev = p;
     }
     return { sku, frame, end, pts, hoverW, sigma };
@@ -212,6 +228,7 @@ export function createPhysicsCheck(c) {
       const climbV = (preheated ? advice.warm : advice.cold).climb_out_v_cell ?? 3.8;
       const env = headroom(fl.frame, fl.sku, { elev_m: elev, agl_m: aglMax, temp_c: f.temp_c, wind_mps: f.wind_mps, gust_mps: f.gust_mps, cell_v: climbV });
       const windLimit = maxWind(fl.frame, fl.sku, { elev_m: elev, agl_m: aglMax, temp_c: f.temp_c, cell_v: climbV });
+      const wind = windAlong(fl, f, climbV, env);
       per.push({
         tail,
         sku: fl.sku,
@@ -230,6 +247,8 @@ export function createPhysicsCheck(c) {
           trace: full ? downsample(advice.cold.rows, preheated || advice.needed ? advice.warm.rows : null) : undefined,
         },
         thrust: { ...env, max_wind_mps: windLimit, elev_m: Math.round(elev) },
+        wind: wind.summary,
+        wind_track: full ? wind.track : undefined,
       });
     }
 
@@ -310,6 +329,13 @@ export function createPhysicsCheck(c) {
         fixes: [],
       });
     }
+    for (const p of per) {
+      const w = p.wind;
+      if (!w || !w.flag) continue;
+      const fd = { id: `wind:${p.tail}`, area: "wind", severity: w.worse && w.verdict === "no-go" ? "no-go" : w.worse || w.wake_s > 0 || w.extra_pct >= 5 ? "caution" : "info", tail: p.tail, title: windTitle(p.tail, w), detail: windDetail(p, w, f), fixes: [] };
+      if (full) addWindFix(m, f, p, flights.get(p.tail), fd);
+      findings.push(fd);
+    }
     if (full) addSwapFixes(m, f, per, findings);
 
     const order = { "no-go": 0, caution: 1, info: 2 };
@@ -328,12 +354,130 @@ export function createPhysicsCheck(c) {
       findings,
       verdict: findings.some((x) => x.severity === "no-go") ? "no-go" : findings.length ? "caution" : "go",
       profile: full ? worstProfile(per, relays, f) : undefined,
+      wind: full ? windField(flights, f) : undefined,
       envelope: full && sample ? { tail: sample.tail, airframe: sample.airframe, ...envelopeGrid(AIRFRAMES[sample.sku], sample.sku, { elev_m: sample.thrust.elev_m, agl_m: 100 }, power(AIRFRAMES[sample.sku], 0)), now: { temp_c: f.temp_c, wind_mps: f.wind_mps } } : undefined,
-      assumptions: full ? { radio: RF, pack: PACK, envelope: ENVELOPE, twr: TWR } : undefined,
+      assumptions: full ? { radio: RF, pack: PACK, envelope: ENVELOPE, twr: TWR, terrain_wind: TERRAIN_WIND } : undefined,
     };
     cache.set(key, out);
     if (cache.size > 64) cache.delete(cache.keys().next().value);
     return out;
+  }
+
+  // ---- wind over terrain -------------------------------------------------------
+
+  const gustOver = (f, p) => Math.max(f.gust_mps - f.wind_mps, 3 * p.sigma_wake);
+
+  /** One tail's track through the terrain wind: where it is strongest, where the air sinks, and what both cost. */
+  function windAlong(fl, f, cellV, flatEnv) {
+    const pts = fl.pts.filter((p) => p.t > 20);
+    if (!pts.length || f.wind_mps <= 0) return { summary: null, track: [] };
+    let extra = 0;
+    let sink = null;
+    let fast = null;
+    let tight = null;
+    let sinkS = 0;
+    let wakeS = 0;
+    for (const p of pts) {
+      extra += ((p.watts - p.flat_w) * DT) / 3600;
+      if (p.vert <= -SINK_MPS) sinkS += DT;
+      if (p.wake) wakeS += DT;
+      if (!sink || p.vert < sink.vert) sink = p;
+      if (!fast || p.wind_k > fast.wind_k) fast = p;
+      const local = f.wind_mps * p.wind_k;
+      const h = headroom(fl.frame, fl.sku, { elev_m: ground(p.x, p.y), agl_m: p.agl, temp_c: f.temp_c, wind_mps: local, gust_mps: local + gustOver(f, p), cell_v: cellV });
+      p.headroom = h.headroom;
+      if (!tight || h.headroom < tight.h.headroom) tight = { p, h };
+    }
+    const rank = { go: 0, caution: 1, "no-go": 2 };
+    const worse = rank[tight.h.verdict] > rank[flatEnv.verdict] && tight.h.headroom <= flatEnv.headroom - 0.04;
+    const pct = (extra / fl.frame.pack_wh) * 100;
+    const where = (p) => ({ label: p.label, home: p.phase === "recover", x: Math.round(p.x), y: Math.round(p.y), agl: p.agl, t: p.t });
+    const summary = {
+      extra_wh: r1(extra),
+      extra_pct: r1(pct),
+      sink_s: sinkS,
+      wake_s: wakeS,
+      worst_sink_mps: r1(sink.vert),
+      sink_at: where(sink),
+      sink_w: Math.round(sink.watts - sink.flat_w),
+      max_factor: Math.round(fast.wind_k * 100) / 100,
+      max_mps: r1(fast.wind),
+      max_at: where(fast),
+      headroom: tight.h.headroom,
+      verdict: tight.h.verdict,
+      tight_at: where(tight.p),
+      tight_gust_mps: tight.h.gust_mps,
+      worse,
+      flag: worse || wakeS > 0 || pct >= WIND_COST_PCT || (sinkS >= 120 && pct >= 2),
+      reason: worse ? "thrust" : wakeS > 0 ? "wake" : "sink",
+    };
+    return { summary, track: pts.map((p) => [Math.round(p.x), Math.round(p.y), r1(p.wind), r1(p.vert), p.wake ? 1 : 0, p.headroom]) };
+  }
+
+  function windTitle(tail, w) {
+    if (w.reason === "thrust") return `${tail} has ${Math.round(w.headroom * 100)}% thrust in hand in the wind ${at(w.tight_at)}`;
+    if (w.reason === "wake") return `${tail} flies ${minutes(w.wake_s)} in the turbulent wake behind high ground ${at(w.tight_at)}`;
+    return `${tail} holds height in sinking air on a lee slope ${at(w.sink_at)}`;
+  }
+
+  function windDetail(p, w, f) {
+    const parts = [];
+    if (w.sink_s > 0) parts.push(`The ground ${at(w.sink_at)} falls away downwind, so the ${f.wind_mps} m/s wind from the ${compass(f.wind_from_deg)} descends with it: ${Math.abs(w.worst_sink_mps)} m/s of sink at ${w.sink_at.agl} m, ${minutes(w.sink_s)} sinking faster than ${SINK_MPS} m/s, ${w.sink_w} W more to hold height at the worst point`);
+    if (w.max_factor >= 1.03) parts.push(`${parts.length ? "the" : "The"} high ground ${at(w.max_at)} speeds the wind up ${Math.round((w.max_factor - 1) * 100)}%, to ${w.max_mps} m/s at ${w.max_at.agl} m`);
+    if (w.wake_s > 0) parts.push(`${parts.length ? "the" : "The"} wake behind the crest carries gusts of ${w.tight_gust_mps} m/s`);
+    const cost = `Over the sortie the terrain costs ${w.extra_wh} Wh, ${w.extra_pct}% of the ${p.pack.label}`;
+    const thrust = w.worse ? ` Thrust in hand falls to ${Math.round(w.headroom * 100)}% there, against ${Math.round(p.thrust.headroom * 100)}% in the forecast wind.` : "";
+    return `${parts.join("; ")}${parts.length ? ". " : ""}${cost}; the pack check above already flies it.${thrust}`;
+  }
+
+  /** Height is the fix: slope-following air and crest speed-up both fade with it, and the wake has a top. */
+  function addWindFix(m, f, p, fl, fd) {
+    const w = p.wind;
+    const spot = w.reason === "sink" ? w.sink_at : w.tight_at;
+    const label = spot.label;
+    const idx = m.objectives.findIndex((o) => o.tail === p.tail && o.label === label && (o.kind === "rtb") === spot.home);
+    if (idx < 0) return;
+    const leg = m.objectives[idx];
+    const pts = fl.pts.filter((q) => q.label === label && q.t > 20 && (spot.home ? q.phase === "recover" && fl.end - q.t > 25 : q.phase !== "transit" && q.phase !== "recover"));
+    if (!pts.length) return;
+    const from = spot.home ? leg.alt_m || RETURN_ALT : leg.alt_m;
+    const cost = (a) => {
+      let wh = 0;
+      let worst = 0;
+      let wake = false;
+      let go = true;
+      for (const q of pts) {
+        const lw = localWind(q.x, q.y, a, f.wind_mps, f.wind_from_deg);
+        wh += ((power(fl.frame, q.air, -lw.vertical_mps) - power(fl.frame, q.air, 0)) * DT) / 3600;
+        worst = Math.min(worst, lw.vertical_mps);
+        wake ||= lw.wake;
+        const local = (f.wind_mps * lw.speed_mps) / Math.max(0.1, lw.free_mps);
+        if (headroom(fl.frame, fl.sku, { elev_m: lw.ground_m, agl_m: a, temp_c: f.temp_c, wind_mps: local, gust_mps: local + Math.max(f.gust_mps - f.wind_mps, 3 * lw.sigma_wake_mps), cell_v: p.thrust.cell_v }).verdict !== "go") go = false;
+      }
+      return { wh, worst, wake, go };
+    };
+    const now = cost(from);
+    for (let a = Math.ceil((from + 10) / 10) * 10; a <= ALT_CEILING; a += 10) {
+      const c = cost(a);
+      const ok = w.reason === "thrust" ? c.go : w.reason === "wake" ? !c.wake : c.wh <= now.wh * 0.75;
+      if (!ok) continue;
+      const climbWh = r1((fl.frame.mass_kg * 9.81 * (a - from)) / ASSUMED_EFF / 3600);
+      fd.fixes.push({ id: `lee:${p.tail}:${idx}:${a}`, kind: "altitude", label: spot.home ? `Bring ${p.tail} home at ${a} m instead of ${from} m` : `Fly ${p.tail}'s ${label} leg at ${a} m instead of ${from} m`, detail: `${w.reason === "wake" ? "Above the wake's top." : w.reason === "thrust" ? "Thrust holds the planning margin there." : `Sink falls from ${Math.abs(r1(now.worst))} to ${Math.abs(r1(c.worst))} m/s and the leg saves ${r1(now.wh - c.wh)} Wh.`} About ${climbWh} Wh more to climb.`, changes_plan: true });
+      return;
+    }
+  }
+
+  /** The wind field under the package at its working height, for the plan map. */
+  function windField(flights, f) {
+    const all = [...flights.values()].flatMap((fl) => fl.pts);
+    if (!all.length || f.wind_mps <= 0) return null;
+    const snap = (v, up) => (up ? Math.ceil(v / 200) : Math.floor(v / 200)) * 200;
+    const xs = [c.station.x, ...all.map((p) => p.x)];
+    const ys = [c.station.y, ...all.map((p) => p.y)];
+    const area = { x0: snap(Math.min(...xs) - 500, false), x1: snap(Math.max(...xs) + 500, true), y0: snap(Math.min(...ys) - 500, false), y1: snap(Math.max(...ys) + 500, true) };
+    const heights = all.filter((p) => p.phase !== "recover").map((p) => p.agl).sort((a, b) => a - b);
+    const agl = heights[Math.floor(heights.length / 2)] ?? 100;
+    return { ...windGrid(area, agl, f.wind_mps, f.wind_from_deg), area, sink_mps: SINK_MPS };
   }
 
   function packSummary(r) {
@@ -440,14 +584,16 @@ export function createPhysicsCheck(c) {
 
   /** Thrust: swap a tail for a spare that has the headroom. */
   function addSwapFixes(m, f, per, findings) {
-    for (const fd of findings.filter((x) => x.area === "thrust" || x.id.startsWith("cutoff:"))) {
+    for (const fd of findings.filter((x) => x.area === "thrust" || x.id.startsWith("cutoff:") || (x.area === "wind" && (per.find((q) => q.tail === x.tail)?.wind?.worse || per.find((q) => q.tail === x.tail)?.wind?.extra_pct >= 5)))) {
       const p = per.find((x) => x.tail === fd.tail);
       const score = (sku) => {
         const h = headroom(AIRFRAMES[sku], sku, { elev_m: p.thrust.elev_m, agl_m: 100, temp_c: f.temp_c, wind_mps: f.wind_mps, gust_mps: f.gust_mps });
-        return h.verdict === "go" ? 10 + (fd.area === "thrust" ? h.headroom : AIRFRAMES[sku].pack_wh / 100) : h.headroom;
+        return h.verdict === "go" ? 10 + (fd.area === "thrust" || p.wind?.worse ? h.headroom : AIRFRAMES[sku].pack_wh / 100) : h.headroom;
       };
       const spare = spares(m, score).find((s) => s.sku !== p.sku);
       if (!spare) continue;
+      // A wind cost is only helped by a bigger pack.
+      if (fd.area === "wind" && !p.wind?.worse && AIRFRAMES[spare.sku].pack_wh <= AIRFRAMES[p.sku].pack_wh) continue;
       fd.fixes.push({ id: `swap:${fd.tail}:${spare.tail}`, kind: "swap", label: `Give ${fd.tail}'s legs to ${spare.tail} (${AIRFRAMES[spare.sku].label})`, detail: `${AIRFRAMES[spare.sku].label}: ${AIRFRAMES[spare.sku].pack_wh} Wh, thrust to weight ${TWR[spare.sku]}.`, changes_plan: true });
     }
   }
@@ -458,7 +604,7 @@ export function createPhysicsCheck(c) {
   function launchChecks(m) {
     const r = run(m, {}, false);
     const out = [];
-    for (const fd of r.findings) out.push({ level: "caution", detail: `${fd.title}: ${firstSentence(fd.detail)}`, area: "physics", finding: fd.id });
+    for (const fd of r.findings) out.push({ level: fd.severity === "info" ? "go" : "caution", detail: `${fd.title}: ${firstSentence(fd.detail)}`, area: "physics", finding: fd.id });
     const warmed = r.tails.filter((t) => t.pack.preheat.done);
     for (const t of warmed) out.push({ level: "go", detail: `${t.tail} pack preheat planned: out of the warmer at ${t.pack.preheat.out_c} °C, launch within ${PACK.pad_window_min} min.`, area: "physics" });
     if (!r.findings.length && r.tails.length) out.push({ level: "go", detail: `Terrain, packs and thrust: links hold over the terrain, packs hold the cutoff, thrust headroom ${Math.round(Math.min(...r.tails.map((t) => t.thrust.headroom)) * 100)}% or better at ${r.forecast.temp_c} °C and ${r.forecast.wind_mps} m/s (SIM).`, area: "physics" });
@@ -479,6 +625,13 @@ export function createPhysicsCheck(c) {
       if (!leg || leg.tail !== tail) return null;
       leg.alt_m = alt;
       return { note: `${tail} ${leg.label} leg raised to ${alt} m for line of sight`, changes_plan: true };
+    }
+    if (kind === "lee") {
+      const [tail, idx, alt] = [rest[0], Number(rest[1]), Number(rest[2])];
+      const leg = m.objectives[idx];
+      if (!leg || leg.tail !== tail) return null;
+      leg.alt_m = alt;
+      return { note: leg.kind === "rtb" ? `${tail} comes home at ${alt} m, above the sinking air` : `${tail} ${leg.label} leg raised to ${alt} m, out of the terrain's wind`, changes_plan: true };
     }
     if (kind === "relay") {
       const a = fix._apply;
@@ -510,6 +663,13 @@ export function createPhysicsCheck(c) {
 }
 
 const ASSUMED_EFF = 0.6;
+/** Sinking air a planner should know about, m/s, and the share of a pack the terrain may cost before it is flagged. */
+const SINK_MPS = 1;
+const WIND_COST_PCT = 3;
+/** The height a tail comes home at when its recovery leg does not carry one (missions.mjs flies the same). */
+const RETURN_ALT = 60;
+const at = (spot) => (spot.home ? "on the way home" : `at ${spot.label}`);
+const compass = (deg) => ["north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west"][Math.round((((deg % 360) + 360) % 360) / 45) % 8];
 const minutes = (s) => (s < 90 ? `${Math.round(s)} s` : `${(s / 60).toFixed(1)} min`);
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const firstSentence = (s) => `${s.split(". ")[0].replace(/\.$/, "")}.`;

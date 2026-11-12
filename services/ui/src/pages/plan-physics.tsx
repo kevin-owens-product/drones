@@ -2,9 +2,9 @@
 // sets, the findings and fixes inside Launch checks, and the packs and thrust
 // beside the plan map. Missions.tsx owns the state; these draw it.
 import { useState } from "react";
-import { AREA_LABEL, Envelope, PackChart, Profile, ThrustBars, fmtMin, type Finding, type Fix, type PhysicsCheck } from "./physics-parts";
+import { AREA_LABEL, COMPASS, Envelope, PackChart, Profile, ThrustBars, compassOf, fmtMin, type Finding, type Fix, type PhysicsCheck } from "./physics-parts";
 
-export type Ask = { temp_c?: number; wind_mps?: number; gust_mps?: number; ew?: boolean };
+export type Ask = { temp_c?: number; wind_mps?: number; wind_from_deg?: number; gust_mps?: number; ew?: boolean };
 
 /** Air temperature, wind, gusts and the EW emitter the plan is checked against, with a what-if the planner can save. */
 export function ConditionsPanel({ check, ask, setAsk, canSave, busy, onSave }: { check: PhysicsCheck; ask: Ask; setAsk: (f: (a: Ask) => Ask) => void; canSave: boolean; busy: boolean; onSave: () => void }) {
@@ -24,6 +24,16 @@ export function ConditionsPanel({ check, ask, setAsk, canSave, busy, onSave }: {
         <label>
           Wind <strong>{f.wind_mps} m/s</strong>
           <input type="range" min={0} max={16} step={1} value={f.wind_mps} onChange={(e) => setAsk((a) => ({ ...a, wind_mps: Number(e.target.value), gust_mps: Math.max(Number(e.target.value), a.gust_mps ?? f.gust_mps) }))} aria-label="Wind speed" />
+        </label>
+        <label className="ph-from">
+          Wind from <strong>{compassOf(f.wind_from_deg)}</strong>
+          <select value={Math.round(f.wind_from_deg / 45) % 8} onChange={(e) => setAsk((a) => ({ ...a, wind_from_deg: Number(e.target.value) * 45 }))} aria-label="Wind direction">
+            {COMPASS.map((c, i) => (
+              <option key={c} value={i}>
+                {c}
+              </option>
+            ))}
+          </select>
         </label>
         <label>
           Gusts <strong>{f.gust_mps} m/s</strong>
@@ -46,7 +56,7 @@ export function ConditionsPanel({ check, ask, setAsk, canSave, busy, onSave }: {
           </button>
         </p>
       ) : (
-        <p className="meta">The terrain, pack and thrust checks fly the plan in this air. Move a slider to ask what if.</p>
+        <p className="meta">The terrain, pack, thrust and wind checks fly the plan in this air. Move a slider to ask what if.</p>
       )}
     </section>
   );
@@ -119,6 +129,53 @@ export function LinkDetail({ check, tail, setTail }: { check: PhysicsCheck; tail
           ))}
         </tbody>
       </table>
+    </>
+  );
+}
+
+/** What the terrain makes of the wind for each tail, under the plan map when it shows the wind. */
+export function WindDetail({ check, tail, setTail }: { check: PhysicsCheck; tail: string; setTail: (t: string) => void }) {
+  const f = check.forecast;
+  const at = (s: { label: string; home: boolean }) => (s.home ? "on the way home" : s.label);
+  return (
+    <>
+      <table className="ph-table" data-testid="plan-wind">
+        <thead>
+          <tr>
+            <th>Tail</th>
+            <th>Strongest wind</th>
+            <th>Worst sink</th>
+            <th>In sink</th>
+            <th>Terrain costs</th>
+            <th>Thrust in hand</th>
+          </tr>
+        </thead>
+        <tbody>
+          {check.tails.map((t) => {
+            const w = t.wind;
+            if (!w) return null;
+            return (
+              <tr key={t.tail} className={t.tail === tail ? "ph-row-sel" : ""} onClick={() => setTail(t.tail)}>
+                <td>{t.tail}</td>
+                <td>
+                  {w.max_mps} m/s, {at(w.max_at)}
+                </td>
+                <td style={{ color: w.worst_sink_mps <= -2 ? "var(--danger)" : w.worst_sink_mps <= -1 ? "var(--warn)" : undefined }}>
+                  {w.worst_sink_mps < 0 ? `${Math.abs(w.worst_sink_mps)} m/s, ${at(w.sink_at)}` : "none"}
+                </td>
+                <td>{w.sink_s ? fmtMin(w.sink_s) : "–"}</td>
+                <td>
+                  {w.extra_wh} Wh ({w.extra_pct}%)
+                </td>
+                <td className={`ph-v-${w.verdict}`}>{Math.round(w.headroom * 100)}%</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <p className="meta ins-note">
+        Forecast {f.wind_mps} m/s from the {compassOf(f.wind_from_deg)} at 10 m; {check.wind?.free_mps ?? f.wind_mps} m/s at {check.wind?.agl_m ?? 100} m over open ground. Over a crest the air speeds up about 2 H/L and that fades with height; on a lee slope it descends with the ground, and a vehicle holding height there is climbing through it. Sink counts under {check.wind?.sink_mps ?? 1} m/s. Assumed coefficients over SRTM terrain, not measured; the model does not turn the wind round hills.
+      </p>
     </>
   );
 }

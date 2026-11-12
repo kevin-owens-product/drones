@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { api } from "../api";
 import { MissionRoute } from "./MissionRoute";
 import { RangeMap, colorFor, toMetres, type MapPath, type RangeFrame } from "./RangeMap";
-import { EmitterMark, linkLayer, type Fix, type PhysicsCheck } from "./physics-parts";
-import { ConditionsPanel, LinkDetail, PacksThrustPanel, PhysicsFindings, type Ask } from "./plan-physics";
+import { EmitterMark, WindCells, compassOf, linkLayer, windLayer, type Fix, type PhysicsCheck } from "./physics-parts";
+import { ConditionsPanel, LinkDetail, PacksThrustPanel, PhysicsFindings, WindDetail, type Ask } from "./plan-physics";
 import "./plan.css";
 
 interface Viewer {
@@ -306,7 +306,7 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
   const [phys, setPhys] = useState<PhysicsCheck | null>(null);
   const [ask, setAsk] = useState<Ask>({});
   const [physTail, setPhysTail] = useState("");
-  const [mapMode, setMapMode] = useState<"routes" | "link">("routes");
+  const [mapMode, setMapMode] = useState<"routes" | "link" | "wind">("routes");
   const [physNote, setPhysNote] = useState("");
 
   async function loadMissions(): Promise<MissionRow[]> {
@@ -454,6 +454,7 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
     if (ask.temp_c !== undefined) q.set("temp_c", String(ask.temp_c));
     if (ask.wind_mps !== undefined) q.set("wind_mps", String(ask.wind_mps));
     if (ask.gust_mps !== undefined) q.set("gust_mps", String(ask.gust_mps));
+    if (ask.wind_from_deg !== undefined) q.set("wind_from_deg", String(ask.wind_from_deg));
     if (ask.ew !== undefined) q.set("ew", ask.ew ? "1" : "0");
     return q.toString();
   }, [ask]);
@@ -639,8 +640,8 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
   const nogo = checks.filter((c) => (c.level ? c.level === "no-go" : !c.pass));
   // With the plan's physics loaded, its findings (with their fixes) stand in for the physics caution lines.
   const physLive = phys !== null;
-  const shownChecks = physLive ? checks.filter((c) => !(c.area === "physics" && c.level === "caution")) : checks;
-  const caution = [...shownChecks.filter((c) => c.level === "caution"), ...(phys?.findings ?? [])];
+  const shownChecks = physLive ? checks.filter((c) => !(c.area === "physics" && (c.level === "caution" || c.finding))) : checks;
+  const caution = [...shownChecks.filter((c) => c.level === "caution"), ...(phys?.findings ?? []).filter((x) => x.severity !== "info")];
   const editablePlan = selected ? selected.state !== "closed" && selected.state !== "active" : false;
   const stepAllowed = selectedStep ? roleCan(viewer.roles, selectedStep.action) : false;
   // Editing a draft is the planner's job; everyone else reads it.
@@ -749,6 +750,11 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
                       <button type="button" className={mapMode === "link" ? "is-on" : ""} aria-pressed={mapMode === "link"} onClick={() => setMapMode("link")}>
                         Video link
                       </button>
+                      {phys.wind ? (
+                        <button type="button" className={mapMode === "wind" ? "is-on" : ""} aria-pressed={mapMode === "wind"} onClick={() => setMapMode("wind")}>
+                          Wind
+                        </button>
+                      ) : null}
                     </span>
                   ) : null}
                   <span className={pillClass(selected.state)}>{columnLabel(selected.state)}</span>
@@ -764,6 +770,14 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
                     {phys.bands.find((b) => b.id === phys.band)?.label}
                   </p>
                   <LinkDetail check={phys} tail={physTail} setTail={setPhysTail} />
+                </>
+              ) : range && inRange && mapMode === "wind" && phys?.wind ? (
+                <>
+                  <RangeMap range={range} {...windLayer(phys, physTail)} under={<WindCells field={phys.wind} />} label="Plan map: the wind over the terrain at the package's working height, and each vehicle's track coloured by the sinking air it flies through" />
+                  <p className="ins-legend">
+                    <span className="ins-key ph-key-sink" /> Sinking air <span className="ins-key ph-key-lift" /> Rising air <span className="ins-key" style={{ background: "var(--warn)" }} /> Track in sink over 1 m/s <span className="ins-key" style={{ background: "var(--danger)" }} /> Over 2 m/s · {phys.wind.free_mps} m/s from the {compassOf(phys.wind.from_deg)} at {phys.wind.agl_m} m
+                  </p>
+                  <WindDetail check={phys} tail={physTail} setTail={setPhysTail} />
                 </>
               ) : range && inRange ? (
                 <RangeMap
@@ -1013,6 +1027,7 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
                     onFocus={(fd) => {
                       setPhysTail(fd.tail);
                       if (fd.area === "link") setMapMode("link");
+                      if (fd.area === "wind") setMapMode("wind");
                     }}
                   />
                 ) : null}

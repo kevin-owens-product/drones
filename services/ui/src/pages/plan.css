@@ -613,3 +613,90 @@
   margin: 4px 0 0;
   font-size: 11px;
 }
+
+/* Brief: what each camera sees by height. */
+.br-look {
+  margin: 8px 0 14px;
+  display: grid;
+  gap: 12px;
+}
+.br-ladder-head {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+.br-ladder-grid {
+  display: grid;
+  grid-template-columns: 92px repeat(13, minmax(34px, 1fr));
+  gap: 2px;
+  max-width: 760px;
+  overflow-x: auto;
+}
+.br-ladder-keys,
+.br-rung {
+  display: grid;
+  grid-template-rows: repeat(4, 24px);
+  gap: 2px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.br-ladder-keys span {
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+}
+.br-rung {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  padding: 1px;
+  cursor: pointer;
+}
+.br-rung:disabled {
+  cursor: default;
+}
+.br-rung span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+}
+.br-rung-alt {
+  color: var(--muted);
+}
+.br-rung.is-best .br-rung-alt {
+  color: var(--text);
+  font-weight: 700;
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.br-rung.is-set {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.br-rung:not(:disabled):hover {
+  border-color: var(--line-strong);
+}
+.br-rung .lv-identify {
+  background: rgba(63, 214, 154, 0.38);
+}
+.br-rung .lv-recognise {
+  background: rgba(63, 214, 154, 0.2);
+}
+.br-rung .lv-detect {
+  background: rgba(246, 185, 138, 0.22);
+}
+.br-rung .lv-none,
+.br-rung .is-bad {
+  background: rgba(242, 109, 109, 0.26);
+}
+.br-rung .is-short {
+  color: var(--warn);
+}
+.br-rung .is-thin {
+  background: rgba(246, 185, 138, 0.22);
+}
+.br-rung .is-good {
+  background: rgba(63, 214, 154, 0.2);
+}
