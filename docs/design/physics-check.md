@@ -2,9 +2,28 @@
 
 The performance model (`physics.md`) answers "is there enough energy?". Small drones are mostly
 lost to other physics: the radio link at low altitude, a battery that collapses in the cold before
-it is empty, and running out of thrust in a gust. The physics check (`#physics`, `GET
+it is empty, and running out of thrust in a gust. The physics check (`GET
 /v1/missions/{id}/physics`) flies a plan through all three before launch and turns every finding
 into a fix the planner can put into the plan.
+
+## Where it shows
+
+There is no separate physics page: each piece sits where the decision it informs is made.
+
+- **Missions**, on the selected plan. *Conditions at launch* sets the air temperature, wind, gusts
+  and EW emitter (a what-if until a planner saves it). Findings and their fixes are rows in *Launch
+  checks*, each with Apply or Add to launch tasks. The plan map switches between routes and the
+  video link coloured over the terrain, with the worst terrain profile and a per-tail link table.
+  *Packs and thrust* shows each tail's cell voltage through the sortie, preheat advice, thrust in
+  hand and the airframe's envelope. `#physics` links land here.
+- **Loadout planner**: *Packs and thrust* for every airframe in the planner's temperature and wind
+  (`GET /v1/envelope`): cold climb-out voltage, preheat time, cutoff on a standard sortie, thrust in
+  a gust, strongest go wind, spare lift and the envelope grid.
+- **Denial map** (was GNSS denial map): Control link and Video link layers beside the GNSS layer
+  (`GET /v1/coverage`), the margin from the GCS mast to every 200 m cell at a chosen height, band
+  and emitter state.
+- **Airframes**: the selected tail's *Next sortie*, what its next plan needs on the pad (preheat,
+  link, thrust) with a link to the plan.
 
 ## 1. Line of sight over real terrain, with jamming (`demo/rf.mjs`)
 

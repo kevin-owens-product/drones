@@ -97,7 +97,7 @@
             <h2>What's new</h2>
             <p>The newest things in the console, with the full list in the repository's <a href="https://github.com/kevin-owens-product/drones/blob/cursor/a2e-mission-cloud/CHANGELOG.md">CHANGELOG.md</a>.</p>
             <ul class="steps">
-              <li><b>Physics check.</b> Fly a plan before launch through the terrain between it and the GCS, a battery that sags in the cold and the thrust left in a gust. Each finding has a fix (a relay on the ridge, a higher leg, a band the jammer misses, a pack preheat, a different airframe) that goes into the plan. Open it from Missions or the rail.</li>
+              <li><b>Terrain, cold packs and thrust, on the pages that use them.</b> Each plan in Missions is flown through the terrain between it and the GCS, a battery that sags in the cold and the thrust left in a gust, in the conditions you set; findings sit in Launch checks with a fix (a relay on the ridge, a higher leg, a band the jammer misses, a pack preheat, a different airframe) that goes into the plan. The Loadout planner shows packs and thrust for every airframe, the Denial map shows where the control and video links hold, and Airframes shows what a tail's next sortie needs on the pad.</li>
               <li><b>Guided walk.</b> A card that steps a first visitor through the loop: work queue, quality hold, the customer's fleet, Brief, Operate, Debrief and the audit chain. Open it from ⌘K with <b>Walk the demo</b>.</li>
               <li><b>⌘K finds things.</b> Every tail and every plan in the workspace is a palette entry and opens selected on its page.</li>
               <li><b>Access as a document.</b> Who can read and do what in the demo is a generated table that a test holds the code to: see the <a href="/developers/#auth">developer site</a>.</li>
@@ -132,7 +132,7 @@
             <h3>Manufacturer workspace</h3>
             <p>Work queue, then Deliver (Contract to field, Program), Make (Quality, Compliance, Configuration, Software updates), Sell (Quotes, Surge planner, Bid desk, Pricing plans, Releasability) and Learn (Field fixes, Attrition, Field reports, Evidence, Loadout planner). The manufacturer never sees a customer's people or another customer's fleet, and sees loss data only while that customer shares it.</p>
             <h3>Customer workspace</h3>
-            <p>Fly (Operate, Brief, Missions, Debrief, Loadout planner, GNSS denial map), Fleet (Airframes, All vendors, Configuration, Stockpile health, Crew readiness), Supply (Receiving, Accountability, Requests to Neros, Order, Software updates) and Learn (Attrition, Field reports). Operators see the flying pages; maintainers start on Airframes and see the fleet and supply pages first. The manufacturer's internals return a refusal, not an empty page.</p>
+            <p>Fly (Operate, Brief, Missions, Debrief, Loadout planner, Denial map), Fleet (Airframes, All vendors, Configuration, Stockpile health, Crew readiness), Supply (Receiving, Accountability, Requests to Neros, Order, Software updates) and Learn (Attrition, Field reports). Operators see the flying pages; maintainers start on Airframes and see the fleet and supply pages first. The manufacturer's internals return a refusal, not an empty page.</p>
             <h3>What flows between them</h3>
             <ul>
               <li><b>Requests</b> from the customer: airframes, spares, training and repairs.</li>

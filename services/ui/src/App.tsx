@@ -14,7 +14,6 @@ const BriefPage = lazy(() => import("./pages/Brief").then((m) => ({ default: m.B
 const CompanyPage = lazy(() => import("./pages/Company").then((m) => ({ default: m.CompanyPage })));
 const ConfigurePage = lazy(() => import("./pages/Configure").then((m) => ({ default: m.ConfigurePage })));
 const DebriefPage = lazy(() => import("./pages/Debrief").then((m) => ({ default: m.DebriefPage })));
-const PhysicsCheckPage = lazy(() => import("./pages/PhysicsCheck").then((m) => ({ default: m.PhysicsCheckPage })));
 const DenialMapPage = lazy(() => import("./pages/DenialMap").then((m) => ({ default: m.DenialMapPage })));
 const EvalPage = lazy(() => import("./pages/Eval").then((m) => ({ default: m.EvalPage })));
 const FieldReportsPage = lazy(() => import("./pages/FieldReports").then((m) => ({ default: m.FieldReportsPage })));
@@ -56,7 +55,6 @@ const SECTIONS: readonly Section[] = [
   "reports",
   "denial",
   "configure",
-  "physics",
   "brief",
   "receiving",
   "accountability",
@@ -87,6 +85,8 @@ const MOVED: Record<string, Section> = {
   organization: "access",
   people: "access",
   sharing: "access",
+  // The physics check now lives in the pages where its decisions are made; the plan holds the fixes.
+  physics: "missions",
 };
 
 function bannerClass(text: string): string {
@@ -259,7 +259,6 @@ export function App() {
       {section === "reports" ? <FieldReportsPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "denial" ? <DenialMapPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "configure" ? <ConfigurePage viewer={viewer} onBanner={setBanner} /> : null}
-      {section === "physics" ? <PhysicsCheckPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "brief" ? <BriefPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "receiving" ? <ReceivingPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "accountability" ? <AccountabilityPage viewer={viewer} onBanner={setBanner} /> : null}

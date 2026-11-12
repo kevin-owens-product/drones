@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import type { Viewer } from "../shell/types";
 import "./insights.css";
+import "./plan.css";
+import "./physics.css";
 
 type Pt = [number, number];
 
@@ -24,6 +26,23 @@ interface Picture {
   score: { mapped: number; precision: number | null; recall: number | null };
 }
 
+interface Coverage {
+  source: string;
+  link: "c2" | "video";
+  band: string;
+  band_label: string;
+  bands: { id: string; label: string }[];
+  agl_m: number;
+  ew: boolean;
+  cell_m: number;
+  need_db: number;
+  emitter: { x: number; y: number; label: string; on: boolean };
+  held_pct: number;
+  cells: { x: number; y: number; m: number }[];
+}
+
+type Layer = "gnss" | "c2" | "video";
+
 const pct = (v: number | null) => (v === null ? "–" : `${Math.round(v * 100)}%`);
 
 export function DenialMapPage({ onBanner }: { viewer: Viewer; onBanner: (banner: string) => void }) {
@@ -33,6 +52,19 @@ export function DenialMapPage({ onBanner }: { viewer: Viewer; onBanner: (banner:
   const [truth, setTruth] = useState(false);
   const [pic, setPic] = useState<Picture | null>(null);
   const [fault, setFault] = useState("");
+  const [layer, setLayer] = useState<Layer>("gnss");
+  const [agl, setAgl] = useState(100);
+  const [band, setBand] = useState("915");
+  const [ew, setEw] = useState(false);
+  const [cov, setCov] = useState<Coverage | null>(null);
+
+  useEffect(() => {
+    if (layer === "gnss") return;
+    const q = new URLSearchParams({ link: layer, band, agl_m: String(agl), ew: ew ? "1" : "0" });
+    void api<Coverage>(`/v1/coverage?${q}`)
+      .then((r) => setCov(r.body))
+      .catch(() => setCov(null));
+  }, [layer, band, agl, ew]);
 
   useEffect(() => {
     void api<Picture>(`/v1/denial-map?passes=${passes}`)
@@ -62,9 +94,9 @@ export function DenialMapPage({ onBanner }: { viewer: Viewer; onBanner: (banner:
       <header className="page-head">
         <div>
           <p className="kicker">Plan</p>
-          <h1 className="page-title">GNSS denial map</h1>
+          <h1 className="page-title">Denial map</h1>
           <p className="lede">
-            Every vehicle that flies on VIO also learns where GNSS dropped out or disagreed with VIO by more than {pic.residual_m} m. The fleet shares that, and the next route bends around it.
+            Where position fails and where the radio does. Every vehicle that flies on VIO also learns where GNSS dropped out or disagreed with VIO by more than {pic.residual_m} m; the fleet shares that, and the next route bends around it. The radio layers show where the control and video links hold over the terrain, with the jammer on or off.
           </p>
         </div>
         <span className="pill pill-warn" title={pic.source}>
@@ -72,6 +104,42 @@ export function DenialMapPage({ onBanner }: { viewer: Viewer; onBanner: (banner:
         </span>
       </header>
       <p className="ins-source">{pic.source}. The jamming zone J1 was in the brief; the spoofing zone S1 was not.</p>
+
+      <div className="dm-controls" role="group" aria-label="Layer">
+        <span className="ms-seg">
+          {(
+            [
+              ["gnss", "GNSS"],
+              ["c2", "Control link"],
+              ["video", "Video link"],
+            ] as [Layer, string][]
+          ).map(([k, label]) => (
+            <button key={k} type="button" className={layer === k ? "is-on" : ""} aria-pressed={layer === k} onClick={() => setLayer(k)}>
+              {label}
+            </button>
+          ))}
+        </span>
+        {layer !== "gnss" ? (
+          <>
+            <label htmlFor="dm-agl">
+              Drone at <strong>{agl} m</strong> above ground
+            </label>
+            <input id="dm-agl" type="range" min={30} max={150} step={10} value={agl} onChange={(e) => setAgl(Number(e.target.value))} />
+            {layer === "c2" ? (
+              <select aria-label="Control band" value={band} onChange={(e) => setBand(e.target.value)}>
+                {(cov?.bands ?? [{ id: "915", label: "900 MHz" }]).map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.label}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+            <label className="dm-check">
+              <input type="checkbox" checked={ew} onChange={(e) => setEw(e.target.checked)} /> EW emitter on (900 MHz, 2.4 GHz)
+            </label>
+          </>
+        ) : null}
+      </div>
 
       <div className="dm-controls">
         <label htmlFor="dm-passes">
@@ -109,7 +177,22 @@ export function DenialMapPage({ onBanner }: { viewer: Viewer; onBanner: (banner:
       <section className="panel">
         <svg className="dm-map" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Map of where GNSS was denied, with the planned route">
           <rect width={W} height={H} className="dm-bg" />
-          {pic.cells.map((c) => (
+          {layer !== "gnss" && cov
+            ? cov.cells.map((c, i) => (
+                <rect
+                  key={`cov-${i}`}
+                  x={sx(c.x - cov.cell_m / 2)}
+                  y={sy(c.y + cov.cell_m / 2)}
+                  width={cov.cell_m}
+                  height={cov.cell_m}
+                  className="dm-cov"
+                  style={{ fill: c.m < cov.need_db ? "var(--danger)" : c.m < cov.need_db + 10 ? "var(--warn)" : "var(--ok)", fillOpacity: c.m < cov.need_db ? 0.38 : 0.26 }}
+                >
+                  <title>{`${c.m} dB margin`}</title>
+                </rect>
+              ))
+            : null}
+          {layer === "gnss" && pic.cells.map((c) => (
             <rect
               key={c.i}
               x={sx(c.x - area.cell / 2)}
@@ -140,6 +223,14 @@ export function DenialMapPage({ onBanner }: { viewer: Viewer; onBanner: (banner:
           ))}
           <path d={line(pic.brief_route)} className="dm-route-brief" />
           <path d={line(pic.route)} className="dm-route" />
+          {layer !== "gnss" && cov?.emitter.on ? (
+            <g>
+              <circle cx={sx(cov.emitter.x)} cy={sy(cov.emitter.y)} r={110} className="ph-emitter" />
+              <text x={sx(cov.emitter.x) + 150} y={sy(cov.emitter.y) + 40} className="dm-label">
+                {cov.emitter.label}
+              </text>
+            </g>
+          ) : null}
           <circle cx={sx(pic.station.x)} cy={sy(pic.station.y)} r={70} className="dm-station" />
           <text x={sx(pic.station.x)} y={sy(pic.station.y) + 190} className="dm-label" textAnchor="middle">
             GCS
@@ -149,14 +240,22 @@ export function DenialMapPage({ onBanner }: { viewer: Viewer; onBanner: (banner:
             {pic.target.id} {pic.target.label}
           </text>
         </svg>
-        <p className="ins-legend">
+        {layer !== "gnss" && cov ? (
+          <p className="dm-cov-line" role="status" data-testid="coverage-line">
+            {cov.link === "video" ? "Video" : `Control on ${cov.band_label}`} holds over {cov.held_pct}% of the map with the drone at {cov.agl_m} m{cov.ew ? ", the emitter on" : ""}.{" "}
+            <span className="ins-key" style={{ background: "var(--ok)" }} /> {cov.need_db + 10} dB or more <span className="ins-key" style={{ background: "var(--warn)" }} /> Thin <span className="ins-key" style={{ background: "var(--danger)" }} /> Lost
+          </p>
+        ) : null}
+        <p className="ins-legend" hidden={layer !== "gnss"}>
           <span className="ins-key dm-key-route" /> Route from the shared map <span className="ins-key dm-key-brief" /> Route from the brief alone <span className="ins-key dm-key-pass" /> Scout
           passes <span className="ins-key dm-key-denied" /> Denied <span className="ins-key dm-key-clear" /> Clear (shade grows with samples)
         </p>
         <p className="meta ins-note">
           Each 200 m cell holds a Beta(1,1) estimate of how often GNSS was denied there. The planner is A* on that grid, with each cell's cost raised by its risk; cells with under 3 samples use the brief, or 10%
           if the brief says nothing, and a cell next to a denied one takes 60% of its risk. Precision and recall score cells with 3 or more samples against the simulation's zones. Across 100 seeds, four passes kept
-          both zones off the route every time (demo/denial.test.mjs). Real jamming and spoofing are patchier than circles.
+          both zones off the route every time (demo/denial.test.mjs). Real jamming and spoofing are patchier than circles. The radio layers price the path from the GCS mast to each 200 m cell over the SRTM/NED terrain
+          (Bullington diffraction, Fresnel clearance, Earth bulge) and count the emitter as interference; control needs {cov?.need_db ?? 10} dB of margin, video needs a signal at all. Assumed link budgets (SIM), not measured. Plans get the same
+          check along their own tracks on Missions.
         </p>
       </section>
     </section>
