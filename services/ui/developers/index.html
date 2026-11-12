@@ -241,6 +241,9 @@ curl -X POST "$GATEWAY/ingest?topic=dmc/v1/&lt;tenant&gt;/&lt;tail&gt;/telemetry
             <div class="table-wrap"><table>
               <thead><tr><th>Release</th><th>What shipped</th></tr></thead>
               <tbody>
+                <tr><td>Physics in the pages</td><td><code>GET /v1/missions/{id}/physics</code> (and <code>POST</code> to apply a fix), <code>/v1/envelope</code>, <code>/v1/coverage</code>, <code>/v1/wear</code>, <code>POST /v1/intent/height</code>; Brief proposals carry what each camera sees by height; <code>/v1/release</code> lists only the caller's own tenant to a customer</td></tr>
+                <tr><td>Performance model</td><td><code>GET /v1/physics</code>; one quadcopter model behind the sortie, launch energy checks, debrief and the loadout planner; unknown routes answer 404; the access matrix as a test</td></tr>
+                <tr><td>Product site</td><td>This site, the help center and the product page; user-visible brand Drone Mission Cloud; <code>dmc/v1</code> telemetry topics</td></tr>
                 <tr><td>Round two, wave 3</td><td>Allied tenants and releasability, plans and entitlements, stockpile health</td></tr>
                 <tr><td>Round two, wave 2</td><td>Surge planner, bid desk, fix loop</td></tr>
                 <tr><td>Round two, wave 1</td><td>Listing and quote, mixed-vendor fleet, field configuration</td></tr>

@@ -85,6 +85,7 @@
           </div>
           <div class="tabs" role="tablist" aria-label="Platform areas">
             <button class="tab" role="tab" aria-selected="true" data-tab="operate">Operate</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="physics">Plan</button>
             <button class="tab" role="tab" aria-selected="false" data-tab="record">Record</button>
             <button class="tab" role="tab" aria-selected="false" data-tab="sell">Sell</button>
             <button class="tab" role="tab" aria-selected="false" data-tab="sovereign">Allied and sovereign</button>
@@ -107,6 +108,27 @@
                 <button class="thumb" aria-pressed="true" data-src="/site-media/operate.webp" data-cap="Operate: the fleet over real terrain, the jamming zone and task lines"><img src="/site-media/operate.webp" alt="" loading="lazy" /></button>
                 <button class="thumb" aria-pressed="false" data-src="/site-media/relief.webp" data-cap="3D: each vehicle at its height above ground, the jamming zone as a dome"><img src="/site-media/relief.webp" alt="" loading="lazy" /></button>
                 <button class="thumb" aria-pressed="false" data-src="/site-media/brief.webp" data-cap="Brief: intent to plan, waiting on a second approver"><img src="/site-media/brief.webp" alt="" loading="lazy" /></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="pillar" data-pane="physics" hidden>
+            <div>
+              <h3>The physics sits on the page where the decision is made.</h3>
+              <p>Small drones are lost to the radio link behind a ridge, a pack that collapses in the cold, a gust they cannot out-thrust and wind the forecast never mentioned. Each plan is flown through all of it before launch, and every finding comes with a fix that changes the plan.</p>
+              <ul class="ticks">
+                <li>Launch checks with fixes<span>A relay on the ridge, a higher leg, a band the jammer misses, a pack preheat or a bigger airframe, applied to the plan in one press.</span></li>
+                <li>Wind over terrain<span>Speed-up over crests and sinking air on lee slopes, priced per tail in watt-hours and thrust in hand.</span></li>
+                <li>Camera height on Brief<span>Pixels on a person, strip width and the ground hidden by trees at each height, set before approval.</span></li>
+                <li>Wear by flight load<span>Bearing life and arm fatigue from how each tail was flown, not just its hours, with a ground-for-check action.</span></li>
+              </ul>
+            </div>
+            <div class="shots" data-gallery>
+              <figure class="shot"><img src="/site-media/missions-wind.webp" alt="Missions wind view" loading="lazy" /><figcaption><span>Missions: the forecast wind over the range's terrain, and what it costs each tail</span><span class="tag tag-sim">SIM</span></figcaption></figure>
+              <div class="shot-thumbs">
+                <button class="thumb" aria-pressed="true" data-src="/site-media/missions-wind.webp" data-cap="Missions: the forecast wind over the range's terrain, and what it costs each tail"><img src="/site-media/missions-wind.webp" alt="" loading="lazy" /></button>
+                <button class="thumb" aria-pressed="false" data-src="/site-media/launch-checks.webp" data-cap="Launch checks: energy, cold and link findings in the conditions you set, each with a fix"><img src="/site-media/launch-checks.webp" alt="" loading="lazy" /></button>
+                <button class="thumb" aria-pressed="false" data-src="/site-media/wear.webp" data-cap="Airframes: wear by flight load against a flat hours schedule"><img src="/site-media/wear.webp" alt="" loading="lazy" /></button>
               </div>
             </div>
           </div>
@@ -165,11 +187,11 @@
               </ul>
             </div>
             <div class="shots" data-gallery>
-              <figure class="shot"><img src="/site-media/allied.webp" alt="Allied tenant view" loading="lazy" /><figcaption><span>Allied tenant: withheld fields named, with the rule that withheld them</span><span class="tag tag-sim">SIM</span></figcaption></figure>
+              <figure class="shot"><img src="/site-media/allied.webp" alt="Allied tenant view" loading="lazy" /><figcaption><span>Allied tenant: build hashes withheld at the API, with the rule that withheld them</span><span class="tag tag-sim">SIM</span></figcaption></figure>
               <div class="shot-thumbs">
-                <button class="thumb" aria-pressed="true" data-src="/site-media/allied.webp" data-cap="Allied tenant: withheld fields named, with the rule that withheld them"><img src="/site-media/allied.webp" alt="" loading="lazy" /></button>
+                <button class="thumb" aria-pressed="true" data-src="/site-media/allied.webp" data-cap="Allied tenant: build hashes withheld at the API, with the rule that withheld them"><img src="/site-media/allied.webp" alt="" loading="lazy" /></button>
                 <button class="thumb" aria-pressed="false" data-src="/site-media/supply.webp" data-cap="Requests to Neros: the customer's portal to the maker"><img src="/site-media/supply.webp" alt="" loading="lazy" /></button>
-                <button class="thumb" aria-pressed="false" data-src="/site-media/denial.webp" data-cap="GNSS denial map: where the spoof gate rejected GNSS, built from field passes"><img src="/site-media/denial.webp" alt="" loading="lazy" /></button>
+                <button class="thumb" aria-pressed="false" data-src="/site-media/denial.webp" data-cap="Denial map: where the spoof gate rejected GNSS, and where the control and video links hold"><img src="/site-media/denial.webp" alt="" loading="lazy" /></button>
               </div>
             </div>
           </div>
@@ -259,7 +281,7 @@
             <div class="metric reveal"><span class="tag tag-sitl">PX4 SITL</span><span class="from">18.0%</span><div class="big">98.4 <small>%</small></div><p>Frames on target with tracker v2, median run, operator-designated object in simulation. v1 was 18%.</p><div class="bar"><i style="--w: 98.4%"></i></div></div>
             <div class="metric reveal"><span class="tag tag-sitl">PX4 SITL</span><div class="big">0.54 <small>s</small></div><p>Worst-run time to catch a spoofed 50 m GNSS step. Zero GNSS drops in clean or multipath flight.</p><div class="bar"><i style="--w: 92%"></i></div></div>
             <div class="metric reveal"><span class="tag tag-unit">Unit check</span><div class="big">0 <small>of 500</small></div><p>Tasks held by two vehicles across 500 lossy CBBA runs. Re-plan after a vehicle loss takes 1.3 s at 10 Hz.</p><div class="bar"><i style="--w: 100%"></i></div></div>
-            <div class="metric reveal"><span class="tag tag-sim">SIM</span><div class="big">~30 <small>per operator</small></div><p>Where mission success falls off in the supervision sweep. A kinematic sim with assumed rates, so it sets the next test, not a claim.</p><div class="bar"><i style="--w: 60%"></i></div></div>
+            <div class="metric reveal"><span class="tag tag-sim">SIM</span><div class="big">~40 <small>per operator</small></div><p>Where mission success falls off in the supervision sweep, now flown on the performance model with wind and pack swaps. Assumed coefficients, so it sets the next test, not a claim.</p><div class="bar"><i style="--w: 60%"></i></div></div>
           </div>
           <div class="honest reveal">
             <span class="tag tag-open">Open problems</span>
