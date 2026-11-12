@@ -24,6 +24,15 @@ There is no separate physics page: each piece sits where the decision it informs
   and emitter state.
 - **Airframes**: the selected tail's *Next sortie*, what its next plan needs on the pad (preheat,
   link, thrust) with a link to the plan.
+- **Operate**: each vehicle's station link quality is the terrain margin (`rf.mjs`), not distance
+  alone, and a *Radio shadow* map layer shades where control at 100 m is thin or lost.
+- **Debrief**: *Where the energy went* splits each tail's watt-hours with `powerParts`
+  (induced, profile, parasite, climb, avionics) plus what the wind, the cold derate and an early
+  return added; the vehicle panel plots control and video margin over the terrain along the flown
+  track, and a finding says whether a recorded link loss matches a terrain shadow.
+- **Stockpile health**: `demo/aging.mjs` models calendar ageing (loss ∝ √t, Arrhenius in
+  temperature, exponential in state of charge) so each stored pack shows capacity today and a
+  two-year projection as stored, at storage charge, and in a cool store.
 
 ## 1. Line of sight over real terrain, with jamming (`demo/rf.mjs`)
 

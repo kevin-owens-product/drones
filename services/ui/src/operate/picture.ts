@@ -78,6 +78,8 @@ export interface Layers {
   coverage: boolean;
   links: boolean;
   tasks: boolean;
+  /** Where the station's control link goes thin or is lost behind terrain, at 100 m. */
+  radio: boolean;
 }
 
 export const LAYER_NAMES: Record<keyof Layers, string> = {
@@ -85,9 +87,27 @@ export const LAYER_NAMES: Record<keyof Layers, string> = {
   coverage: "Coverage",
   links: "Links",
   tasks: "Tasks",
+  radio: "Radio shadow",
 };
 
-export const DEFAULT_LAYERS: Layers = { terrain: true, coverage: true, links: true, tasks: true };
+export const DEFAULT_LAYERS: Layers = { terrain: true, coverage: true, links: true, tasks: true, radio: false };
+
+/** The station's control-link margin over the terrain, as a grid of cells in latitude and longitude. */
+export interface RadioGrid {
+  agl_m: number;
+  need_db: number;
+  half_deg: [number, number];
+  cells: { ll: [number, number]; m: number }[];
+}
+
+export async function loadRadio(): Promise<RadioGrid | null> {
+  try {
+    const { body } = await api<RadioGrid>("/v1/coverage?link=c2&band=915&agl_m=100&ll=1");
+    return body && Array.isArray(body.cells) && Array.isArray(body.half_deg) ? body : null;
+  } catch {
+    return null;
+  }
+}
 
 export async function loadPicture(): Promise<Picture | null> {
   try {

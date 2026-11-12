@@ -111,3 +111,72 @@
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
 }
+
+/* Stockpile: pack capacity and its projected fade. */
+.sp-fade {
+  margin: 0 0 16px;
+}
+.sp-fade svg {
+  width: 100%;
+  height: 170px;
+  display: block;
+  background: var(--surface-2);
+}
+.sp-line {
+  fill: none;
+  stroke-width: 2;
+}
+.sp-line.sp-asis {
+  stroke: var(--warn);
+}
+.sp-line.sp-storage {
+  stroke: var(--accent);
+}
+.sp-line.sp-cool {
+  stroke: var(--ok);
+}
+.sp-eol {
+  stroke: var(--danger);
+  stroke-dasharray: 6 4;
+}
+.sp-key {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin: 0 4px 0 8px;
+}
+.sp-key.sp-asis {
+  background: var(--warn);
+}
+.sp-key.sp-storage {
+  background: var(--accent);
+}
+.sp-key.sp-cool {
+  background: var(--ok);
+}
+.sp-health {
+  display: inline-block;
+  width: 48px;
+  height: 6px;
+  background: var(--surface-2);
+  vertical-align: middle;
+}
+.sp-health span {
+  display: block;
+  height: 100%;
+  background: var(--ok);
+}
+.sp-pick {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  white-space: nowrap;
+}
+.sp-row-sel {
+  background: var(--accent-soft);
+}

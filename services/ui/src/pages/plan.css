@@ -547,3 +547,69 @@
 .ms-ph-findings {
   margin-bottom: 12px;
 }
+
+/* Debrief: where the energy went, and link margin over the terrain. */
+.db-energy {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.db-energy li {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 64px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.db-energy-bar {
+  display: flex;
+  height: 12px;
+  background: var(--surface-2);
+}
+.db-energy-bar span {
+  display: block;
+  height: 100%;
+}
+.db-energy-total {
+  color: var(--muted);
+  text-align: right;
+}
+.db-spark-tall svg {
+  height: 64px;
+  display: block;
+}
+.db-margin-lost {
+  fill: rgba(255, 107, 91, 0.22);
+}
+.db-margin-need {
+  stroke: var(--warn);
+  stroke-dasharray: 4 3;
+}
+.db-margin-zero {
+  stroke: var(--danger);
+  stroke-dasharray: 2 3;
+}
+.db-margin-c2 {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.6;
+}
+.db-margin-video {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.2;
+  stroke-dasharray: 5 3;
+  opacity: 0.7;
+}
+.db-margin-now {
+  stroke: var(--text);
+  stroke-width: 1;
+}
+.db-spark .db-margin-key {
+  display: block;
+  margin: 4px 0 0;
+  font-size: 11px;
+}

@@ -14,6 +14,7 @@
 
 import { TODAY } from "./company.mjs";
 import { addDays } from "./serials.mjs";
+import { AGING, packHealth, projection } from "./aging.mjs";
 
 export const RULES = {
   shelf_days: 180, // pack past this age is not flown: holds its airframe
@@ -81,9 +82,15 @@ export function createStockpile({ serials }) {
     if (maker.listed) flags.push({ level: "warn", code: "listed_maker", text: `${maker.name}: barred from ${RULES.listed_ban} (${daysBetween(TODAY, RULES.listed_ban)} days)`, fix: "rotate" });
     if (p.soc > RULES.storage_soc_max && storedDays > RULES.storage_days_warn) flags.push({ level: "warn", code: "high_charge", text: `Stored ${storedDays} days at ${Math.round(p.soc * 100)}% charge`, fix: "recharge" });
     if (p.heat_c > RULES.heat_c) flags.push({ level: "warn", code: "heat", text: `Store reached ${p.heat_c} °C`, fix: "inspect" });
+    // Calendar ageing: how much capacity the shelf has taken, and how soon it reaches end of life as stored.
+    const health = packHealth({ age_days: age, stored_days: storedDays, soc: p.soc, heat_c: p.heat_c });
+    if (health.eol_days !== null && health.eol_days < 365 && age <= RULES.shelf_days) {
+      const buys = p.soc > RULES.storage_soc_max && health.eol_days_storage_charge !== health.eol_days;
+      flags.push({ level: "warn", code: "fade", text: `Capacity ${Math.round(health.health_pct)}%: reaches ${Math.round(AGING.eol * 100)}% in ${health.eol_days} days as stored${buys ? `, ${health.eol_days_storage_charge ?? "over 7,000"} at storage charge` : ""}`, fix: buys ? "recharge" : "rotate" });
+    }
     return {
       serial: s.serial, sku: s.sku, unit: lotUnit(s), lot: s.delivery_lot,
-      pack: { id: p.id, maker: maker.name, listed: maker.listed, made: p.made, age_days: age, stored_days: storedDays, soc: p.soc, heat_c: p.heat_c },
+      pack: { id: p.id, maker: maker.name, listed: maker.listed, made: p.made, age_days: age, stored_days: storedDays, soc: p.soc, heat_c: p.heat_c, ...health, curve: projection({ age_days: age, stored_days: storedDays, soc: p.soc, heat_c: p.heat_c }) },
       flags, ready: !flags.some((f) => f.level === "hold"), history: p.history.slice(),
     };
   }
@@ -96,10 +103,10 @@ export function createStockpile({ serials }) {
     const count = (code) => rows.filter((r) => r.flags.some((f) => f.code === code)).length;
     return {
       source: "Simulated: pack makers, ages, charge and store temperatures are demo data seeded per serial. Cell makers are generic labels.",
-      today: TODAY, rules: RULES,
+      today: TODAY, rules: RULES, aging: AGING,
       units: units.map((u) => ({ unit: u, stored: rows.filter((r) => r.unit === u).length, held: rows.filter((r) => r.unit === u && !r.ready).length })),
       unit: pick,
-      counts: { stored: rows.length, held: rows.filter((r) => !r.ready).length, over_age: count("over_age"), listed: count("listed_maker"), high_charge: count("high_charge"), heat: count("heat") },
+      counts: { stored: rows.length, held: rows.filter((r) => !r.ready).length, over_age: count("over_age"), listed: count("listed_maker"), high_charge: count("high_charge"), heat: count("heat"), fade: count("fade") },
       rows: shown.slice(0, 120),
       retired: [...retired.entries()].filter(([id]) => serials.serials.get(id)?.org === org).map(([serial, x]) => ({ serial, ...x })),
       ban_days: daysBetween(TODAY, RULES.listed_ban),

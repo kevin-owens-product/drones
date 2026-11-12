@@ -1737,3 +1737,13 @@ kbd {
 .hud-horizon { stroke: #7dffc4; stroke-width: 1.6; opacity: 0.85; }
 .hud-arrowhead { fill: #7dffc4; }
 .hud-wind line { stroke-width: 1.6; }
+
+/* Radio shadow: where the station's control link is thin or lost over the terrain. */
+.tac-shadow {
+  fill: rgba(244, 180, 67, 0.16);
+  stroke: none;
+  pointer-events: none;
+}
+.tac-shadow.is-lost {
+  fill: rgba(255, 107, 91, 0.26);
+}
