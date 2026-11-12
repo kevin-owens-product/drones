@@ -199,7 +199,8 @@ export function App() {
     if (!viewer) return;
     const w = workspaceOf(viewer);
     // A bare address, or a page outside this workspace, lands on this person's home.
-    if (!window.location.hash || !sectionsFor(w).includes(section)) {
+    // "#home" is what the public site's "Open the console" links use, so each role starts on its own page.
+    if (!window.location.hash || window.location.hash === "#home" || !sectionsFor(w).includes(section)) {
       const home = homeOf(w, viewer);
       window.history.replaceState(null, "", `#${home}`);
       setSection(home);

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { Viewer } from "../shell/types";
-import { Loading, Note, PacketDrawer, PageHead, pct, SerialDrawer, Stat, useCustomerOrg, usePageData, Withheld } from "./thread";
+import { EmptyRow, Loading, Note, PacketDrawer, PageHead, pct, SerialDrawer, Stat, useCustomerOrg, usePageData, Withheld } from "./thread";
 
 interface Check { level: "fail" | "warn"; code: string; text: string }
 interface LotSummary {
@@ -115,6 +115,7 @@ export function ReceivingPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
               </tr>
             </thead>
             <tbody>
+              {d.history.length === 0 ? <EmptyRow text="Nothing received yet. A delivery shows up here when Neros ships it." go={{ label: "Order airframes", section: "quote" }} /> : null}
               {d.history.map((l) => (
                 <tr key={l.id}>
                   <td className="mono">{l.id}</td>
@@ -187,6 +188,7 @@ function PackageView({ id, org, disabled, onSerial, onDecide }: { id: string; or
             </tr>
           </thead>
           <tbody>
+            {rows.length === 0 ? <EmptyRow text="This lot has no serials to check." /> : null}
             {rows.map((r) => (
               <tr key={r.serial} className={r.checks.some((c) => c.level === "fail") ? "th-row-fail" : undefined}>
                 <td>

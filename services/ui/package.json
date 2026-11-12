@@ -10,7 +10,9 @@
     "e2e": "playwright test",
     "demo": "node demo/server.mjs",
     "typecheck": "tsc --noEmit",
-    "build:static": "tsc --noEmit && VITE_STATIC_DEMO=1 vite build && cp -r demo/assets dist/demo-assets"
+    "build:static": "tsc --noEmit && VITE_STATIC_DEMO=1 vite build && cp -r demo/assets dist/demo-assets",
+    "swarm": "node e2e/swarm/run.mjs",
+    "swarm:serve": "node e2e/swarm/serve.mjs 4180"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",

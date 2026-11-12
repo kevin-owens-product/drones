@@ -936,9 +936,26 @@ export function createDemo(opts = {}) {
     extra: EXTRA,
     // Allied sessions pass through their releasability rules on the way out (demo/release.mjs).
     handle(method, url, raw = "", who = null) {
-      return market.release.filter(routeRequest(method, url, raw, who), who);
+      return market.release.filter(ownFleet(routeRequest(method, url, raw, who), who), who);
     },
   };
+
+  // Every customer login flies the same scripted fleet (SIM). It is Customer A's on paper; another tenant sees it
+  // marked as its own, never another customer's id.
+  function ownFleet(res, who) {
+    const org = who?.org;
+    if (!org || org === NEROS.id || org === "CUS-A" || !res?.body || typeof res.body !== "object") return res;
+    const walk = (v) => {
+      if (Array.isArray(v)) return v.map(walk);
+      if (v && typeof v === "object") {
+        const out = {};
+        for (const [k, x] of Object.entries(v)) out[k] = k === "owner" && x === "CUS-A" ? org : walk(x);
+        return out;
+      }
+      return v;
+    };
+    return { ...res, body: walk(res.body) };
+  }
 
   function routeRequest(method, url, raw = "", who = null) {
       caller = who;

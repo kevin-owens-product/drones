@@ -129,7 +129,12 @@ export function createMarket({ company, thread, audit, holds, triage = () => [] 
     }
     if (path === "/v1/stockpile") return { status: 200, body: stockpile.view(org, q.get("unit")) };
     if (path === "/v1/plans") return { status: 200, body: neros && !q.get("org") ? plans.view() : plans.mine(org) };
-    if (path === "/v1/release") return { status: 200, body: { ...release.view(), you: viewer && !neros ? release.tenantOf(org) : null } };
+    if (path === "/v1/release") {
+      // A customer sees its own tenant row, never the names, countries or hosting of Neros's other customers.
+      const v = release.view();
+      if (viewer && !neros) v.tenants = v.tenants.filter((t) => t.org === org);
+      return { status: 200, body: { ...v, you: viewer && !neros ? release.tenantOf(org) : null } };
+    }
     if (path === "/v1/quote") {
       const c = {};
       for (const k of ["sku", "sensor", "qty", "seats", "fleet"]) if (q.get(k) != null) c[k] = q.get(k);

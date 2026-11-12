@@ -131,7 +131,7 @@ export function tourFor(viewer: Pick<Viewer, "roles" | "org">): readonly TourSte
 }
 
 const KEY = "dmc-tour";
-type Saved = { step: number; open: boolean; seen: boolean };
+type Saved = { step: number; open: boolean; seen: boolean; small?: boolean };
 
 export function readTour(): Saved {
   try {

@@ -17,9 +17,11 @@ export function Tour(props: {
 }): JSX.Element | null {
   const steps = tourFor(props.viewer);
   const [index, setIndex] = useState(() => Math.min(readTour().step, Math.max(0, steps.length - 1)));
+  // Folded to its header line so it stops covering the page; a phone starts folded.
+  const [small, setSmall] = useState(() => readTour().small ?? window.matchMedia("(max-width: 640px)").matches);
   useEffect(() => {
-    saveTour({ ...readTour(), step: index, open: props.open });
-  }, [index, props.open]);
+    saveTour({ ...readTour(), step: index, open: props.open, small });
+  }, [index, props.open, small]);
   if (!props.open || steps.length === 0) return null;
   const step = steps[Math.min(index, steps.length - 1)] as TourStep;
   const here = props.section === step.section && (!step.workspace || props.workspace === step.workspace || !props.viewer.org);
@@ -33,15 +35,27 @@ export function Tour(props: {
   }
 
   return (
-    <aside className="tour" role="complementary" aria-label="Guided walk" data-testid="tour">
+    <aside className={small ? "tour is-small" : "tour"} role="complementary" aria-label="Guided walk" data-testid="tour">
       <div className="tour-head">
         <span className="kicker">
           Walk the demo · {index + 1} of {steps.length}
         </span>
-        <button type="button" className="tour-close" onClick={props.onClose} aria-label="Close the guided walk">
-          ×
-        </button>
+        <span>
+          <button type="button" className="tour-close" onClick={() => setSmall((x) => !x)} aria-expanded={!small} aria-label={small ? "Show the guided walk" : "Fold the guided walk"} title={small ? "Show" : "Fold"}>
+            {small ? "▴" : "▾"}
+          </button>
+          <button type="button" className="tour-close" onClick={props.onClose} aria-label="Close the guided walk">
+            ×
+          </button>
+        </span>
       </div>
+      {small ? (
+        <button type="button" className="tour-mini" onClick={() => setSmall(false)}>
+          {step.title}
+        </button>
+      ) : null}
+      {small ? null : (
+        <>
       <h2>{step.title}</h2>
       <p>{step.body}</p>
       <p className="tour-action">
@@ -74,6 +88,8 @@ export function Tour(props: {
           </li>
         ))}
       </ol>
+        </>
+      )}
     </aside>
   );
 }

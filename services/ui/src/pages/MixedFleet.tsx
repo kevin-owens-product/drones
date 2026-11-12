@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { api } from "../api";
 import type { Viewer } from "../shell/types";
-import { Loading, Note, PageHead, Stat, useCustomerOrg, usePageData, Withheld } from "./thread";
+import { EmptyRow, Loading, Note, PageHead, Stat, useCustomerOrg, usePageData, Withheld } from "./thread";
 import "./market.css";
 
 interface UnitRow { unit: string; vendors: number; total: number; ready: number; unknown: number; grounded: number; held: number }
@@ -63,6 +63,7 @@ export function MixedFleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner:
           <table data-testid="mixed-units">
             <thead><tr><th>Unit</th><th>Vendors</th><th>Tails</th><th>Ready</th><th>Held (Neros)</th><th>Grounded</th><th>Unknown</th></tr></thead>
             <tbody>
+              {d.units.length === 0 ? <EmptyRow text="No units on file yet. Import another vendor's tails below, or accept a Neros delivery." /> : null}
               {d.units.map((u) => (
                 <tr key={u.unit}><td>{u.unit}</td><td className="mono">{u.vendors}</td><td className="mono">{u.total}</td><td className="mono">{u.ready}</td><td className="mono">{u.held}</td><td className="mono">{u.grounded}</td><td className="mono">{u.unknown}</td></tr>
               ))}
@@ -78,6 +79,7 @@ export function MixedFleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner:
             <table>
               <thead><tr><th>Unit</th><th>Model</th><th>On hand</th><th>Ready</th><th>Sorties, 14 days</th></tr></thead>
               <tbody>
+                {d.neros.length === 0 ? <EmptyRow text="Nothing yet for your organization: rows appear once Neros delivers airframes and you accept them." go={{ label: "Open Receiving", section: "receiving" }} /> : null}
                 {d.neros.map((r) => (
                   <tr key={r.unit}><td>{r.unit}</td><td>{r.model}</td><td className="mono">{r.total}</td><td className="mono">{r.ready}</td><td className="mono">{r.sorties_14d}</td></tr>
                 ))}
@@ -93,7 +95,7 @@ export function MixedFleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner:
           </label>
           <div className="ops-actions">
             <button type="button" className="btn btn-quiet" onClick={() => setCsv(d.sample_log)}>Use the sample export</button>
-            <button type="button" className="btn" disabled={!canAct || page.busy || !csv.trim()} onClick={() => void post("mixed.import", { csv }).then((ok) => ok && setCsv(""))}>Import</button>
+            <button type="button" className="btn" disabled={!canAct || page.busy || !csv.trim()} title={!canAct ? "Importing needs the mission commander, maintainer or admin role" : !csv.trim() ? "Paste rows above first" : undefined} onClick={() => void post("mixed.import", { csv }).then((ok) => ok && setCsv(""))}>Import</button>
           </div>
           <p className="meta">Every row is checked: unknown vendors, dates that are not dates, Neros tails (they report through their own records) and impossible durations are refused with the reason. Good rows land.</p>
         </section>
@@ -105,6 +107,7 @@ export function MixedFleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner:
           <table data-testid="mixed-tails">
             <thead><tr><th>Tail</th><th>Vendor</th><th>Unit</th><th>Source</th><th>Last log</th><th>Flights, 30 days</th><th>Status</th><th>NGC2</th><th>Record</th><th /></tr></thead>
             <tbody>
+              {d.others.length === 0 ? <EmptyRow text="No other vendors' airframes yet. Paste their rows into Import below." /> : null}
               {d.others.map((t) => (
                 <tr key={t.tail} className={t.state === "retired" ? "th-row-fail" : undefined}>
                   <td className="mono">{t.tail}</td>

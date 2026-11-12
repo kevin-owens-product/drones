@@ -26,7 +26,7 @@ export function mountChrome(current: "product" | "help" | "developers" | "why"):
         </nav>
         <div class="nav-cta">
           <a class="btn btn-sm" href="/why/">Why I built this</a>
-          <a class="btn btn-sm btn-primary" href="/#operate">Open the console →</a>
+          <a class="btn btn-sm btn-primary" href="/#home">Open the console →</a>
         </div>
         <button class="nav-toggle" aria-expanded="false" aria-label="Menu">Menu</button>
       </div>`;
@@ -52,7 +52,7 @@ export function mountChrome(current: "product" | "help" | "developers" | "why"):
             <li><a href="/product/#loop">Factory to field</a></li>
             <li><a href="/product/#evidence">Evidence</a></li>
             <li><a href="/product/#pricing">Pricing</a></li>
-            <li><a href="/#operate">Live console</a></li>
+            <li><a href="/#home">Live console</a></li>
             <li><a href="/why/">Why I built this</a></li>
           </ul></div>
           <div><h4>Help</h4><ul>

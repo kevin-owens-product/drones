@@ -84,7 +84,7 @@ export function IntegrationsPage({ viewer, onBanner }: { viewer: Viewer; onBanne
                   </td>
                   <td>
                     {f.direction === "out" ? (
-                      <button type="button" className="btn btn-quiet" disabled={!canAct || page.busy} onClick={() => void page.post("/v1/interop/act", "feed.set", { org, id: f.id, on: !f.on })}>
+                      <button type="button" className="btn btn-quiet" disabled={!canAct || page.busy} title={canAct ? undefined : viewer.org === "neros" ? "Each customer switches its own feeds" : "Switching a feed needs the mission commander, maintainer or admin role"} onClick={() => void page.post("/v1/interop/act", "feed.set", { org, id: f.id, on: !f.on })}>
                         Turn {f.on ? "off" : "on"}
                       </button>
                     ) : null}

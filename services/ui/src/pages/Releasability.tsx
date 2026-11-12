@@ -24,6 +24,9 @@ export function ReleasabilityPage({ onBanner }: { viewer: Viewer; onBanner: (ban
       />
       <p className="ins-source">{d.source}</p>
       <Withheld data={d} />
+      <p className="meta">
+        {d.test} <a href="/developers/#auth">How the API enforces it, and the test that fails if it drifts</a>.
+      </p>
 
       <div className="th-stats">
         <Stat label="Fields withheld from allied tenants" value={String(d.rules.length)} />

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Viewer } from "../shell/types";
-import { Loading, Note, PageHead, Stat, useCustomerOrg, usePageData, Withheld } from "./thread";
+import { EmptyRow, Loading, Note, PageHead, Stat, useCustomerOrg, usePageData, Withheld } from "./thread";
 import "./market.css";
 
 interface Flag { level: "hold" | "warn"; code: string; text: string; fix: string }
@@ -97,6 +97,7 @@ export function StockpilePage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
           <table data-testid="stock-rows">
             <thead><tr><th>Serial</th><th>Unit</th><th>Pack</th><th>Age</th><th>Charge</th><th>Store max</th><th>Capacity</th><th>State</th><th /></tr></thead>
             <tbody>
+              {d.rows.length === 0 ? <EmptyRow text="No stored airframes in this unit yet." /> : null}
               {d.rows.map((r) => (
                 <tr key={r.serial} className={[r.ready ? "" : "th-row-fail", r.serial === shown?.serial ? "sp-row-sel" : ""].join(" ").trim() || undefined}>
                   <td className="mono">

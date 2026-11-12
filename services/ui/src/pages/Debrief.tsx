@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api";
 import type { Viewer } from "../shell/types";
+import { can } from "../shell/workspace";
 import { RangeMap, colorFor, type MapMarker, type MapPath, type RangeFrame } from "./RangeMap";
 import "./insights.css";
 import "./plan.css";
@@ -572,7 +573,13 @@ export function DebriefPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
                   <option value="json">JSON replay</option>
                   <option value="xapi">xAPI training record</option>
                 </select>
-                <button className="btn btn-primary" type="button" disabled={busy || !data?.tracks?.length} onClick={() => void onExport()}>
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  disabled={busy || !data?.tracks?.length || !can(viewer, "release.export")}
+                  title={can(viewer, "release.export") ? undefined : "Releasing a debrief needs the mission commander, planner, analyst or admin role."}
+                  onClick={() => void onExport()}
+                >
                   Release debrief
                 </button>
                 </>

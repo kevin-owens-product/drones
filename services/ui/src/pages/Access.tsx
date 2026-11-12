@@ -110,6 +110,10 @@ export function AccessPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ba
             .join(", ") || "nothing yet"}
           .
         </p>
+        <p className="meta">
+          Roles come from your organization's sign-in provider, so an admin there changes them, and every change lands in the audit log.{" "}
+          <a href="/developers/#auth">See what each role can open and change</a>.
+        </p>
       </section>
 
       <section className="panel">

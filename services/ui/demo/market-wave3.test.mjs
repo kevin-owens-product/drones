@@ -101,3 +101,14 @@ test("bid desk picks up releasability once rules exist", () => {
   assert.equal(rows.find((r) => r.id === "rel").status, "met");
   assert.equal(rows.find((r) => r.id === "sov").status, "partial");
 });
+
+test("releasability: a customer sees only its own tenant row, never Neros's other customers", () => {
+  const d = createDemo({ speed: 0 });
+  const as = (org) => ({ username: "x", roles: ["mission_commander"], org });
+  for (const [org, other] of [["CUS-A", "CUS-C"], ["CUS-C", "CUS-A"]]) {
+    const body = JSON.stringify(d.handle("GET", new URL("http://x/v1/release"), "", as(org)).body);
+    assert.ok(!body.includes(other), `${org} must not see ${other}`);
+  }
+  const neros = d.handle("GET", new URL("http://x/v1/release"), "", { username: "n", roles: ["admin"], org: "neros" }).body;
+  assert.equal(neros.tenants.length, 3);
+});

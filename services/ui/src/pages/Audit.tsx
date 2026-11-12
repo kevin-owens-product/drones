@@ -191,10 +191,10 @@ export function AuditPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b: 
         )
       ) : null}
       {access === "open" ? (
-        <div className="role-switch">
-          <button type="button" className={decisionFilter === "all" ? "btn btn-primary" : "btn"} onClick={() => setDecisionFilter("all")}>All</button>
-          <button type="button" className={decisionFilter === "allow" ? "btn btn-primary" : "btn"} onClick={() => setDecisionFilter("allow")}>Allow</button>
-          <button type="button" className={decisionFilter === "deny" ? "btn btn-primary" : "btn"} onClick={() => setDecisionFilter("deny")}>Deny</button>
+        <div className="role-switch" role="group" aria-label="Filter by decision">
+          <button type="button" className={decisionFilter === "all" ? "btn btn-primary" : "btn"} aria-pressed={decisionFilter === "all"} onClick={() => setDecisionFilter("all")}>All</button>
+          <button type="button" className={decisionFilter === "allow" ? "btn btn-primary" : "btn"} aria-pressed={decisionFilter === "allow"} onClick={() => setDecisionFilter("allow")}>Allow</button>
+          <button type="button" className={decisionFilter === "deny" ? "btn btn-primary" : "btn"} aria-pressed={decisionFilter === "deny"} onClick={() => setDecisionFilter("deny")}>Deny</button>
         </div>
       ) : null}
       {access === "open" && ordered.length === 0 ? <p className="empty">No events in this filter.</p> : null}

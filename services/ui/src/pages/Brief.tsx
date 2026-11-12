@@ -235,7 +235,7 @@ export function BriefPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
         <div className="br-row">
           <div className="br-examples">
             {EXAMPLES.map((ex) => (
-              <button key={ex} type="button" className="chip" onClick={() => setBrief(ex)}>
+              <button key={ex} type="button" className={brief === ex ? "chip is-on" : "chip"} aria-pressed={brief === ex} onClick={() => setBrief(ex)}>
                 {ex.length > 44 ? `${ex.slice(0, 44)}…` : ex}
               </button>
             ))}

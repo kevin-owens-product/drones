@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { api } from "../api";
 import type { Viewer } from "../shell/types";
-import { Loading, Note, PageHead, Stat, useCustomerOrg, usePageData, Withheld } from "./thread";
+import { EmptyRow, Loading, Note, PageHead, Stat, useCustomerOrg, usePageData, Withheld } from "./thread";
 
 interface Result { unit: string; sku: string; serials: string[]; sorties: number; faults: number; lost_links: number; rate: number; baseline: number; pass: boolean }
 interface Rollout { status: string; approved_by?: string; approved?: string; units: Record<string, string>; results?: Result[]; halt?: string | null; canary?: string[] }
@@ -111,7 +111,7 @@ export function UpdatesPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
                     <button type="button" className="btn btn-primary" disabled={!canCustomer || page.busy} onClick={() => go("updates.approve", { release: r.id })}>Approve for our fleet</button>
                   ) : null}
                   {!isNeros && ro.status === "approved" ? (
-                    <button type="button" className="btn btn-primary" disabled={!canCustomer || page.busy} onClick={() => go("updates.canary", { release: r.id })}>Fly the canary</button>
+                    <button type="button" className="btn btn-primary" disabled={!canCustomer || page.busy || !d.units.length} title={d.units.length ? undefined : "No airframes issued to a unit yet, so there is nothing to fly the canary on"} onClick={() => go("updates.canary", { release: r.id })}>Fly the canary</button>
                   ) : null}
                   {!isNeros && (ro.status === "canary passed" || ro.status === "rolling out")
                     ? d.units.filter((u) => ro.units[u] !== "fleet").map((u) => (
@@ -147,6 +147,7 @@ export function UpdatesPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
               </tr>
             </thead>
             <tbody>
+              {d.versions.length === 0 ? <EmptyRow text="Nothing yet for your organization: rows appear once Neros delivers airframes and you accept them." go={{ label: "Open Receiving", section: "receiving" }} /> : null}
               {d.versions.map((v) => (
                 <tr key={v.unit}>
                   <td>{v.unit}</td>
