@@ -13,7 +13,26 @@ const LINKS: Array<[string, string]> = [
   ["/developers/", "Developers"],
 ];
 
+/**
+ * Request a demo and Contact forms from the ProductExec platform, which emails each
+ * submission to Kevin. This site is a static build hosted off the platform, so the
+ * script comes from a platform host and posts there cross-origin (the platform allows
+ * this origin in PE_INQUIRY_ORIGINS). Off the hosted site it simply does not load.
+ */
+const PE_FORMS = (import.meta.env.VITE_PE_FORMS_ORIGIN as string | undefined) ?? "https://discover.productexec.co";
+
+function loadForms(): void {
+  if (!PE_FORMS || document.querySelector("script[data-pe-forms]")) return;
+  const s = document.createElement("script");
+  s.src = `${PE_FORMS}/__pe/forms.js`;
+  s.async = true;
+  s.setAttribute("data-pe-forms", "");
+  s.setAttribute("data-product", "Drone Mission Cloud");
+  document.head.appendChild(s);
+}
+
 export function mountChrome(current: "product" | "help" | "developers" | "why"): void {
+  loadForms();
   const nav = document.querySelector<HTMLElement>("[data-site-nav]");
   if (nav) {
     nav.className = "nav";
@@ -25,7 +44,8 @@ export function mountChrome(current: "product" | "help" | "developers" | "why"):
           ${LINKS.map(([href, label]) => `<a href="${href}"${href.startsWith(`/${current}/`) && href.endsWith("/") ? ' aria-current="page"' : ""}>${label}</a>`).join("")}
         </nav>
         <div class="nav-cta">
-          <a class="btn btn-sm" href="/why/">Why I built this</a>
+          <a class="btn btn-sm nav-why" href="/why/">Why I built this</a>
+          <a class="btn btn-sm" href="#request-demo" data-pe-open="demo">Request a demo</a>
           <a class="btn btn-sm btn-primary" href="/#home">Open the console →</a>
         </div>
         <button class="nav-toggle" aria-expanded="false" aria-label="Menu">Menu</button>
@@ -54,6 +74,8 @@ export function mountChrome(current: "product" | "help" | "developers" | "why"):
             <li><a href="/product/#pricing">Pricing</a></li>
             <li><a href="/#home">Live console</a></li>
             <li><a href="/why/">Why I built this</a></li>
+            <li><a href="#request-demo" data-pe-open="demo">Request a demo</a></li>
+            <li><a href="#contact" data-pe-open="contact">Contact</a></li>
           </ul></div>
           <div><h4>Help</h4><ul>
             <li><a href="/help/#start">Getting started</a></li>
@@ -70,7 +92,7 @@ export function mountChrome(current: "product" | "help" | "developers" | "why"):
             <li><a href="https://github.com/kevin-owens-product/drones">Source on GitHub</a></li>
           </ul></div>
         </div>
-        <p class="disclaimer">Drone Mission Cloud is an independent concept product built by Kevin Owens. It is not affiliated with, endorsed by or a product of Neros Technologies or any vendor named in the demo. Manufacturer catalog items appear as published; every fleet, order, price, customer and flight on this site is simulated demo data, and every metric says where it was measured. The console monitors and advises; it never arms or fires, and fire control stays on the airframe (ADR 0016). Questions or an invite link: <a href="mailto:kevin.a.owens@gmail.com">kevin.a.owens@gmail.com</a>.</p>
+        <p class="disclaimer">Drone Mission Cloud is an independent concept product built by Kevin Owens. It is not affiliated with, endorsed by or a product of Neros Technologies or any vendor named in the demo. Manufacturer catalog items appear as published; every fleet, order, price, customer and flight on this site is simulated demo data, and every metric says where it was measured. The console monitors and advises; it never arms or fires, and fire control stays on the airframe (ADR 0016). Questions or an invite link: <a href="#contact" data-pe-open="contact">send a note</a> or email <a href="mailto:kevin.a.owens@gmail.com">kevin.a.owens@gmail.com</a>.</p>
       </div>`;
   }
 
