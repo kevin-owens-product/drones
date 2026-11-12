@@ -44,3 +44,27 @@ test("an airframe shows what its next sortie needs on the pad", async ({ page })
   await expect(next).toContainText("M-1035");
   await expect(next).toContainText("Preheat");
 });
+
+test("operate can shade where the station's control link is thin behind terrain", async ({ page }) => {
+  await page.goto("/#operate");
+  await page.getByRole("button", { name: "Radio shadow" }).click();
+  await expect(page.locator(".tac-shadow").first()).toBeVisible();
+});
+
+test("debrief shows where the energy went and the link margin over the terrain", async ({ page }) => {
+  await page.addInitScript(() => sessionStorage.setItem("a2e-debrief-mission", "M-1029"));
+  await page.goto("/#debrief");
+  await expect(page.getByTestId("debrief-energy")).toContainText("Fighting the wind");
+  await expect(page.getByTestId("debrief-energy")).toContainText("Cold pack");
+  await expect(page.getByTestId("debrief-margin")).toContainText("worst control");
+});
+
+test("stockpile projects a pack's capacity and what a storage charge buys", async ({ page }) => {
+  await page.goto("/#stockpile");
+  const fade = page.getByTestId("stock-fade");
+  await expect(fade).toContainText("at storage charge");
+  const second = page.getByTestId("stock-rows").locator(".sp-pick").nth(1);
+  const serial = (await second.textContent()) ?? "";
+  await second.click();
+  await expect(fade).toContainText(serial);
+});

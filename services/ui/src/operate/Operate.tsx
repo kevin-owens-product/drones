@@ -4,7 +4,7 @@ import type { LivePoint } from "../live";
 import { setPageCommands, type Command } from "../shell/commands";
 import type { Viewer } from "../shell/types";
 import { Hud } from "./Hud";
-import { DEFAULT_LAYERS, LAYER_NAMES, loadPicture, replanText, replans, type Layers, type Picture } from "./picture";
+import { DEFAULT_LAYERS, LAYER_NAMES, loadPicture, loadRadio, replanText, replans, type Layers, type Picture, type RadioGrid } from "./picture";
 import { TacMap, type Pulse, type Trail } from "./TacMap";
 import { Timeline } from "./Timeline";
 import { blocker, checks, isGo, median, onGround, seconds, tick, type Check, type ReadyClock } from "./readiness";
@@ -173,6 +173,11 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
   const [events, setEvents] = useState<OpsEvent[]>([]);
   const [picture, setPicture] = useState<Picture | null>(null);
   const [layers, setLayers] = useState<Layers>(loadLayers);
+  const [radio, setRadio] = useState<RadioGrid | null>(null);
+  useEffect(() => {
+    // The terrain does not move: fetch the radio grid once, when the layer is first switched on.
+    if (layers.radio && !radio) void loadRadio().then(setRadio);
+  }, [layers.radio, radio]);
   const [densityPref, setDensityPref] = useState<boolean | null>(null);
   const [view3d, setView3d] = useState(false);
   const [reporting, setReporting] = useState(false);
@@ -499,7 +504,7 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
             <Map3D fleet={view} picture={viewPicture} layers={layers} selected={selected} follow={follow} onSelect={setSelected} />
           </Suspense>
         ) : (
-          <TacMap fleet={view} trails={trails} selected={selected} follow={follow} onSelect={setSelected} picture={viewPicture} layers={layers} pulses={pulses} density={density} />
+          <TacMap fleet={view} trails={trails} selected={selected} follow={follow} onSelect={setSelected} picture={viewPicture} layers={layers} pulses={pulses} density={density} radio={layers.radio ? radio : null} />
         )}
         {picture || liveCount > 20 ? (
           <div className="op-layers chips" role="group" aria-label="Map layers">

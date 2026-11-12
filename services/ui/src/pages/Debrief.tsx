@@ -34,6 +34,89 @@ interface Track {
   vio_s: number;
   link_lost_s: number;
   flight_s: number;
+  energy_wh?: number;
+  energy_parts?: Record<EnergyPart, number>;
+  /** [t_s, control margin dB, video margin dB, link up 1/0], priced over the terrain from the GCS every 30 s. */
+  link_margin?: [number, number, number, number][];
+}
+
+type EnergyPart = "induced" | "parasite" | "profile" | "climb" | "avionics" | "wind" | "cold" | "abort";
+const ENERGY_PARTS: [EnergyPart, string, string][] = [
+  ["induced", "Holding it up", "#5cc8ff"],
+  ["profile", "Spinning the blades", "#8eb4ff"],
+  ["parasite", "Pushing through the air", "#b6a5ff"],
+  ["climb", "Climbing", "#3fd69a"],
+  ["avionics", "Avionics", "#7fe0d6"],
+  ["wind", "Fighting the wind", "#f4b443"],
+  ["cold", "Cold pack", "#dfe7ef"],
+  ["abort", "Early return", "#ff6b5b"],
+];
+
+/** Each tail's energy split by where it went, as stacked bars on one scale. */
+function EnergyBars({ tracks }: { tracks: Track[] }) {
+  const rows = tracks.filter((x) => x.energy_parts);
+  if (!rows.length) return null;
+  const total = (x: Track) => ENERGY_PARTS.reduce((a, [k]) => a + Math.max(0, x.energy_parts?.[k] ?? 0), 0);
+  const max = Math.max(...rows.map(total), 1);
+  const used = ENERGY_PARTS.filter(([k]) => rows.some((x) => (x.energy_parts?.[k] ?? 0) > 0.05));
+  return (
+    <>
+      <ul className="db-energy" aria-label="Energy by where it went, per vehicle">
+        {rows.map((x) => (
+          <li key={x.tail}>
+            <span className="db-energy-tail">{x.tail}</span>
+            <span className="db-energy-bar">
+              {used.map(([k, label, color]) => {
+                const v = Math.max(0, x.energy_parts?.[k] ?? 0);
+                return v > 0 ? <span key={k} style={{ width: `${(100 * v) / max}%`, background: color }} title={`${label}: ${v} Wh`} /> : null;
+              })}
+            </span>
+            <span className="db-energy-total">{x.energy_wh ?? Math.round(total(x))} Wh</span>
+          </li>
+        ))}
+      </ul>
+      <p className="ins-legend">
+        {used.map(([k, label, color]) => (
+          <span key={k}>
+            <span className="ins-key" style={{ background: color }} /> {label}{" "}
+          </span>
+        ))}
+      </p>
+    </>
+  );
+}
+
+/** Control and video margin along the flown track, over the terrain, with the moments the link was actually down shaded. */
+function MarginSpark({ track, t }: { track: Track; t: number }) {
+  const rows = track.link_margin ?? [];
+  if (rows.length < 2) return null;
+  const W = 300;
+  const H = 70;
+  const t0 = rows[0]![0];
+  const t1 = rows.at(-1)![0] || t0 + 1;
+  const vals = rows.flatMap((r) => [r[1], r[2]]);
+  const lo = Math.min(-10, ...vals);
+  const hi = Math.max(30, ...vals);
+  const x = (s: number) => ((s - t0) / Math.max(1, t1 - t0)) * W;
+  const y = (v: number) => H - ((v - lo) / (hi - lo)) * H;
+  const line = (i: 1 | 2) => rows.map((r, k) => `${k ? "L" : "M"}${x(r[0]).toFixed(1)},${y(r[i]).toFixed(1)}`).join(" ");
+  const worst = Math.min(...rows.map((r) => r[1]));
+  return (
+    <div className="db-spark db-spark-tall" data-testid="debrief-margin">
+      <p className="meta">
+        Link margin over the terrain <strong className="mono">worst control {worst} dB</strong>
+      </p>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`${track.tail} control and video link margin over the terrain through the flight`}>
+        {rows.map((r, k) => (r[3] === 0 && rows[k + 1] ? <rect key={k} x={x(r[0])} y={0} width={Math.max(1, x(rows[k + 1]![0]) - x(r[0]))} height={H} className="db-margin-lost" /> : null))}
+        <line x1={0} x2={W} y1={y(10)} y2={y(10)} className="db-margin-need" vectorEffect="non-scaling-stroke" />
+        <line x1={0} x2={W} y1={y(0)} y2={y(0)} className="db-margin-zero" vectorEffect="non-scaling-stroke" />
+        <path d={line(2)} className="db-margin-video" vectorEffect="non-scaling-stroke" />
+        <path d={line(1)} className="db-margin-c2" vectorEffect="non-scaling-stroke" />
+        {t >= t0 && t <= t1 ? <line x1={x(t)} x2={x(t)} y1={0} y2={H} className="db-margin-now" vectorEffect="non-scaling-stroke" /> : null}
+      </svg>
+      <p className="meta db-margin-key">Control (solid), video (dashed), 10 dB planning line; shaded where the link was actually down.</p>
+    </div>
+  );
 }
 
 interface DebriefEvent {
@@ -599,6 +682,7 @@ export function DebriefPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
                     })()}
                     <Spark track={focusTrack} t={t} field={3} label="Altitude" unit="m" />
                     <Spark track={focusTrack} t={t} field={4} label="Battery" unit="%" />
+                    <MarginSpark track={focusTrack} t={t} />
                   </>
                 ) : null}
               </section>
@@ -612,6 +696,19 @@ export function DebriefPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
                 <span className="meta">Click to jump. Bars show navigation source and link; dots are events.</span>
               </div>
               <Lanes tracks={tracks} events={events} duration={duration} t={t} tails={tails} onSeek={(s) => setT(s)} />
+            </section>
+          ) : null}
+
+          {tracks.some((x) => x.energy_parts) ? (
+            <section className="panel" data-testid="debrief-energy">
+              <div className="panel-head">
+                <h2>Where the energy went</h2>
+                <span className="pill pill-warn">SIM</span>
+              </div>
+              <EnergyBars tracks={tracks} />
+              <p className="meta ins-note">
+                The performance model's power split by part at every 5 s step: induced power holds the airframe up, profile power spins the blades, parasite power pushes the body through the air. Fighting the wind is what the flight cost over the same ground track in still air (negative when a tailwind helped). Cold pack and early return are the extra a cold derate and an RTL added. Assumed coefficients, not measured.
+              </p>
             </section>
           ) : null}
 

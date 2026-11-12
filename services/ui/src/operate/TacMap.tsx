@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type JSX } from "react";
-import type { Layers, Picture } from "./picture";
+import type { Layers, Picture, RadioGrid } from "./picture";
 import type { Vehicle } from "./vehicle";
 
 /**
@@ -89,6 +89,7 @@ export function TacMap({
   layers,
   pulses,
   density,
+  radio = null,
 }: {
   fleet: readonly Vehicle[];
   trails: ReadonlyMap<string, Trail>;
@@ -96,6 +97,7 @@ export function TacMap({
   follow: boolean;
   onSelect: (tail: string | null) => void;
   picture: Picture | null;
+  radio?: RadioGrid | null;
   layers: Layers;
   pulses: ReadonlyMap<string, Pulse>;
   density: boolean;
@@ -259,6 +261,18 @@ export function TacMap({
       </g>
     );
   });
+
+  // Radio shadow: cells where the station's control link is thin (under 10 dB over what it needs) or lost at 100 m.
+  const shadow = radio
+    ? radio.cells
+        .filter((c) => c.m < radio.need_db + 10)
+        .map((c, i) => {
+          const [dla, dlo] = radio.half_deg;
+          const [x0, y0] = ll(c.ll[0] + dla, c.ll[1] - dlo);
+          const [x1, y1] = ll(c.ll[0] - dla, c.ll[1] + dlo);
+          return <rect key={`rs-${i}`} x={x0} y={y0} width={Math.max(1, x1 - x0)} height={Math.max(1, y1 - y0)} className={c.m < radio.need_db ? "tac-shadow is-lost" : "tac-shadow"} />;
+        })
+    : [];
 
   const areas = layers.coverage
     ? (picture?.areas ?? []).map((a) => {
@@ -544,7 +558,7 @@ export function TacMap({
   const bar = niceStep(120 / view.scale);
   const exceptions = live.filter((v) => v.health === "warn" || v.health === "alert").length;
   const notes = picture ? Object.values(picture.notes ?? {}) : [];
-  const layersOn = picture && (layers.coverage || layers.links || layers.tasks || (picture.zones?.length ?? 0) > 0);
+  const layersOn = picture && (layers.coverage || layers.links || layers.tasks || Boolean(radio) || (picture.zones?.length ?? 0) > 0);
 
   return (
     <div
@@ -592,6 +606,7 @@ export function TacMap({
         <rect width={size.w} height={size.h} fill="url(#tac-bg)" />
         {terrain}
         {grid}
+        {shadow.length ? <g className="tac-shadows">{shadow}</g> : null}
         {zones}
         {areas}
         {routes}
@@ -615,7 +630,7 @@ export function TacMap({
           <summary>
             {layersOn ? (
               <>
-                <span className="tag tag-sim">SIM</span> Overlays: {[(picture?.zones?.length ?? 0) > 0 ? "jamming zone" : null, layers.coverage ? "coverage" : null, layers.tasks ? "tasks" : null, layers.links ? "links" : null].filter(Boolean).join(", ")}
+                <span className="tag tag-sim">SIM</span> Overlays: {[(picture?.zones?.length ?? 0) > 0 ? "jamming zone" : null, layers.coverage ? "coverage" : null, layers.tasks ? "tasks" : null, layers.links ? "links" : null, radio ? "radio shadow at 100 m" : null].filter(Boolean).join(", ")}
               </>
             ) : (
               "Terrain"

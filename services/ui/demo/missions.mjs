@@ -8,7 +8,8 @@
 // changes its state on the board and writes the audit log: no vehicle is
 // commanded from here.
 
-import { AIRFRAMES, ASSUMED, coldFactor, power, vioSigma, windAt } from "./physics.mjs";
+import { AIRFRAMES, ASSUMED, coldFactor, power, powerParts, vioSigma, windAt } from "./physics.mjs";
+import { RF, VIDEO, hop as rfHop } from "./rf.mjs";
 import { createPhysicsCheck } from "./plancheck.mjs";
 
 const MIN = 60_000;
@@ -377,6 +378,8 @@ export function createMissions(o) {
   }
 
   /** Electrical power for a step of the replay: airspeed against the wind, with the guidance holding near cruise airspeed on upwind legs. */
+  const BANDS_OK = new Set(["915", "2400", "5800"]);
+
   function stepWatts(frame, gx, gy, t, alt, climbRate) {
     const [wx, wy] = windAt(WEATHER, t, alt || 60);
     const air = Math.min(frame.cruise_mps * 1.15, Math.hypot(gx - wx, gy - wy));
@@ -541,6 +544,12 @@ export function createMissions(o) {
       let wh = (frame.pack_wh * startBatt) / 100;
       let peakW = 0;
       let whUsed = 0;
+      // Where the energy went, Wh: the power curve's parts, what the wind added over flying the same ground track in still air, and the cold.
+      const parts = { induced: 0, parasite: 0, profile: 0, climb: 0, avionics: 0, wind: 0, cold: 0, abort: 0 };
+      // Link margin along the flown track, priced over the terrain from the GCS mast every 30 s.
+      const margin = [];
+      const gcsMast = { x: S.x, y: S.y, agl: RF.gcs_mast_m };
+      const band = BANDS_OK.has(m.band) ? m.band : "915";
       for (let t = launch; t <= Math.min(stop, elapsed) + 1e-6; t += DT) {
         const [px, py] = sample(segs, t);
         const seg = segs.find((s) => t >= s.t0 && t < s.t1) ?? segs.at(-1);
@@ -553,7 +562,20 @@ export function createMissions(o) {
         }
         if (prev) {
           const climbRate = t - launch < 25 ? (seg.alt || 60) / 25 : seg.phase === "recover" && stop - t < 25 ? -(seg.alt || 60) / 25 : 0;
-          const w = stepWatts(frame, (px - prev[0]) / DT, (py - prev[1]) / DT, t, seg.alt, climbRate) * (x.abort ? 1.15 : 1) * (m.temp_c !== undefined ? 1 / coldFactor(m.temp_c) : 1);
+          const gx = (px - prev[0]) / DT;
+          const gy = (py - prev[1]) / DT;
+          const base = stepWatts(frame, gx, gy, t, seg.alt, climbRate);
+          const coldX = m.temp_c !== undefined ? 1 / coldFactor(m.temp_c) : 1;
+          const abortX = x.abort ? 1.15 : 1;
+          const w = base * abortX * coldX;
+          // Split the still-air power for this ground speed by part; the rest of the base is the wind's doing.
+          const still = Math.min(frame.cruise_mps * 1.15, Math.hypot(gx, gy));
+          const pp = powerParts(frame, still, climbRate);
+          const h = DT / 3600;
+          for (const k of ["induced", "parasite", "profile", "climb", "avionics"]) parts[k] += pp[k] * h;
+          parts.wind += (base - power(frame, still, climbRate)) * h;
+          parts.abort += base * (abortX - 1) * h;
+          parts.cold += base * abortX * (coldX - 1) * h;
           peakW = Math.max(peakW, w);
           wh -= (w * DT) / 3600;
           whUsed += (w * DT) / 3600;
@@ -571,13 +593,17 @@ export function createMissions(o) {
         const alt = Math.round((seg.alt || 60) * climb * landing);
         const batt = Math.max(5, (100 * wh) / frame.pack_wh);
         pts.push([Math.round(t), Math.round(px), Math.round(py), alt, Math.round(batt), vio ? 1 : 0, link]);
+        if (Math.round(t - launch) % 30 === 0 && alt > 5) {
+          const here = { x: px, y: py, agl: alt };
+          margin.push([Math.round(t), Math.round(rfHop(gcsMast, here, band).margin_db * 10) / 10, Math.round(rfHop(gcsMast, here, VIDEO.id).margin_db * 10) / 10, link]);
+        }
         prev = [px, py];
       }
       for (const [a, b] of gaps) {
         if (a < elapsed) ev(a, tail, "link", "warn", "Link lost. Vehicle continues its last plan on its own.");
         if (b < elapsed) ev(b, tail, "link", "info", `Link restored after ${Math.round((b - a) / 60)} min ${Math.round((b - a) % 60)} s.`);
       }
-      tracks.push({ tail, sku, outcome: m.state === "active" && Math.min(stop, elapsed) < stop ? "airborne" : outcome, points: pts, max_vio_m: Number(maxDrift.toFixed(1)), vio_s: vioS, link_lost_s: linkS, flight_s: Math.max(0, Math.min(stop, elapsed) - launch), energy_wh: Number(whUsed.toFixed(1)), peak_w: Math.round(peakW), landed_pct: Math.max(0, Math.round((100 * wh) / frame.pack_wh)) });
+      tracks.push({ tail, sku, outcome: m.state === "active" && Math.min(stop, elapsed) < stop ? "airborne" : outcome, points: pts, max_vio_m: Number(maxDrift.toFixed(1)), vio_s: vioS, link_lost_s: linkS, flight_s: Math.max(0, Math.min(stop, elapsed) - launch), energy_wh: Number(whUsed.toFixed(1)), energy_parts: Object.fromEntries(Object.entries(parts).map(([k, v]) => [k, Number(v.toFixed(1))])), link_margin: margin, peak_w: Math.round(peakW), landed_pct: Math.max(0, Math.round((100 * wh) / frame.pack_wh)) });
     });
     for (const s of m.scripted ?? []) if (s.t <= elapsed) ev(s.t, s.tail, s.kind, s.severity, s.label, s.link);
     const shown = events.filter((e) => e.t_s <= elapsed).sort((a, b) => a.t_s - b.t_s || a.tail.localeCompare(b.tail));
@@ -612,6 +638,17 @@ export function createMissions(o) {
     const thin = tracks.filter((t) => t.outcome !== "lost" && t.landed_pct < 30);
     if (thin.length)
       findings.push({ title: `${thin.length} airframe${thin.length > 1 ? "s" : ""} landed under 30%`, detail: `${thin.map((t) => `${t.tail} ${t.landed_pct}%`).join(", ")}. Flown in ${WEATHER.wind_mps} m/s with gusts; the upwind legs cost up to ${Math.max(...tracks.map((t) => t.peak_w))} W. Plan the next sortie with the wind in the loadout planner.`, link: "#configure", cta: "Loadout planner" });
+    // Did the terrain explain the drop-outs? Compare each gap with the priced margin just before it.
+    for (const tr of tracks) {
+      const lostAt = tr.link_margin.filter((r) => r[3] === 0);
+      if (!lostAt.length) continue;
+      const worst = Math.min(...lostAt.map((r) => r[1]));
+      findings.push(
+        worst < RF.required_db
+          ? { title: `${tr.tail}'s link loss matches a terrain shadow`, detail: `Over the terrain the control link from the GCS had ${worst} dB of margin where it dropped (under the ${RF.required_db} dB the plan needs). A relay on the Ridge or a higher leg fixes it; the plan's launch checks offer both.`, link: "#missions", cta: "Missions" }
+          : { title: `${tr.tail}'s link loss is not the terrain`, detail: `The terrain leaves ${worst} dB of control margin where it dropped, so look at the radio, the antenna or interference. Report it from Requests to Neros if it repeats.`, link: "#supply", cta: "Requests to Neros" },
+      );
+    }
     if (stats.link_lost_s > 0)
       findings.push({ title: `${Math.round(stats.link_lost_s / 60)} min with a vehicle off the link`, detail: "The vehicle kept flying its last plan and CBBA re-assigned its task to a connected neighbour. Nobody had to re-task by hand.", link: "#operate", cta: "Operate" });
     if (aborted)

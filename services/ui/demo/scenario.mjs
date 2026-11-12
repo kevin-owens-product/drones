@@ -9,7 +9,7 @@ import { nameOf, skuForTail } from "./supply.mjs";
 import { AREA as DENIAL_AREA, denialPicture } from "./denial.mjs";
 import { coverage } from "./coverage.mjs";
 import { airframesTonight } from "./tonight.mjs";
-import { ground as groundAt } from "./rf.mjs";
+import { RF, ground as groundAt, hop as rfHop } from "./rf.mjs";
 import { PLACES, propose } from "./intent.mjs";
 import { createMissions } from "./missions.mjs";
 import { parseEvalTable } from "./evalrows.mjs";
@@ -431,15 +431,22 @@ export function createDemo(opts = {}) {
       }
     }
 
-    // Link quality from the radio budget (physics.mjs): log-distance path loss,
-    // a low-altitude penalty, and 12 dB less for the mesh radios than the station.
-    // Each vehicle shows its station link and its two best mesh neighbours. NX-07's links read zero during its gap.
+    // Station links are priced over the range's terrain (rf.mjs: SRTM/NED heights,
+    // Bullington diffraction, Fresnel clearance), the same model the plan's launch
+    // checks and the denial map use, so a vehicle behind a ridge reads weak here too.
+    // Mesh links between vehicles keep the log-distance budget (physics.mjs) with
+    // 12 dB less for the mesh radios. Each vehicle shows its station link and its two
+    // best mesh neighbours. NX-07's links read zero during its gap.
     const links = [];
     const q = (d, alt, extra = 0) => Number(linkBudget(d, alt, extra).quality.toFixed(2));
+    const gcsQ = (a) => {
+      const m = rfHop({ x: STATION.x, y: STATION.y, agl: RF.gcs_mast_m }, { x: a.x, y: a.y, agl: Math.max(2, a.alt) }, "915").margin_db;
+      return Number(Math.max(0, Math.min(1, m / ASSUMED.radio.good_margin_db)).toFixed(2));
+    };
     for (const c of airborne) {
       const a = pos.get(c.tail);
       const down = c.gap && within(LINK_GAP, t);
-      links.push({ a: "GCS", b: c.tail, quality: down ? 0 : q(Math.hypot(a.x - STATION.x, a.y - STATION.y), a.alt) });
+      links.push({ a: "GCS", b: c.tail, quality: down ? 0 : gcsQ(a) });
       const near = airborne
         .filter((o) => o.tail > c.tail)
         .map((o) => {
@@ -971,7 +978,12 @@ export function createDemo(opts = {}) {
       }
       if (url.pathname === "/v1/coverage") {
         const q = url.searchParams;
-        return { status: 200, body: coverage(STATION, DENIAL_AREA, { link: q.get("link") ?? "c2", band: q.get("band") ?? "915", agl_m: Number(q.get("agl_m") ?? 100), ew: q.get("ew") === "1" || q.get("ew") === "true" }) };
+        const grid = coverage(STATION, DENIAL_AREA, { link: q.get("link") ?? "c2", band: q.get("band") ?? "915", agl_m: Number(q.get("agl_m") ?? 100), ew: q.get("ew") === "1" || q.get("ew") === "true" });
+        if (q.get("ll") !== "1") return { status: 200, body: grid };
+        // The live map draws in latitude and longitude: each cell's centre, and its half-size in degrees.
+        const [la0, lo0] = toLL(0, 0);
+        const [la1, lo1] = toLL(grid.cell_m / 2, grid.cell_m / 2);
+        return { status: 200, body: { ...grid, half_deg: [Math.abs(la1 - la0), Math.abs(lo1 - lo0)], cells: grid.cells.map((c) => ({ ...c, ll: round(toLL(c.x, c.y)) })) } };
       }
       if (url.pathname === "/v1/denial-map") return { status: 200, body: denialPicture(Number(url.searchParams.get("passes") ?? 4)) };
       if (url.pathname.startsWith("/v1/training/")) {

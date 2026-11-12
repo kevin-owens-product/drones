@@ -62,6 +62,16 @@ export function drag(frame, airMps) {
  * climbing costs weight times rate, and descent gives a little back.
  */
 export function power(frame, airMps = 0, climbMps = 0) {
+  const p = powerParts(frame, airMps, climbMps);
+  return Math.max(ASSUMED.avionics_w, p.induced + p.parasite + p.profile + p.climb + p.avionics);
+}
+
+/**
+ * The same power, split by where it goes: induced (holding the airframe up),
+ * parasite (pushing the body through the air), profile (spinning the blades),
+ * climb (raising the weight; negative on descent) and avionics.
+ */
+export function powerParts(frame, airMps = 0, climbMps = 0) {
   const m = frame.mass_kg;
   const eta = ASSUMED.efficiency;
   const hover = hoverWatts(m);
@@ -73,11 +83,13 @@ export function power(frame, airMps = 0, climbMps = 0) {
   let vi = vh;
   for (let k = 0; k < 8; k += 1) vi = (vh * vh) / Math.hypot(airMps, vi);
   vi *= thrust / (m * G);
-  const induced = (thrust * vi) / eta;
-  const parasite = (D * airMps) / eta;
-  const profile = hover * ASSUMED.profile_fraction * (1 + 3 * (airMps / 60) ** 2);
-  const climb = climbMps >= 0 ? (m * G * climbMps) / eta : m * G * climbMps * ASSUMED.descent_recovery;
-  return Math.max(ASSUMED.avionics_w, induced + parasite + profile + climb + ASSUMED.avionics_w);
+  return {
+    induced: (thrust * vi) / eta,
+    parasite: (D * airMps) / eta,
+    profile: hover * ASSUMED.profile_fraction * (1 + 3 * (airMps / 60) ** 2),
+    climb: climbMps >= 0 ? (m * G * climbMps) / eta : m * G * climbMps * ASSUMED.descent_recovery,
+    avionics: ASSUMED.avionics_w,
+  };
 }
 
 /**
