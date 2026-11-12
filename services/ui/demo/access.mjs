@@ -19,7 +19,7 @@ export const CALLERS = [
 /** Every read route the console uses, grouped the way the rail groups pages. */
 export const READS = [
   ["Session", ["/v1/me", "/v1/users", "/v1/org"]],
-  ["Fly", ["/v1/platforms", "/v1/telemetry/live", "/v1/operations/picture", "/v1/physics", "/v1/missions", "/v1/intent", "/v1/configure", "/v1/envelope", "/v1/denial-map", "/v1/coverage", "/v1/maintenance"]],
+  ["Fly", ["/v1/platforms", "/v1/telemetry/live", "/v1/operations/picture", "/v1/physics", "/v1/missions", "/v1/intent", "/v1/configure", "/v1/envelope", "/v1/denial-map", "/v1/coverage", "/v1/maintenance", "/v1/wear"]],
   ["Fleet", ["/v1/birth-records", "/v1/mixed", "/v1/config", "/v1/stockpile", "/v1/thread/readiness", "/v1/thread/updates"]],
   ["Supply", ["/v1/thread/receiving", "/v1/thread/accountability", "/v1/ops/portal", "/v1/quote", "/v1/plans"]],
   ["Learn", ["/v1/attrition", "/v1/field-reports", "/v1/eval/runs"]],

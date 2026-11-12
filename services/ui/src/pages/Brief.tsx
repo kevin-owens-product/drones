@@ -5,7 +5,43 @@ import { RangeMap, colorFor, type MapPath, type RangeFrame } from "./RangeMap";
 import "./insights.css";
 import "./plan.css";
 
+interface LookRow {
+  alt_m: number;
+  range_m: number;
+  gsd_cm: number;
+  px: number;
+  level: "identify" | "recognise" | "detect" | "none";
+  ok: boolean;
+  swath_m?: number;
+  cover?: number;
+  closed?: boolean;
+  look_deg?: number;
+  hidden_m?: number;
+  video_db?: number;
+}
+interface LookTail {
+  tail: string;
+  airframe: string;
+  camera: string;
+  rows: LookRow[];
+  recommended_m: number;
+  alt_m: number;
+  at: LookRow;
+  can: boolean;
+  linked: boolean;
+  why: string;
+}
+/** What each assigned camera sees of a task by height (demo/optics.mjs). */
+interface Look {
+  needs: string;
+  need_px: number;
+  pattern: string;
+  strips: boolean;
+  tails: LookTail[];
+}
+
 interface Task {
+  look?: Look | null;
   kind: string;
   place: string;
   label: string;
@@ -50,6 +86,47 @@ function ago(iso?: string): string {
   if (!iso) return "";
   const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
   return mins < 1 ? "just now" : mins < 90 ? `${mins} min ago` : `${Math.round(mins / 60)} h ago`;
+}
+
+const videoClass = (db: number | undefined) => (db === undefined ? "" : db < 0 ? "is-bad" : db < 3 ? "is-thin" : "is-good");
+
+/**
+ * One camera against one task at every height: pixels on a person, the ground
+ * it covers or loses, and whether the picture gets home. Each column is a
+ * height; while the brief waits for approval a click sets the height the plan files.
+ */
+function HeightLadder({ look, t, canSet, onSet }: { look: Look; t: LookTail; canSet: boolean; onSet: (alt: number) => void }) {
+  return (
+    <div className="br-ladder" data-testid={`ladder-${t.tail}`}>
+      <p className="br-ladder-head">
+        <strong>{t.tail}</strong> <span className="meta">{t.airframe} · {t.camera}</span>
+      </p>
+      <div className="br-ladder-grid" role="group" aria-label={`${t.tail} height`}>
+        <div className="br-ladder-keys" aria-hidden="true">
+          <span>Height</span>
+          <span>Person</span>
+          <span>{look.strips ? "Ground seen" : "Hidden"}</span>
+          <span>Video</span>
+        </div>
+        {t.rows.map((r) => {
+          const second = look.strips ? `${Math.round((r.cover ?? 0) * 100)}%` : `${r.hidden_m} m`;
+          const says = `${t.tail} at ${r.alt_m} m: ${r.px} pixels on a person, ${look.strips ? `${second} of the ground seen` : `${second} hidden behind an obstacle`}${r.video_db !== undefined ? `, video ${r.video_db} dB` : ""}`;
+          return (
+            <button key={r.alt_m} type="button" className={`br-rung${r.alt_m === t.alt_m ? " is-set" : ""}${r.alt_m === t.recommended_m ? " is-best" : ""}`} disabled={!canSet} aria-pressed={r.alt_m === t.alt_m} aria-label={says} title={says} onClick={() => onSet(r.alt_m)}>
+              <span className="br-rung-alt">{r.alt_m}</span>
+              <span className={`br-rung-px lv-${r.level}${r.px >= look.need_px ? "" : " is-short"}`}>{r.px >= 10 ? Math.round(r.px) : r.px}</span>
+              <span className={`br-rung-cov ${look.strips ? (r.closed ? "is-good" : (r.cover ?? 0) >= 1 ? "is-thin" : "is-bad") : (r.hidden_m ?? 0) <= 12 ? "is-good" : (r.hidden_m ?? 0) <= 25 ? "is-thin" : "is-bad"}`}>{second}</span>
+              <span className={`br-rung-vid ${videoClass(r.video_db)}`}>{r.video_db ?? "–"}</span>
+            </button>
+          );
+        })}
+      </div>
+      <p className={t.can && t.linked ? "meta" : "br-warn"}>
+        {t.alt_m === t.recommended_m ? "" : `Set to ${t.alt_m} m: ${t.at.px} px on a person${look.strips ? `, ${Math.round((t.at.cover ?? 0) * 100)}% of the ground seen` : `, ${t.at.hidden_m} m hidden`}${t.at.video_db !== undefined ? `, video ${t.at.video_db} dB` : ""}. Suggested ${t.recommended_m} m. `}
+        {t.why}
+      </p>
+    </div>
+  );
 }
 
 function pill(status: string): string {
@@ -97,6 +174,18 @@ export function BriefPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
       await loadQueue(r.body.id);
     } catch (error) {
       setFault(error instanceof Error ? error.message : "could not read the brief");
+    }
+  }
+
+  async function setHeight(task: number, tail: string, alt: number) {
+    if (!p) return;
+    setFault("");
+    try {
+      const r = await api<Proposal>("/v1/intent/height", { method: "POST", body: JSON.stringify({ id: p.id, task, tail, alt_m: alt }) });
+      setP(r.body);
+      setQueue((q) => q.map((x) => (x.id === r.body.id ? r.body : x)));
+    } catch (error) {
+      setFault(error instanceof Error ? error.message : "could not set the height");
     }
   }
 
@@ -203,6 +292,17 @@ export function BriefPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
                         {t.minutes ? ` for ${t.minutes} min` : ""}: {t.tails?.length ? t.tails.join(", ") : "no vehicle free"}
                       </p>
                       <p className="meta">From: “{t.from}”</p>
+                      {t.look ? (
+                        <div className="br-look" data-testid="brief-look">
+                          <p className="meta">
+                            To {t.look.needs} takes {t.look.need_px} pixels across them. {t.look.pattern}. Heights in metres above the ground; pixels on a person, {t.look.strips ? "share of the ground the strips see" : "ground hidden behind a 6 m obstacle"}, video margin in dB.
+                            {p.status === "awaiting approval" ? " Pick a column to set the height the plan files." : ""}
+                          </p>
+                          {t.look.tails.map((lt) => (
+                            <HeightLadder key={lt.tail} look={t.look as Look} t={lt} canSet={p.status === "awaiting approval"} onSet={(alt) => void setHeight(i, lt.tail, alt)} />
+                          ))}
+                        </div>
+                      ) : null}
                     </li>
                   ))}
                 </ol>

@@ -33,6 +33,28 @@ There is no separate physics page: each piece sits where the decision it informs
 - **Stockpile health**: `demo/aging.mjs` models calendar ageing (loss ∝ √t, Arrhenius in
   temperature, exponential in state of charge) so each stored pack shows capacity today and a
   two-year projection as stored, at storage charge, and in a cool store.
+- **Missions, Wind** (`demo/windfield.mjs`). The forecast is one wind at 10 m over open ground; the
+  plan check flies each track through what the terrain makes of it: Jackson-Hunt speed-up over
+  crests (about 2 H/L at the surface, fading with height), a lee wake falling one in ten behind a
+  crest, and air that rises and sinks with the slope. Holding height in sink is a climb, so it is in
+  the same power trace the pack check uses. The plan map has a *Wind* view (sink and lift cells,
+  the track coloured by sink) with a per-tail table; *Conditions at launch* takes a wind direction;
+  a `wind` finding offers a height (out of a wake or back inside the thrust margin) or a bigger
+  pack. The model does not turn the wind round hills.
+- **Brief** (`demo/optics.mjs`). Each task of a proposal carries a *look*: for every assigned tail's
+  camera, at every height from 30 to 150 m, the pixels across a person (ground sample distance
+  against the Johnson criteria), the share of ground a search's strips see or the ground an orbit
+  loses behind a 6 m obstacle, and the video margin home over the terrain (through the brief's own
+  relay when it has one). The suggested height is the lowest that closes a search's strips or the
+  highest an orbit's camera still resolves from, among those that hold video. A click on a column
+  sets the height (`POST /v1/intent/height`) while the brief awaits approval; approval files it on
+  the plan's legs, and relay tasks are filed as relays.
+- **Airframes, Wear by flight load** (`demo/wear.mjs`, `GET /v1/wear`). Bearing life per motor from
+  ISO 281 with thrust going as speed squared (an hour at thrust ratio T uses T^3.5 hours of hover
+  life; rear rotors carry more in forward flight), and arm fatigue as a Palmgren-Miner sum with a
+  tenth-power Basquin curve, which makes it a count of hard landings. The panel shows both against
+  what a flat hours schedule would assume, when each line is crossed at the tail's own usage, and
+  lets a maintainer ground the tail for the check. The flight log is synthetic.
 
 ## 1. Line of sight over real terrain, with jamming (`demo/rf.mjs`)
 

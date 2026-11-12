@@ -11,6 +11,7 @@
 import { AIRFRAMES, ASSUMED, coldFactor, power, powerParts, vioSigma, windAt } from "./physics.mjs";
 import { RF, VIDEO, hop as rfHop } from "./rf.mjs";
 import { createPhysicsCheck } from "./plancheck.mjs";
+import { RELAY_ALT_M, heightFor, relaysOf } from "./optics.mjs";
 
 const MIN = 60_000;
 const SIM = "Simulated replay (SIM): scripted plan flown by the demo kinematics, not a field log.";
@@ -477,7 +478,7 @@ export function createMissions(o) {
       const work = x.kind === "rtb" ? null : workPath(x.kind, goal);
       const entry = work ? work[0] : goal;
       const dur = Math.hypot(entry[0] - at[0], entry[1] - at[1]) / v;
-      segs.push({ t0: t, t1: t + dur, pts: [at, entry], phase: x.kind === "rtb" ? "recover" : "transit", alt: x.kind === "rtb" ? 60 : x.alt_m, label: x.label });
+      segs.push({ t0: t, t1: t + dur, pts: [at, entry], phase: x.kind === "rtb" ? "recover" : "transit", alt: x.kind === "rtb" ? x.alt_m || 60 : x.alt_m, label: x.label });
       t += dur;
       if (work) {
         const wdur = x.duration_min * 60;
@@ -745,11 +746,13 @@ export function createMissions(o) {
     let offset = 0;
     const KIND = { search: "search", survey: "search", observe: "loiter", relay: "loiter", inspect: "transit" };
     const used = new Set();
+    const relays = relaysOf(p.plan, place);
     for (const t of p.plan) {
       const pl = place(t.place);
       if (!pl) continue;
       for (const tail of t.tails ?? []) {
-        objectives.push(obj(KIND[t.kind] ?? "transit", pl, tail, offset, t.minutes ?? (t.kind === "inspect" ? 5 : 8)));
+        // The height the brief settled on for this camera and task (demo/optics.mjs); relays keep the planner's default.
+        objectives.push(obj(KIND[t.kind] ?? "transit", pl, tail, offset, t.minutes ?? (t.kind === "inspect" ? 5 : 8), heightFor(t, pl, tail, skuOf, S, relays) ?? RELAY_ALT_M, t.kind === "relay" ? { relay: true } : {}));
         used.add(tail);
       }
       offset += 2;

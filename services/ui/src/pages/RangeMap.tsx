@@ -59,6 +59,7 @@ export function RangeMap({
   markers = [],
   keepouts = [],
   label,
+  under,
   children,
 }: {
   range: RangeFrame;
@@ -66,6 +67,8 @@ export function RangeMap({
   markers?: MapMarker[];
   keepouts?: MapZone[];
   label: string;
+  /** Drawn over the terrain and under everything else: a field (wind, coverage) the routes are read against. */
+  under?: ReactNode;
   children?: ReactNode;
 }) {
   const xs: number[] = [range.station.x];
@@ -92,6 +95,7 @@ export function RangeMap({
     <svg className="rm-map" viewBox={`${minX} ${-maxY} ${w} ${h}`} role="img" aria-label={label} preserveAspectRatio="xMidYMid meet">
       {bm ? <image href={bm.url} x={bm.west} y={-bm.north} width={bm.east - bm.west} height={bm.north - bm.south} preserveAspectRatio="none" className="rm-bg" /> : null}
       <rect x={minX} y={-maxY} width={w} height={h} className="rm-shade" />
+      {under}
       {range.zones.map((z) => (
         <g key={z.id}>
           <circle cx={z.x} cy={-z.y} r={z.r} className="rm-jam" />

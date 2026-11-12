@@ -15,7 +15,7 @@ export interface Fix {
 }
 export interface Finding {
   id: string;
-  area: "link" | "pack" | "thrust";
+  area: "link" | "pack" | "thrust" | "wind";
   severity: Severity;
   tail: string;
   title: string;
@@ -48,6 +48,42 @@ export interface TailCheck {
     trace: { t: number; v: number; temp: number; soc: number; v_warm: number | null; temp_warm: number | null }[];
   };
   thrust: { verdict: string; headroom: number; thrust_max_n: number; thrust_gust_n: number; tilt_gust_deg: number; gust_mps: number; density_altitude_m: number; cell_v: number; max_wind_mps: number };
+  /** What the terrain makes of the forecast wind along this tail's track. */
+  wind?: WindSummary | null;
+  /** x, y, wind m/s, vertical air m/s (negative sinks), in a lee wake, thrust in hand. */
+  wind_track?: [number, number, number, number, number, number][];
+}
+export interface WindSpot {
+  label: string;
+  home: boolean;
+  x: number;
+  y: number;
+  agl: number;
+}
+export interface WindSummary {
+  extra_wh: number;
+  extra_pct: number;
+  sink_s: number;
+  wake_s: number;
+  worst_sink_mps: number;
+  sink_at: WindSpot;
+  sink_w: number;
+  max_factor: number;
+  max_mps: number;
+  max_at: WindSpot;
+  headroom: number;
+  verdict: string;
+  tight_at: WindSpot;
+  flag: boolean;
+}
+export interface WindField {
+  agl_m: number;
+  cell_m: number;
+  free_mps: number;
+  from_deg: number;
+  sink_mps: number;
+  /** x, y, wind m/s, in a lee wake, vertical air m/s. */
+  cells: [number, number, number, number, number][];
 }
 export interface PhysicsCheck {
   source: string;
@@ -61,6 +97,7 @@ export interface PhysicsCheck {
   verdict: "go" | "caution" | "no-go";
   profile: { tail: string; from: string; to: string; distance_m: number; clearance_f1: number; diffraction_db: number; rows: { d_m: number; ground_m: number; los_m: number; fresnel60_m: number }[] } | null;
   envelope?: EnvelopeGrid;
+  wind?: WindField | null;
   range: RangeFrame;
 }
 
@@ -74,7 +111,63 @@ export interface EnvelopeGrid {
   now: { temp_c: number; wind_mps: number };
 }
 
-export const AREA_LABEL: Record<Finding["area"], string> = { link: "Link", pack: "Pack", thrust: "Thrust" };
+export const AREA_LABEL: Record<Finding["area"], string> = { link: "Link", pack: "Pack", thrust: "Thrust", wind: "Wind" };
+/** Vertical air a track flies through: holding height in sink costs power. */
+export const sinkColor = (v: number) => (v <= -2 ? "var(--danger)" : v <= -1 ? "var(--warn)" : "var(--ok)");
+export const COMPASS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+export const compassOf = (deg: number) => COMPASS[Math.round((((deg % 360) + 360) % 360) / 45) % 8] ?? "N";
+
+/** Each tail's planned track coloured by the vertical air it flies through. */
+export function windLayer(check: PhysicsCheck, selected: string): { paths: MapPath[]; markers: MapMarker[] } {
+  const paths: MapPath[] = [];
+  const markers: MapMarker[] = [];
+  for (const t of check.tails) {
+    const track = t.wind_track ?? [];
+    let run: [number, number][] = [];
+    let cls = "";
+    const flush = (k: number) => {
+      if (run.length > 1) paths.push({ id: `${t.tail}-w${k}`, color: cls, pts: run, faded: selected !== "" && t.tail !== selected });
+    };
+    track.forEach(([x, y, , vert], k) => {
+      const c = sinkColor(vert);
+      if (c !== cls && run.length) {
+        run.push([x, y]);
+        flush(k);
+        run = [];
+      }
+      cls = c;
+      run.push([x, y]);
+    });
+    flush(track.length);
+    const mid = track[Math.floor(track.length / 2)];
+    if (mid) markers.push({ id: t.tail, label: t.tail, x: mid[0], y: mid[1], color: t.tail === selected ? "var(--accent)" : "#c9d4df", dim: selected !== "" && t.tail !== selected });
+  }
+  return { paths, markers };
+}
+
+/** The wind field under the package: sinking and rising air as tinted cells, lee wakes hatched, an arrow for the wind in each cell. */
+export function WindCells({ field }: { field: WindField }): ReactNode {
+  const half = field.cell_m / 2;
+  const a = (field.from_deg * Math.PI) / 180;
+  // Unit vector downwind, in the map's flipped y.
+  const dx = -Math.sin(a);
+  const dy = Math.cos(a);
+  return (
+    <g className="ph-wind">
+      {field.cells.map(([x, y, speed, wake, vert]) => {
+        const mag = Math.min(1, Math.abs(vert) / 2.5);
+        const len = half * 0.75 * Math.min(1.4, speed / Math.max(1, field.free_mps));
+        return (
+          <g key={`${x},${y}`}>
+            {Math.abs(vert) >= 0.3 ? <rect x={x - half} y={-y - half} width={field.cell_m} height={field.cell_m} className={vert < 0 ? "ph-wind-sink" : "ph-wind-lift"} style={{ fillOpacity: 0.06 + 0.42 * mag }} /> : null}
+            {wake ? <rect x={x - half} y={-y - half} width={field.cell_m} height={field.cell_m} className="ph-wind-wake" /> : null}
+            <path d={`M${x - dx * len},${-y - dy * len}L${x + dx * len},${-y + dy * len}M${x + dx * len},${-y + dy * len}l${(-dx * 0.5 - dy * 0.3) * len},${(-dy * 0.5 + dx * 0.3) * len}M${x + dx * len},${-y + dy * len}l${(-dx * 0.5 + dy * 0.3) * len},${(-dy * 0.5 - dx * 0.3) * len}`} className="ph-wind-arrow" vectorEffect="non-scaling-stroke" />
+          </g>
+        );
+      })}
+    </g>
+  );
+}
 export const marginColor = (db: number) => (db < 0 ? "var(--danger)" : db < 10 ? "var(--warn)" : "var(--ok)");
 export const fmtMin = (s: number) => (s < 90 ? `${s} s` : `${(s / 60).toFixed(1)} min`);
 

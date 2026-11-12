@@ -4,6 +4,7 @@ import { planLabel, type PlanAssignment } from "../plans";
 import { can, inCustomerView } from "../shell/workspace";
 import { Donut, TileGrid, type Tone } from "../viz/viz";
 import type { PhysicsCheck } from "./physics-parts";
+import { WearPanel } from "./airframe-wear";
 import "./physics.css";
 
 interface Viewer {
@@ -205,6 +206,7 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
   const [alerts, setAlerts] = useState<QualityAlert[]>([]);
   const [holds, setHolds] = useState<Hold[]>([]);
   const [plans, setPlans] = useState<PlanAssignment[]>([]);
+  const [wear, setWear] = useState<{ tail: string; state: string; worst: { id: string; life_pct: number }; frame_pct: number }[]>([]);
   const [recordsFault, setRecordsFault] = useState("");
   // Bumped after every change so the registry, holds and work orders reload from the one record.
   const [version, setVersion] = useState(0);
@@ -256,6 +258,12 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
       }
       setRecordsFault(births.status === "rejected" && maint.status === "rejected" ? "Could not load birth records or maintenance." : "");
       try {
+        const worn = await api<{ items: { tail: string; state: string; worst: { id: string; life_pct: number }; frame_pct: number }[] }>("/v1/wear");
+        if (!stopped) setWear(Array.isArray(worn.body.items) ? worn.body.items : []);
+      } catch {
+        if (!stopped) setWear([]);
+      }
+      try {
         const board = await api<{ items: PlanAssignment[] }>("/v1/operations/board");
         if (!stopped) setPlans(Array.isArray(board.body.items) ? board.body.items : []);
       } catch {
@@ -268,14 +276,14 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
     };
   }, [version]);
 
-  async function setAirworthiness(row: Platform, status: string) {
+  async function setAirworthiness(row: Platform, status: string, reason?: string) {
     setPendingId(row.id);
     setExportResult("");
     setExportIsFault(false);
     try {
       const result = await api<{ airworthiness: string }>(`/v1/platforms/${row.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ airworthiness: status }),
+        body: JSON.stringify(reason ? { airworthiness: status, reason } : { airworthiness: status }),
       });
       if (!mountedRef.current) return;
       onBanner(result.banner);
@@ -417,6 +425,18 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
                   <td><span className={statusClass(row.airworthiness)}>{statusText(row.airworthiness)}</span></td>
                   <td className="meta">
                     {row.airworthiness_reason ?? row.service_note ?? (flaggedLot(birthOf(row.tail_number)) ? `Carries flagged lot ${flaggedLot(birthOf(row.tail_number))?.value}` : birthOf(row.tail_number)?.verdict.reason ?? "—")}
+                    {(() => {
+                      const w = wear.find((x) => x.tail === row.tail_number);
+                      if (!w || w.state === "ok") return null;
+                      return (
+                        <>
+                          {" "}
+                          <span className="pill pill-warn" data-testid="wear-flag">
+                            Wear: {w.worst.life_pct >= 80 ? `${w.worst.id} bearing ${Math.round(w.worst.life_pct)}%` : `arms ${Math.round(w.frame_pct)}%`}
+                          </span>
+                        </>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))}
@@ -440,6 +460,7 @@ export function FleetPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
                 return plan ? <p><span className="pill pill-ok pill-plan">{planLabel(plan.state, plan.mission_name)}</span></p> : <p className="meta">Standby</p>;
               })()}
               <NextSortie tail={selected.tail_number} />
+              <WearPanel key={`${selected.tail_number}-${version}`} tail={selected.tail_number} canGround={canWrite && selected.airworthiness === "airworthy"} busy={pendingId !== null} onGround={(reason) => void setAirworthiness(selected, "grounded", reason.slice(0, 280))} />
               {openMaintenance.map((item) => (
                 <p key={item.id}>
                   <span className="pill pill-warn">{item.id} open</span> {item.summary}{" "}

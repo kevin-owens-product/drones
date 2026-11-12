@@ -280,3 +280,71 @@
   min-width: 140px;
   margin-left: 6px;
 }
+
+/* Wind over terrain on the plan map. */
+.ph-wind-sink {
+  fill: #4f8dff;
+}
+.ph-wind-lift {
+  fill: #f0b35a;
+}
+.ph-wind-wake {
+  fill: none;
+  stroke: var(--danger);
+  stroke-width: 12;
+  stroke-dasharray: 30 24;
+}
+.ph-wind-arrow {
+  fill: none;
+  stroke: rgba(225, 235, 245, 0.55);
+  stroke-width: 1;
+  stroke-linecap: round;
+}
+.ph-key-sink {
+  background: #4f8dff;
+}
+.ph-key-lift {
+  background: #f0b35a;
+}
+.page .ph-controls .ph-from select {
+  width: auto;
+  min-width: 80px;
+}
+
+/* Wear by flight load on Airframes. */
+.wr-bars {
+  margin: 10px 0;
+}
+.wr-fill-ok {
+  background: var(--ok);
+}
+.wr-fill-inspect {
+  background: var(--warn);
+}
+.wr-fill-replace {
+  background: var(--danger);
+}
+.wr-inspect {
+  stroke: var(--warn);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+.wr-hours {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+.wr-frame {
+  fill: none;
+  stroke: #b6a5ff;
+  stroke-width: 1.5;
+}
+.wr-bars li {
+  grid-template-columns: 104px minmax(0, 1fr) 52px;
+}
+.wr-bars .ph-bar-value {
+  grid-column: auto;
+  text-align: right;
+  color: var(--text);
+}
