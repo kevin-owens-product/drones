@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Viewer } from "../shell/types";
-import { Loading, Note, PageHead, pct, SerialDrawer, Stat, useCustomerOrg, usePageData, Withheld } from "./thread";
+import { EmptyRow, Loading, Note, PageHead, pct, SerialDrawer, Stat, useCustomerOrg, usePageData, Withheld } from "./thread";
 
 interface UnitRow { unit: string; sku: string | null; in_store: number; issued: number; ended_14d: number; per_day: number; days_of_supply: number | null; sorties_14d: number }
 interface LotRow { lot: string; unit: string; sku: string; delivered: number; rejected: number; in_store: number; issued: number; ended: number }
@@ -64,7 +64,7 @@ export function AccountabilityPage({ viewer, onBanner }: { viewer: Viewer; onBan
           }}
         >
           <input aria-label="Find a serial" placeholder="Find a serial, e.g. A5-2615-004" value={find} onChange={(e) => setFind(e.target.value)} />
-          <button type="submit" className="btn btn-quiet">Open record</button>
+          <button type="submit" className="btn btn-quiet" disabled={!find.trim()} title={find.trim() ? undefined : "Type a serial first"}>Open record</button>
         </form>
       </div>
 
@@ -86,6 +86,7 @@ export function AccountabilityPage({ viewer, onBanner }: { viewer: Viewer; onBan
               </tr>
             </thead>
             <tbody>
+              {d.units.length === 0 ? <EmptyRow text="Nothing yet for your organization: rows appear once Neros delivers airframes and you accept them." go={{ label: "Open Receiving", section: "receiving" }} /> : null}
               {d.units.map((u) => {
                 const lot = d.lots.find((l) => l.unit === u.unit && l.in_store > 0);
                 const need = Math.max(5, Math.ceil(u.per_day * 21 - u.issued - u.in_store));
@@ -150,6 +151,7 @@ export function AccountabilityPage({ viewer, onBanner }: { viewer: Viewer; onBan
                 </tr>
               </thead>
               <tbody>
+                {d.lots.length === 0 ? <EmptyRow text="Nothing yet for your organization: rows appear once Neros delivers airframes and you accept them." go={{ label: "Open Receiving", section: "receiving" }} /> : null}
                 {d.lots.map((l) => (
                   <tr key={l.lot}>
                     <td className="mono">{l.lot}</td>
@@ -213,6 +215,7 @@ export function AccountabilityPage({ viewer, onBanner }: { viewer: Viewer; onBan
               </tr>
             </thead>
             <tbody>
+              {shown.length === 0 ? <EmptyRow text="No end-of-flight records match this filter yet." /> : null}
               {shown.map((r) => (
                 <tr key={r.id}>
                   <td className="mono">{r.id}</td>

@@ -537,7 +537,7 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
           </div>
         ) : null}
         <div className="op-map-tools">
-          <button type="button" className={follow ? "chip is-on" : "chip"} aria-pressed={follow} disabled={!selected} onClick={() => setFollow((on) => !on)}>
+          <button type="button" className={follow ? "chip is-on" : "chip"} aria-pressed={follow} disabled={!selected} title={selected ? undefined : "Pick a vehicle to follow"} onClick={() => setFollow((on) => !on)}>
             Follow <kbd>F</kbd>
           </button>
         </div>

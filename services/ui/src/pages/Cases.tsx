@@ -88,7 +88,7 @@ export function CasesPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ban
                     {c.engineer ? (
                       <span className="mk-inline">
                         <input aria-label={`Change for ${c.id}`} placeholder="What changed, e.g. firmware 1.15.5 canary" value={f(c.id).change ?? ""} onChange={(e) => setForm({ ...form, [c.id]: { ...f(c.id), change: e.target.value } })} />
-                        <button type="button" className="btn btn-quiet" disabled={!canAct || page.busy || !(f(c.id).change ?? "").trim()} onClick={() => void post("case.ship", { id: c.id, change: f(c.id).change }).then((ok) => ok && setForm({ ...form, [c.id]: {} }))}>{c.shipped ? "Ship another change" : `Ship to ${c.partner}`}</button>
+                        <button type="button" className="btn btn-quiet" disabled={!canAct || page.busy || !(f(c.id).change ?? "").trim()} title={!canAct ? "Shipping a fix needs the ops lead or admin role" : !(f(c.id).change ?? "").trim() ? "Describe the change first" : undefined} onClick={() => void post("case.ship", { id: c.id, change: f(c.id).change }).then((ok) => ok && setForm({ ...form, [c.id]: {} }))}>{c.shipped ? "Ship another change" : `Ship to ${c.partner}`}</button>
                       </span>
                     ) : null}
                     {c.shipped ? <button type="button" className="btn btn-quiet" disabled={!canAct || page.busy} onClick={() => void post("case.collect", { id: c.id })}>Add {d.rule.trial_days_per_collect} days of field sorties (SIM)</button> : null}

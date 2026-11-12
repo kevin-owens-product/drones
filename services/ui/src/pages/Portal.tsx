@@ -326,7 +326,7 @@ export function PortalPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (ba
               <span>What is wrong</span>
               <input value={rmaIssue} maxLength={200} placeholder="Video drops past 2 km on the dual-band radio" onChange={(e) => setRmaIssue(e.target.value)} />
             </label>
-            <button type="submit" className="btn btn-primary" disabled={disabled || !rmaIssue.trim() || !d.tails.length}>Send to Neros</button>
+            <button type="submit" className="btn btn-primary" disabled={disabled || !rmaIssue.trim() || !d.tails.length} title={!d.tails.length ? "No airframes to report on" : !rmaIssue.trim() ? "Say what is wrong first" : undefined}>Send to Neros</button>
           </form>
         </section>
       </div>

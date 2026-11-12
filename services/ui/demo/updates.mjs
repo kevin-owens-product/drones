@@ -49,7 +49,7 @@ const RELEASES = [
   },
   {
     id: "RF-P4", kind: "frequency profile", version: "P4", component: "Control link (RAD-C2)", size_mb: 0.1,
-    notes: "Re-band the control link from band plan P3 to P4, away from the band jammed on Customer A's range (SIM)",
+    notes: "Re-band the control link from band plan P3 to P4, away from the band jammed on the training range (SIM)",
     status: "published", published: "2026-11-03",
     // SIM regression: P4 sits badly with the 10-inch frame's antenna placement.
     effect: { fault: -0.01, lost_link_by_sku: { "ARCHER-10": 0.3 } },

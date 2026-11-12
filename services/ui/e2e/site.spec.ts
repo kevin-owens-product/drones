@@ -6,7 +6,7 @@ test("product site runs the live picture and links into the console", async ({ p
   await expect(page.locator("#scope canvas")).toBeVisible();
   await expect(page.locator("#s-air")).not.toHaveText("0");
   await expect(page.locator("#serial")).toContainText("Born on the bench");
-  await expect(page.locator(".nav-cta a.btn-primary")).toHaveAttribute("href", "/#operate");
+  await expect(page.locator(".nav-cta a.btn-primary")).toHaveAttribute("href", "/#home");
 });
 
 test("help center search filters articles", async ({ page }) => {

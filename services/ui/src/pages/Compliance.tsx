@@ -93,7 +93,15 @@ export function CompliancePage({ viewer, onBanner }: { viewer: Viewer; onBanner:
                         {l.items.some((i) => i.evidence === "missing") ? (
                           <input aria-label={`Origin for ${l.lot}`} placeholder="Origin on the document" value={origin[l.lot] ?? ""} onChange={(e) => setOrigin((o) => ({ ...o, [l.lot]: e.target.value }))} />
                         ) : null}
-                        <button type="button" className="btn btn-quiet" disabled={disabled} onClick={() => go("compliance.record", { lot: l.lot, origin: origin[l.lot] ?? "" })}>Record document</button>
+                        <button
+                          type="button"
+                          className="btn btn-quiet"
+                          disabled={disabled || (l.items.some((i) => i.evidence === "missing") && !(origin[l.lot] ?? "").trim())}
+                          title={l.items.some((i) => i.evidence === "missing") && !(origin[l.lot] ?? "").trim() ? "Type the origin the document states first" : undefined}
+                          onClick={() => go("compliance.record", { lot: l.lot, origin: origin[l.lot] ?? "" })}
+                        >
+                          Record document
+                        </button>
                       </span>
                     ) : null}
                   </td>

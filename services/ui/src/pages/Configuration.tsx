@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { Viewer } from "../shell/types";
-import { Loading, Note, PageHead, pct, Stat, useCustomerOrg, usePageData, Withheld } from "./thread";
+import { EmptyRow, Loading, Note, PageHead, pct, Stat, useCustomerOrg, usePageData, Withheld } from "./thread";
 import "./market.css";
 
 interface Row {
@@ -71,6 +71,7 @@ export function ConfigurationPage({ viewer, onBanner }: { viewer: Viewer; onBann
           <table data-testid="config-rows">
             <thead><tr><th>Serial</th><th>Built as</th><th>Now</th><th>Arms, motors, props</th><th>Sensor pack</th><th>Parameters</th><th>State</th><th /></tr></thead>
             <tbody>
+              {d.rows.length === 0 ? <EmptyRow text="Nothing yet for your organization: rows appear once Neros delivers airframes and you accept them." go={{ label: "Open Receiving", section: "receiving" }} /> : null}
               {d.rows.map((r) => (
                 <tr key={r.serial} className={r.ready ? undefined : "th-row-fail"}>
                   <td className="mono">{r.serial}</td>
@@ -122,6 +123,7 @@ export function ConfigurationPage({ viewer, onBanner }: { viewer: Viewer; onBann
             <table data-testid="by-config">
               <thead><tr><th>Configuration now</th><th>Sorties</th><th>Completed</th><th>Hardware faults</th></tr></thead>
               <tbody>
+                {byConfig.length === 0 ? <EmptyRow text="No sorties flown on these configurations yet." /> : null}
                 {byConfig.map((g) => (
                   <tr key={g.config}><td>{g.config}</td><td className="mono">{g.sorties}</td><td className="mono">{pct(g.rate)}</td><td className="mono">{pct(g.fault_rate, 1)}</td></tr>
                 ))}

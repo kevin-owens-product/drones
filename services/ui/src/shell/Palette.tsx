@@ -17,6 +17,18 @@ export function Palette({ open, commands, onClose }: { open: boolean; commands: 
 
   useEffect(() => setActive(0), [query]);
 
+  // Escape closes it wherever focus is, not only from the search box.
+  const close = useRef(onClose);
+  close.current = onClose;
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && document.activeElement !== input.current) close.current();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   if (!open) return null;
 
   function run(command: Command | undefined) {

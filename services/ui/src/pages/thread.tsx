@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { api } from "../api";
 import type { Viewer } from "../shell/types";
 import "./insights.css";
@@ -121,6 +122,49 @@ interface SerialRecord {
   events: SerialEvent[];
 }
 
+
+/** The one row a table shows when it has nothing to list, so an empty table still says why and what comes next. */
+export function EmptyRow({ text, go }: { text: string; go?: { label: string; section: string } }) {
+  return (
+    <tr className="th-empty">
+      <td colSpan={100}>
+        {text}
+        {go ? (
+          <>
+            {" "}
+            <a href={`#${go.section}`}>{go.label}</a>
+          </>
+        ) : null}
+      </td>
+    </tr>
+  );
+}
+
+/** A side drawer over the page: above the shell strips and the guided walk, closes on Escape, takes focus. */
+function Drawer({ label, testId, onClose, children }: { label: string; testId: string; onClose: () => void; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const close = useRef(onClose);
+  close.current = onClose;
+  useEffect(() => {
+    const back = document.activeElement as HTMLElement | null;
+    ref.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close.current();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      back?.focus?.();
+    };
+  }, []);
+  return createPortal(
+    <div ref={ref} className="th-drawer" role="dialog" aria-label={label} data-testid={testId} tabIndex={-1}>
+      {children}
+    </div>,
+    document.body,
+  );
+}
+
 /** One serial's record, factory bench to last flight, each event hashing the one before it. */
 export function SerialDrawer({ serial, onClose }: { serial: string; onClose: () => void }) {
   const [rec, setRec] = useState<SerialRecord | null>(null);
@@ -131,7 +175,7 @@ export function SerialDrawer({ serial, onClose }: { serial: string; onClose: () 
       .catch((e: unknown) => setFault(e instanceof Error ? e.message : "Could not load the record."));
   }, [serial]);
   return (
-    <div className="th-drawer" role="dialog" aria-label={`Serial record ${serial}`} data-testid="serial-drawer">
+    <Drawer label={`Serial record ${serial}`} testId="serial-drawer" onClose={onClose}>
       <div className="th-drawer-head">
         <div>
           <p className="kicker">Serial record</p>
@@ -167,7 +211,7 @@ export function SerialDrawer({ serial, onClose }: { serial: string; onClose: () 
           <p className="meta">Neros writes the build events; the customer writes everything after acceptance. Each event's hash covers the one before it, so an edit anywhere breaks the chain.</p>
         </>
       ) : null}
-    </div>
+    </Drawer>
   );
 }
 
@@ -193,7 +237,7 @@ export function PacketDrawer({ lot, onClose }: { lot: string; onClose: () => voi
     URL.revokeObjectURL(url);
   }
   return (
-    <div className="th-drawer" role="dialog" aria-label={`Provenance packet ${lot}`} data-testid="packet-drawer">
+    <Drawer label={`Provenance packet ${lot}`} testId="packet-drawer" onClose={onClose}>
       <div className="th-drawer-head">
         <div>
           <p className="kicker">Provenance packet</p>
@@ -213,6 +257,6 @@ export function PacketDrawer({ lot, onClose }: { lot: string; onClose: () => voi
           <pre className="th-code">{text}</pre>
         </>
       ) : null}
-    </div>
+    </Drawer>
   );
 }

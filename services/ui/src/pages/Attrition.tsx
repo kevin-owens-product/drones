@@ -264,7 +264,7 @@ export function AttritionPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
                   type="button"
                   className="btn btn-primary"
                   disabled={Boolean(h) || !canHold}
-                  title={canHold ? undefined : "Holding a lot needs the maintainer, mission commander or admin role."}
+                  title={h ? "This lot is already on hold" : canHold ? undefined : "Holding a lot needs the maintainer, mission commander or admin role."}
                   onClick={() => void hold(a)}
                 >
                   {h ? "Held" : `Hold ${a.in_service_count} airframes`}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Viewer } from "../shell/types";
-import { Loading, Note, PageHead, pct, Stat, useCustomerOrg, usePageData } from "./thread";
+import { EmptyRow, Loading, Note, PageHead, pct, Stat, useCustomerOrg, usePageData } from "./thread";
 
 interface Operator {
   id: string; unit: string; course: string; course_done: string | null; instructor: boolean; sessions: number;
@@ -108,6 +108,7 @@ export function ReadinessPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
               </tr>
             </thead>
             <tbody>
+              {shown.length === 0 ? <EmptyRow text="No operators on file for this unit yet." /> : null}
               {shown.map((o) => (
                 <tr key={o.id} className={o.ready ? undefined : "th-row-fail"}>
                   <td className="mono">{o.id}{o.instructor ? <span className="meta"> instructor</span> : null}</td>
@@ -130,7 +131,7 @@ export function ReadinessPage({ viewer, onBanner }: { viewer: Viewer; onBanner: 
                       <span className="meta">{o.refresher.kind} on {o.refresher.on}</span>
                     ) : o.flags.length ? (
                       <span className="th-inline">
-                        <button type="button" className="btn btn-quiet" disabled={!canAct || page.busy} onClick={() => void page.post("/v1/thread/act", "readiness.refresher", { org, operator: o.id, kind: o.sim.passed ? "session" : "sim" })}>
+                        <button type="button" className="btn btn-quiet" disabled={!canAct || page.busy} title={canAct ? undefined : "Booking training needs the mission commander, maintainer or admin role"} onClick={() => void page.post("/v1/thread/act", "readiness.refresher", { org, operator: o.id, kind: o.sim.passed ? "session" : "sim" })}>
                           Book {o.sim.passed ? "a session" : "requalification"}
                         </button>
                       </span>

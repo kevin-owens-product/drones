@@ -21,6 +21,9 @@ test("accountability opens a serial's hash-chained record from an end-of-flight 
   await page.getByTestId("acct-records").locator(".th-link").first().click();
   await expect(page.getByTestId("serial-drawer")).toContainText("Chain verified");
   await expect(page.getByTestId("serial-drawer")).toContainText("born");
+  // The drawer sits over the shell and closes from the keyboard.
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("serial-drawer")).toBeHidden();
 });
 
 test("quality flags the ESC lot from shared field records", async ({ page }) => {
