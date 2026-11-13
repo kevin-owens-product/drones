@@ -33,7 +33,7 @@ export type Section =
   | "audit"
   | "respond"
   | "records"
-  | "crew";
+  | "crew" | "contract";
 
 export type Viewer = {
   id: string;

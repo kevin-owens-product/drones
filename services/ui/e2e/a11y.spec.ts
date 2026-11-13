@@ -10,7 +10,7 @@ test.skip(!process.env.A2E_DEMO, "needs the demo server");
 test.use({ reducedMotion: "reduce" });
 
 const AXE = readFileSync(createRequire(import.meta.url).resolve("axe-core/axe.min.js"), "utf8");
-const PAGES = ["operate", "ops", "fleet", "missions", "brief", "debrief", "quality", "company", "reports", "configure", "denial", "program", "integrations", "access", "audit", "release", "respond", "records", "crew"];
+const PAGES = ["operate", "ops", "fleet", "missions", "brief", "debrief", "quality", "company", "reports", "configure", "denial", "program", "integrations", "access", "audit", "release", "respond", "records", "crew", "contract"];
 
 interface Violation { id: string; impact: string | null; nodes: { html: string }[] }
 declare global {

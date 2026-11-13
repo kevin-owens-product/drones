@@ -8,6 +8,7 @@ interface Pilot { id: string; name: string; items: Item[]; assignable: boolean; 
 interface Day { date: string; pilot: string | null; pilot_name: string | null; supervised_by: string | null; supervised_by_name: string | null; flags: string[] }
 interface Crew {
   source: string; today: string; on_console: string | null;
+  role: { supervisor: boolean; pilot: boolean; contractor: boolean };
   rules: { recurrent_months: number; hours: number; docked_hours: number; supervised_shifts: number; supervised_flights: number };
   shift_hours: { start: string; end: string; hours: number };
   pilots: Pilot[];
@@ -16,6 +17,19 @@ interface Crew {
 }
 
 const LV = { ok: "is-ok", warn: "is-warn", fail: "is-fail" } as const;
+const RENEWABLE = ["twic", "recurrent", "cjis", "background"];
+
+/** Record a renewal or clearance on a file: a date for TWIC and recurrent training, a clearance for the rest. */
+function Renew({ pilot, item, busy, act }: { pilot: Pilot; item: Item; busy: boolean; act: (action: string, args: Record<string, unknown>) => Promise<boolean> }) {
+  const [value, setValue] = useState("");
+  const dated = item.key === "twic" || item.key === "recurrent";
+  return (
+    <span className="rs-renew">
+      {dated ? <input type="date" value={value} onChange={(e) => setValue(e.target.value)} aria-label={`${item.key === "twic" ? "New TWIC expiry" : "Recurrent training completed"} for ${pilot.name}`} /> : null}
+      <button type="button" className="btn btn-quiet" disabled={busy || (dated && !value)} onClick={() => void act("crew.renew", { pilot: pilot.id, item: item.key, value: dated ? value : null })}>{item.key === "twic" ? "Record the renewal" : item.key === "recurrent" ? "Record the training" : "Record the clearance"}</button>
+    </span>
+  );
+}
 
 /** Who can sit at the console, and who is rostered: each pilot's currency file and the next fourteen days of shifts. */
 export function CrewPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (banner: string) => void }) {
@@ -23,7 +37,9 @@ export function CrewPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (bann
   const [open, setOpen] = useState<string | null>(null);
   if (!page.data) return <Loading fault={page.fault} />;
   const d = page.data;
-  const manager = !viewer.org || viewer.roles.some((r) => ["mission_commander", "admin"].includes(r));
+  const manager = d.role.supervisor;
+  // The contractor keeps its pilots' files current; the program manager can record a renewal too.
+  const renews = d.role.contractor || d.role.supervisor;
   const act = (action: string, args: Record<string, unknown>) => page.post("/v1/dfr/act", action, args);
   const solo = d.pilots.filter((p) => p.solo);
 
@@ -83,12 +99,12 @@ export function CrewPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (bann
                 {!p.assignable ? <span className="th-check is-fail">Cannot be rostered</span> : p.solo ? <span className="th-check is-ok">Cleared for solo</span> : <span className="th-check is-warn">Supervised shifts only</span>}
                 {p.warnings.map((w) => <span key={w} className="th-check is-warn">{w}</span>)}
                 <button type="button" className="btn btn-quiet" aria-expanded={open === p.id} onClick={() => setOpen(open === p.id ? null : p.id)}>{open === p.id ? "Hide file" : "Open file"}</button>
-                {p.certifiable ? <button type="button" className="btn btn-primary" disabled={!manager || page.busy} title={manager ? undefined : "The program manager signs pilots off"} onClick={() => void act("crew.certify", { pilot: p.id })}>Sign off for solo shifts</button> : null}
+                {p.certifiable && manager ? <button type="button" className="btn btn-primary" disabled={!manager || page.busy} title={manager ? undefined : "The program manager signs pilots off"} onClick={() => void act("crew.certify", { pilot: p.id })}>Sign off for solo shifts</button> : null}
               </div>
               {!p.assignable ? <p className="meta">{p.blocking.join("; ")}</p> : null}
               {open === p.id ? (
                 <dl className="rs-fields">
-                  {p.items.map((x) => <div key={x.key}><dt>{x.label}</dt><dd><span className={`th-check ${LV[x.level]}`}>{x.value}</span>{x.note ? <span className="meta"> {x.note}</span> : null}</dd></div>)}
+                  {p.items.map((x) => <div key={x.key}><dt>{x.label}</dt><dd><span className={`th-check ${LV[x.level]}`}>{x.value}</span>{x.note ? <span className="meta"> {x.note}</span> : null}{renews && x.level !== "ok" && RENEWABLE.includes(x.key) ? <Renew pilot={p} item={x} busy={page.busy} act={act} /> : null}</dd></div>)}
                 </dl>
               ) : null}
             </li>

@@ -33,6 +33,8 @@ export const ACCOUNTS = [
   // A public safety program (demo/dfr.mjs): a supervisor approves launches, a contract pilot flies them.
   { id: "demo-supervisor", username: "supervisor", display_name: "Demo Supervisor (Harbor police)", roles: ["mission_commander"], org: "CUS-D" },
   { id: "demo-pilot", username: "pilot", display_name: "Demo Pilot (contract RPIC)", roles: ["operator"], org: "CUS-D" },
+  // The company that staffs the console: a seat in the agency's tenant for its pilots' files and its invoice, not the console.
+  { id: "demo-contractor", username: "contractor", display_name: "Demo Contractor (pilot company)", roles: ["contractor"], org: "CUS-D" },
 ];
 
 // ---- SHA-256 (FIPS 180-4), synchronous, UTF-8 input, lowercase hex output ----

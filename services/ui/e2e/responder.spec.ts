@@ -53,3 +53,37 @@ test("the program manager fills the empty day and signs the onboarding pilot off
   await nguyen.getByRole("button", { name: "Sign off for solo shifts" }).click();
   await expect(nguyen).toContainText("Cleared for solo");
 });
+
+test("the month closes: a held shift, a lapsed pilot's day, submit and approve", async ({ page }) => {
+  await page.goto("/#contract");
+  const invoice = page.getByTestId("invoice");
+  await expect(invoice.locator('[data-shift="SH-2026-10-19"]')).toContainText("Unstaffed: not payable");
+  await expect(invoice.locator('[data-shift="SH-2026-10-31"]')).toContainText("TWIC lapsed");
+  await expect(page.getByTestId("activity-report")).toContainText("Calls received");
+  const status = page.getByTestId("month-status");
+  await status.getByRole("button", { name: "Submit the report and invoice" }).click();
+  await expect(status).toContainText("Submitted, waiting on the program manager");
+  await status.getByRole("button", { name: "Approve for payment" }).click();
+  await expect(status).toContainText("Approved for payment");
+});
+
+test("a records request is gathered, redacted and released; an overdue care check is signed", async ({ page }) => {
+  await page.goto("/#records");
+  const req = page.getByTestId("requests");
+  await req.getByLabel("Requester").fill("Harbor Gazette");
+  await req.getByLabel("Incident number").fill("26-111301");
+  await req.getByRole("button", { name: "Gather the records" }).click();
+  const q = req.locator("[data-request]").first();
+  await q.getByRole("button", { name: "Review" }).click();
+  await expect(q).toContainText("[licence plate redacted]");
+  await expect(q).not.toContainText("8KTR214");
+  await q.getByRole("button", { name: "Release" }).click();
+  await expect(q).toContainText("Released");
+
+  const care = page.getByTestId("care-log").locator('[data-tail="DFR-04"]');
+  await expect(care).toContainText("Overdue since");
+  await care.getByRole("button", { name: "Sign this week's check" }).click();
+  await care.getByLabel("Pack health, %").fill("96");
+  await care.getByRole("button", { name: "Sign the check" }).click();
+  await expect(care).toContainText("Next due");
+});

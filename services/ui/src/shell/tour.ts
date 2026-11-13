@@ -148,12 +148,43 @@ const RESPONDER: readonly TourStep[] = [
     body: "Times, aircraft, dock, incident number, approver, pilot, weather and airspace come from the flight. The pilot writes what happened. A correction is a new version beside the original, sealed into the same chain.",
     action: "File the waiting record, then correct it and see both versions.",
   },
+  {
+    id: "contract-approve",
+    section: "contract",
+    workspace: "responder",
+    title: "The month closes on the shift logs",
+    body: "The contractor's invoice is built from the signed shift logs: unstaffed hours and hours worked by a pilot who was not current are not payable, and a shift whose records are not filed is held until they are. The activity report sits beside it.",
+    action: "Read the held and excluded lines, then approve or return the invoice once the contractor submits it.",
+  },
+];
+
+/** The contractor's seat: its pilots' files and its invoice. It never sees the console or the incident records. */
+const CONTRACTOR: readonly TourStep[] = [
+  {
+    id: "contractor-files",
+    section: "crew",
+    workspace: "responder",
+    title: "Keep every pilot's file current",
+    body: "A pilot with a lapsed credential cannot be rostered. A. Reyes's TWIC expired on October 30, so the program manager cannot put him on console until the renewal is on file.",
+    action: "Open A. Reyes's file and record the TWIC renewal.",
+  },
+  {
+    id: "contractor-month",
+    section: "contract",
+    workspace: "responder",
+    title: "Submit the month",
+    body: "The report and the invoice come from the signed shift logs, so there is nothing to type. One shift is held until its flight record is filed, and the day Reyes worked without a current TWIC is not payable.",
+    action: "Submit the October report and invoice to the program manager.",
+  },
 ];
 
 /** The steps this person can take: Neros staff who can switch walk the whole loop; a customer walks their fleet. */
 export function tourFor(viewer: Pick<Viewer, "roles" | "org">): readonly TourStep[] {
   if (!viewer.org) return [...NEROS.filter((s) => s.workspace === "neros" && s.id !== "audit"), ...CUSTOMER];
-  if (isResponderOrg(viewer.org)) return RESPONDER;
+  if (isResponderOrg(viewer.org)) {
+    if (viewer.roles.includes("contractor") && !viewer.roles.some((r) => r === "operator" || can(viewer, "mission.approve"))) return CONTRACTOR;
+    return can(viewer, "mission.approve") ? RESPONDER : RESPONDER.filter((s) => s.section !== "contract");
+  }
   if (viewer.org !== "neros") return CUSTOMER.filter((s) => s.section !== "brief" || can(viewer, "mission.draft"));
   const switcher = viewer.roles.includes("admin");
   return NEROS.filter((s) => (switcher || s.workspace === "neros") && (s.section !== "audit" || can(viewer, "audit.read")));

@@ -19,6 +19,7 @@
 import { createLedger, can, RESPONDER_ORGS, verifyChain } from "./ledger.mjs";
 import { TODAY } from "./company.mjs";
 import { createCrew } from "./dfrcrew.mjs";
+import { createProgram, history, RETENTION } from "./dfrprogram.mjs";
 
 /** The public safety program in the demo, and the contractor that staffs its console. */
 export const PROGRAM = { id: "CUS-D", name: "Customer D: Harbor police DFR program (SIM)", mode: "public_safety" };
@@ -136,6 +137,8 @@ export function createResponder(o = {}) {
   const place = (id) => MAP.places.find((p) => p.id === id);
   const dockOf = (id) => docks.find((d) => d.id === id);
   const pilotName = (id) => PILOTS.find((p) => p.id === id)?.name ?? id;
+  // The month: care log, retention and holds, records requests, the activity report and the invoice (demo/dfrprogram.mjs).
+  const program = createProgram({ today: () => shift.date, evidence, pilotName });
 
   function receive(at) {
     const f = FEED[fed % FEED.length];
@@ -151,7 +154,7 @@ export function createResponder(o = {}) {
   function seed() {
     const t0 = shift.start;
     const early = [
-      { kind: "Suspicious vehicle", place: "block-12", priority: 2, text: "Pickup driving between stacks with lights off", at: t0 + 35 * 60_000, dock: "D2", minutes: 14, narrative: "Arrived 74 s after launch. Pickup parked between rows 11 and 12, two occupants, no cargo movement. Units arrived and identified a terminal security patrol. Released by supervisor.", filed: true },
+      { kind: "Suspicious vehicle", place: "block-12", priority: 2, text: "Pickup driving between stacks with lights off", at: t0 + 35 * 60_000, dock: "D2", minutes: 14, narrative: "Arrived 74 s after launch. Pickup parked between rows 11 and 12, two occupants, no cargo movement. Units arrived and identified a terminal security patrol, plate 8KTR214; the driver, Mr. Alvarez, gave a callback of 310-555-0142. Released by supervisor.", filed: true },
       { kind: "Alarm", place: "gate-4", priority: 2, text: "Perimeter alarm at the gate, no one on camera", at: t0 + 102 * 60_000, dock: "D2", minutes: 11, narrative: null, filed: false },
     ];
     for (const e of early) {
@@ -168,6 +171,19 @@ export function createResponder(o = {}) {
       const rec = draftRecord(f);
       records.push(rec);
       if (e.filed) fileRecord(rec, { narrative: e.narrative, anomaly: "" }, pilotName(shift.rpic), launch + (e.minutes + 6) * 60_000);
+    }
+    // A flight from October 30 whose record was never filed: its shift's hours are held on the invoice until it is.
+    {
+      const p = place("block-12");
+      const at = Date.parse("2026-10-30T21:12:00Z");
+      const c = { id: "C-0987", incident: "26-109874", kind: "Theft in progress", priority: 2, text: "Container seal reported cut at block 12", place: p.label, x: p.x, y: p.y, received_at: at, status: "flown", order: 987, history: [] };
+      calls.push(c);
+      const d = dockOf("D2");
+      const transit = dist(d, c) / CRUISE_MPS;
+      const launch = at + 41_000;
+      const f = { id: "F-38", call: c.id, dock: d.id, tail: d.tail, rpic: "P-03", approver: SUPERVISOR, approved_at: at + 25_000, launched_at: launch, scripted: { docked_at: launch + 16 * 60_000, on_scene_at: launch + (LAUNCH_S + transit) * 1000 }, released_at: launch + (16 * 60 - transit) * 1000, terminated: null, observe_stopped_at: null, start_charge: 100 };
+      flights.push(f);
+      records.push({ ...draftRecord(f), due_at: Date.parse("2026-10-31T00:00:00Z") });
     }
     // A request the pilot declined: airspace closed over the cruise terminal.
     callSeq += 1;
@@ -258,6 +274,9 @@ export function createResponder(o = {}) {
       if (need > TRANSIT_M) add("caution", `Route crosses ${x.label} (${x.height_m} m): the transit climbs to ${need} m over it, ${CLEAR_M} m clear.`);
       else add("go", `Route crosses ${x.label} (${x.height_m} m); the ${TRANSIT_M} m transit clears it by ${TRANSIT_M - x.height_m} m.`);
     }
+    const care = program.careOf(d.tail);
+    if (care.grounded) add("no-go", `${d.tail} grounded at its care check: ${care.why}.`);
+    else if (care.overdue) add("caution", `${d.tail} weekly care check overdue since ${care.due}. Sign it on Flight records.`);
     add("go", "Control and video link margin good on the route (SIM).");
     return { go: !checks.some((x) => x.level === "no-go"), checks };
   }
@@ -324,6 +343,7 @@ export function createResponder(o = {}) {
 
   seed();
   seedShifts();
+  mishaps.sort((a, b) => b.verbal_at - a.verbal_at);
 
   // ---- Shifts: the start-of-shift checklist, discrepancies, and the signed shift log ----
 
@@ -336,6 +356,11 @@ export function createResponder(o = {}) {
       if (d.power !== "on" || d.comms !== "ok") add("Docks and aircraft", "fail", `${d.name}: ${d.power !== "on" ? "no power" : "not communicating"}.`);
       else if (charge < 60) add("Docks and aircraft", "caution", `${d.name}: powered and communicating, door clear; ${d.tail} at ${charge}%, not launchable until 60%.`);
       else add("Docks and aircraft", "ok", `${d.name}: powered, communicating, door clear; ${d.tail} at ${charge}%, no visible damage.`);
+    }
+    for (const d of docks) {
+      const care = program.careOf(d.tail);
+      if (care.grounded) add("Docks and aircraft", "fail", `${d.tail} grounded at its care check: ${care.why}.`);
+      else if (care.overdue) add("Docks and aircraft", "caution", `${d.tail} weekly battery and care check overdue since ${care.due}.`);
     }
     add("Console", "ok", "Ground control station, video link, data link, recording and radio all reporting.");
     const wx = WEATHER.wind_mps <= LIMITS.wind_mps && WEATHER.gust_mps <= LIMITS.gust_mps && WEATHER.visibility_km >= LIMITS.visibility_km && WEATHER.ceiling_ft >= LIMITS.ceiling_ft;
@@ -363,10 +388,23 @@ export function createResponder(o = {}) {
     week.forEach((w, i) => {
       const date = addDays(TODAY, -(i + 1));
       const staffed = 12 - w.gap_min / 60;
-      const log = { id: `SH-${date}`, date, rpic: pilotName(w.rpic), supervisor: SUPERVISOR, scheduled_h: 12, staffed_h: staffed, flights: w.flights, flight_ids: [], declined: w.declined, gaps: w.gap ? [w.gap] : [], discrepancies: w.discrepancies, aircraft_start: "All four docks ready", aircraft_end: "All four docks ready", records_unfiled: 0, signed_by: pilotName(w.rpic), signed_at: `${date}T19:0${i}:00.000Z` };
+      const late = date === "2026-10-30";
+      const log = { id: `SH-${date}`, date, rpic: pilotName(w.rpic), supervisor: SUPERVISOR, scheduled_h: 12, staffed_h: staffed, flights: w.flights, flight_ids: late ? ["F-38"] : [], declined: w.declined, gaps: w.gap ? [w.gap] : [], discrepancies: w.discrepancies, aircraft_start: "All four docks ready", aircraft_end: "All four docks ready", records_unfiled: late ? 1 : 0, signed_by: pilotName(w.rpic), signed_at: `${date}T19:0${i}:00.000Z` };
       const row = evidence.append({ actor: log.signed_by, action: "shift.sign", resource_type: "shift_log", resource_id: log.id, detail: JSON.stringify(log), at: Date.parse(log.signed_at) });
       shiftLogs.push({ ...log, hash: row.row_hash });
     });
+    // The rest of the month before that week, for the activity report and the invoice.
+    for (const log of history(addDays(TODAY, -33), addDays(TODAY, -(week.length + 1)), pilotName).reverse()) {
+      const row = evidence.append({ actor: log.signed_by, action: "shift.sign", resource_type: "shift_log", resource_id: log.id, detail: JSON.stringify(log), at: Date.parse(log.signed_at) });
+      shiftLogs.push({ ...log, hash: row.row_hash });
+    }
+    // An October mishap, written the same day and not reportable.
+    {
+      const verbal = Date.parse("2026-10-12T17:40:00Z");
+      const written = { at: "2026-10-12T22:05:00.000Z", by: pilotName("P-02"), text: "Gull struck the left front propeller on climb-out from Dock 2. Aircraft held a hover, returned and landed normally. Propeller replaced; no other damage.", injury: false, damage_usd: 0, aircraft_damage: "One propeller" };
+      const row = evidence.append({ actor: written.by, action: "mishap.file", resource_type: "mishap", resource_id: "MS-6", detail: JSON.stringify(written), at: Date.parse(written.at) });
+      mishaps.push({ id: "MS-6", tail: "DFR-02", dock: "D2", flight: null, kind: "Bird strike", verbal_at: verbal, reported_to: SUPERVISOR, by: pilotName("P-02"), text: "Bird strike on climb-out from Dock 2; landed normally.", written: { ...written, hash: row.row_hash } });
+    }
     // A mishap from yesterday evening: a hard landing on Dock 3, reported by radio, the written report still due.
     mishaps.push({ id: "MS-7", tail: "DFR-03", dock: "D3", flight: null, kind: "Hard landing", verbal_at: opened - 20 * 3600_000, reported_to: SUPERVISOR, by: pilotName("P-03"), text: "Gust on final into Dock 3; aircraft touched the dock lip and one propeller chipped. Landed and secured.", written: null });
   }
@@ -416,11 +454,11 @@ export function createResponder(o = {}) {
 
   // ---- Views ----
   const roleOf = (who) => {
-    if (!who) return { supervisor: true, pilot: true, preview: false };
+    if (!who) return { supervisor: true, pilot: true, contractor: true, preview: false };
     const preview = who.org === "neros";
-    // Neros staff previewing the program play both seats so the walk-through works from one login; a real program has two people.
-    if (preview) return { supervisor: can(who.roles, "mission.approve"), pilot: who.roles.includes("admin"), preview };
-    return { supervisor: can(who.roles, "mission.approve"), pilot: who.roles.includes("operator"), preview };
+    // Neros staff previewing the program play every seat so the walk-through works from one login; a real program has three people.
+    if (preview) return { supervisor: can(who.roles, "mission.approve"), pilot: who.roles.includes("admin"), contractor: who.roles.includes("admin"), preview };
+    return { supervisor: can(who.roles, "mission.approve"), pilot: who.roles.includes("operator"), contractor: who.roles.includes("contractor"), preview };
   };
 
   function callView(c, now) {
@@ -465,7 +503,8 @@ export function createResponder(o = {}) {
       docks: docks.map((d) => {
         const out = flights.find((f) => f.dock === d.id && !f.scripted && flightView(f, now).phase !== "docked");
         const charge = chargeOf(d, now);
-        return { ...d, charge, state: out ? "out" : d.power !== "on" || d.comms !== "ok" ? "fault" : charge < 60 ? "charging" : "ready", out_on: out?.call ?? null };
+        const care = program.careOf(d.tail);
+        return { ...d, charge, state: out ? "out" : d.power !== "on" || d.comms !== "ok" ? "fault" : care.grounded ? "grounded" : charge < 60 ? "charging" : "ready", out_on: out?.call ?? null, care: { due: care.due, overdue: care.overdue, grounded: care.grounded } };
       }),
       queue: waiting,
       flights: live.filter((f) => f.phase !== "docked"),
@@ -481,7 +520,8 @@ export function createResponder(o = {}) {
       const f = flights.find((x) => x.id === r.flight);
       const s = flightState(f, now);
       const latest = r.versions.at(-1);
-      return { id: r.id, flight: r.flight, call: r.call, status: s.phase !== "docked" ? "in_flight" : r.status, due_at: iso(r.due_at), late: r.late, fields: latest?.fields ?? prefill(r, now), versions: r.versions.map((v) => ({ v: v.v, at: v.at, by: v.by, why: v.why, hash: v.hash })) };
+      const late = r.status !== "filed" && now > r.due_at;
+      return { id: r.id, flight: r.flight, call: r.call, status: s.phase !== "docked" ? "in_flight" : r.status, due_at: iso(r.due_at), late: r.late || late, fields: latest?.fields ?? prefill(r, now), versions: r.versions.map((v) => ({ v: v.v, at: v.at, by: v.by, why: v.why, hash: v.hash })), retention: program.retention("flight_record", r.versions[0]?.at ?? null, r.id) };
     });
     const chain = evidence.items();
     const broken = verifyChain(chain);
@@ -490,8 +530,12 @@ export function createResponder(o = {}) {
       items: list.sort((a, b) => (a.flight < b.flight ? 1 : -1)),
       declined: calls.filter((c) => c.status === "declined" || c.status === "cancelled").map((c) => ({ call: c.id, incident: c.incident, kind: c.kind, place: c.place, received_at: iso(c.received_at), ...(c.declined ?? c.cancelled), by_role: c.status === "declined" ? "RPIC" : "Supervisor" })),
       chain: { rows: chain.length, intact: broken === -1, broken_at: broken, head: chain.at(-1)?.row_hash ?? null },
-      shift_logs: [{ ...shiftDraft(now), status: "open" }, ...shiftLogs.map((l) => ({ ...l, status: "signed" }))],
-      mishaps: mishaps.map((m) => mishapView(m, now)),
+      shift_logs: [{ ...shiftDraft(now), status: "open" }, ...shiftLogs.slice(0, 7).map((l) => ({ ...l, status: "signed", retention: program.retention("shift_log", l.signed_at, l.id) }))],
+      shift_logs_total: shiftLogs.length,
+      mishaps: mishaps.map((m) => ({ ...mishapView(m, now), retention: program.retention("mishap", m.written?.at ?? null, m.id) })),
+      care: program.careView(),
+      retention: RETENTION,
+      requests: program.requests,
       fields: ["Launch and recovery time", "Aircraft", "Launch location", "Incident location", "Duration", "Reason for flight", "Incident or call number", "Approving authority", "RPIC", "Weather and airspace", "Narrative", "Anomaly"],
     };
   }
@@ -685,12 +729,68 @@ export function createResponder(o = {}) {
         audit.append({ actor, action: "dfr.certify", resource_type: "pilot", resource_id: String(args.pilot), detail: out.message, at: now });
         return ok(out.message);
       }
+      case "care.sign": {
+        if (!role.pilot) return deny("The pilot signs the weekly care check.");
+        const out = program.signCare(args, role.preview ? `${actor} (as RPIC)` : who ? actor : pilotName(shift.rpic ?? "P-02"), now);
+        if (!out.ok) return no(out.status, out.why);
+        audit.append({ actor, action: "dfr.care", resource_type: "aircraft", resource_id: String(args.tail), detail: out.message, at: now });
+        return ok(out.message);
+      }
+      case "record.hold":
+      case "record.release_hold": {
+        if (!role.supervisor) return deny("The records custodian places and lifts legal holds.");
+        const id = String(args.id ?? "");
+        if (![...records.map((r) => r.id), ...shiftLogs.map((l) => l.id), ...mishaps.map((m) => m.id)].includes(id)) return no(404, "No such record.");
+        const by = role.preview ? `${actor} (as custodian)` : who ? actor : SUPERVISOR;
+        const out = action === "record.hold" ? program.setHold(id, args.matter, by, now) : program.liftHold(id, by, now);
+        if (!out.ok) return no(409, out.why);
+        audit.append({ actor, action: `dfr.${action === "record.hold" ? "hold" : "hold_lift"}`, resource_type: "record", resource_id: id, detail: out.message, at: now });
+        return ok(out.message);
+      }
+      case "request.create": {
+        if (!role.supervisor) return deny("The records custodian answers records requests.");
+        const out = program.createRequest(args, { records: records.map((r) => ({ ...r, fields: r.versions.at(-1)?.fields })), shiftLogs }, role.preview ? `${actor} (as custodian)` : who ? actor : SUPERVISOR, now);
+        if (!out.ok) return no(out.status, out.why);
+        audit.append({ actor, action: "dfr.request", resource_type: "records_request", resource_id: program.requests[0].id, detail: out.message, at: now });
+        return ok(out.message);
+      }
+      case "request.release": {
+        if (!role.supervisor) return deny("The records custodian releases a records request.");
+        const out = program.releaseRequest(String(args.id ?? ""), role.preview ? `${actor} (as custodian)` : who ? actor : SUPERVISOR, now, verifyChain(evidence.items()) === -1);
+        if (!out.ok) return no(out.status, out.why);
+        audit.append({ actor, action: "dfr.request_release", resource_type: "records_request", resource_id: String(args.id), detail: out.message, at: now });
+        return ok(out.message);
+      }
+      case "month.submit": {
+        if (!role.contractor) return deny("The contractor submits the month's report and invoice.");
+        const out = program.submitMonth(monthSrc(), role.preview ? `${actor} (as contractor)` : who ? actor : "Contract pilot company (SIM)", now);
+        if (!out.ok) return no(409, out.why);
+        audit.append({ actor, action: "dfr.month_submit", resource_type: "invoice", resource_id: "INV-2026-10", detail: out.message, at: now });
+        return ok(out.message);
+      }
+      case "month.approve":
+      case "month.return": {
+        if (!role.supervisor) return deny("The program manager approves or returns the invoice.");
+        const out = program.decideMonth(action === "month.approve", args.note, role.preview ? `${actor} (as program manager)` : who ? actor : SUPERVISOR, now);
+        if (!out.ok) return no(409, out.why);
+        audit.append({ actor, action: `dfr.${action.replace(".", "_")}`, resource_type: "invoice", resource_id: "INV-2026-10", detail: out.message, at: now });
+        return ok(out.message);
+      }
+      case "crew.renew": {
+        if (!role.contractor && !role.supervisor) return deny("The contractor keeps the pilot files current; the program manager can too.");
+        const out = crew.renew(String(args.pilot ?? ""), String(args.item ?? ""), args.value == null ? null : String(args.value));
+        if (!out.ok) return no(409, out.why);
+        audit.append({ actor, action: "dfr.renew", resource_type: "pilot", resource_id: String(args.pilot), detail: out.message, at: now });
+        return ok(out.message);
+      }
       default:
         return no(400, `unknown action ${action}`);
     }
   }
 
-  const ROUTES = ["/v1/dfr", "/v1/dfr/act", "/v1/dfr/records", "/v1/dfr/crew"];
+  const monthSrc = () => ({ shiftLogs, records, mishaps, crewView: crew.view() });
+
+  const ROUTES = ["/v1/dfr", "/v1/dfr/act", "/v1/dfr/records", "/v1/dfr/crew", "/v1/dfr/program"];
   const owns = (path) => ROUTES.includes(path);
 
   /** Whose program this is: the program's own people, Neros previewing it, or the local demo with no sign-in. */
@@ -700,6 +800,9 @@ export function createResponder(o = {}) {
 
   function handle(method, url, raw, who) {
     if (!allowed(who)) return no(403, "That is another customer's program.");
+    // A contractor seat sees its people and its invoice, never the live console or the incident records.
+    const contractorOnly = Boolean(who?.roles?.includes("contractor")) && !roleOf(who).supervisor && !roleOf(who).pilot;
+    if (contractorOnly && (url.pathname === "/v1/dfr" || url.pathname === "/v1/dfr/records")) return no(403, "The live console and incident records stay with the agency. A contractor seat sees the roster, pilot files, and the month's report and invoice.");
     if (url.pathname === "/v1/dfr/act" && method === "POST") {
       let msg = {};
       try {
@@ -711,9 +814,11 @@ export function createResponder(o = {}) {
     }
     if (url.pathname === "/v1/dfr") return { status: 200, body: console_(who) };
     if (url.pathname === "/v1/dfr/records") return { status: 200, body: recordsView() };
-    if (url.pathname === "/v1/dfr/crew") return { status: 200, body: { source: "Simulated program (SIM): made-up pilots, certificate numbers and dates.", today: TODAY, on_console: shift.rpic, ...crew.view() } };
+    if (url.pathname === "/v1/dfr/program" && !roleOf(who).supervisor && !roleOf(who).contractor) return no(403, "The month's report and invoice are between the program manager and the contractor.");
+    if (url.pathname === "/v1/dfr/program") return { status: 200, body: { source: "Simulated program (SIM): made-up hours, rates and history.", today: shift.date, role: roleOf(who), ...program.monthView(monthSrc()) } };
+    if (url.pathname === "/v1/dfr/crew") return { status: 200, body: { source: "Simulated program (SIM): made-up pilots, certificate numbers and dates.", today: TODAY, on_console: shift.rpic, role: roleOf(who), ...crew.view() } };
     return no(404, "unknown");
   }
 
-  return { owns, handle, act, view: console_, records: recordsView, flightState, evidence, shift, calls, flights, crew, mishaps };
+  return { owns, handle, act, view: console_, records: recordsView, flightState, evidence, shift, calls, flights, crew, mishaps, program, shiftLogs };
 }
