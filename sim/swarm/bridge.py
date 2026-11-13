@@ -33,7 +33,7 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import urlparse
@@ -76,7 +76,7 @@ NAN = float("nan")
 
 
 def iso(t: float) -> str:
-    return datetime.fromtimestamp(t, tz=timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    return datetime.fromtimestamp(t, tz=UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
 def px4_mode(custom_mode: int) -> str:
@@ -289,9 +289,8 @@ class Vehicle:
             with self.ack_cv:
                 self.acks[msg.command] = (msg.result, time.time())
                 self.ack_cv.notify_all()
-        elif kind in ("MISSION_REQUEST_INT", "MISSION_REQUEST", "MISSION_ACK"):
-            if self.uploading:
-                self.mission_q.put(msg)
+        elif kind in ("MISSION_REQUEST_INT", "MISSION_REQUEST", "MISSION_ACK") and self.uploading:
+            self.mission_q.put(msg)
 
     def _rx(self) -> None:
         self.state.last_rx = time.time()
