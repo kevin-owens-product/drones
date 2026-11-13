@@ -56,6 +56,7 @@
           <div><b>Drone makers</b><span>Build, ship, sustain and improve the fleet from one work queue.</span></div>
           <div><b>Unit commanders</b><span>Run a mixed-vendor fleet: readiness, receiving, training, requests.</span></div>
           <div><b>Allied programs</b><span>Their own tenant, with releasability enforced on every response.</span></div>
+          <div><b>Public safety programs</b><span>Docked first responder flights: supervisor approval, the pilot's safety call, records that hold up.</span></div>
           <div><b>Integrators</b><span>Telemetry in from any autopilot; CoT and entity feeds out. Interfaces are free.</span></div>
         </div>
       </section>
@@ -268,6 +269,51 @@
         </div>
       </section>
 
+      <section class="section" id="public-safety">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <p class="kicker">A second market on the same record</p>
+            <h2>A police drone program runs on it too: every launch approved, every flight on the record.</h2>
+            <p class="lede">Agencies are putting docked drones on rooftops and piers and staffing them with contract remote pilots. Each call raises the same questions a military fleet does: who approved the launch, who can call it off, what does the record say, and what do we pay for. The same platform answers them for a public safety customer in its own operating mode, with its own words and its own records policy.</p>
+          </div>
+          <ol class="calls reveal" aria-label="A call, from dispatch to the invoice">
+            <li><span class="who">Dispatch</span><b>A call comes in</b><p>It lands in the queue with its priority, incident number and how long it has waited.</p></li>
+            <li><span class="who">Supervisor decides</span><b>Approve the launch</b><p>The nearest dock whose aircraft passes its checks is picked by flight time. Nothing flies without this approval.</p></li>
+            <li><span class="who">Pilot decides</span><b>Fly it, or don't</b><p>The pilot can decline or end any flight for safety. No role can override that call.</p></li>
+            <li><span class="who">Pilot files</span><b>The record writes itself</b><p>Prefilled from the flight; the pilot adds what happened. A correction is a new version on a hash chain.</p></li>
+            <li><span class="who">Program manager decides</span><b>Pay for the month</b><p>The invoice is built from signed shift logs. Unstaffed hours and hours a pilot worked while not current don't bill.</p></li>
+          </ol>
+          <div class="pillar ps reveal">
+            <div>
+              <h3>The shift, the roster and the records request, run from the same evidence.</h3>
+              <p>The program manager knows the console is staffed by a pilot who is current. The contractor bills for hours that were really worked. When a records request or a lawsuit arrives, the custodian can show who decided what.</p>
+              <ul class="ticks">
+                <li>The shift gates the launch<span>Start-of-shift checks on every dock, the weather and the airspace before the first approval. At hand-off the pilot signs a log built from the shift's own records.</span></li>
+                <li>Only current pilots on the roster<span>Each pilot's certificate, recurrent training, TWIC, CJIS and supervised time. A lapsed item can't be rostered, and a new pilot flies solo only after the program manager signs them off.</span></li>
+                <li>Cranes and bridges in the pre-flight<span>Crane rows, container stacks and bridge towers are on the map. A route that crosses one says how high to climb.</span></li>
+                <li>Mishaps on a clock<span>Verbal at once, written within 24 hours, with the FAA reportability test applied.</span></li>
+                <li>Records that hold up<span>Retention by record type, legal holds, and records requests released with plates, phones and names redacted and a hash manifest.</span></li>
+                <li>A contractor seat that sees only its part<span>The pilot company keeps its pilots' files and submits the month. It never sees the live console or incident records.</span></li>
+              </ul>
+              <div class="hero-ctas" style="margin-top:22px">
+                <a class="btn btn-primary btn-sm" href="/#respond">Sign in as supervisor or pilot →</a>
+                <a class="btn btn-sm" href="/help/#responder">Read the walkthrough</a>
+              </div>
+            </div>
+            <div class="shots" data-gallery>
+              <figure class="shot"><img src="/site-media/respond.webp" alt="The Respond screen" loading="lazy" /><figcaption><span>Respond: calls waiting, the nearest ready dock and the supervisor's approval</span><span class="tag tag-sim">SIM</span></figcaption></figure>
+              <div class="shot-thumbs four">
+                <button class="thumb" aria-pressed="true" data-src="/site-media/respond.webp" data-cap="Respond: calls waiting, the nearest ready dock and the supervisor's approval"><img src="/site-media/respond.webp" alt="" loading="lazy" /></button>
+                <button class="thumb" aria-pressed="false" data-src="/site-media/flight-records.webp" data-cap="Flight records: prefilled from the flight, written once, sealed into the evidence chain"><img src="/site-media/flight-records.webp" alt="" loading="lazy" /></button>
+                <button class="thumb" aria-pressed="false" data-src="/site-media/roster.webp" data-cap="Pilots and roster: 14 days of console cover, and a pilot whose TWIC lapsed can't be rostered"><img src="/site-media/roster.webp" alt="" loading="lazy" /></button>
+                <button class="thumb" aria-pressed="false" data-src="/site-media/invoice.webp" data-cap="Report and invoice: the month billed from signed shift logs, with unstaffed hours held back"><img src="/site-media/invoice.webp" alt="" loading="lazy" /></button>
+              </div>
+            </div>
+          </div>
+          <p class="fine">Customer D is a made-up harbor police program on a schematic harbor. Its docks, pilots, calls, weather, hours and rates are simulated, and no agency's process or prices are shown.</p>
+        </div>
+      </section>
+
       <section class="section" id="evidence">
         <div class="wrap">
           <div class="section-head reveal">
@@ -305,7 +351,7 @@
           </div>
           <div class="rails">
             <div class="rail reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg><h3>Fire control stays on the airframe</h3><p>The platform keeps the record and supervises the fleet; it never arms, targets or fires. Strike airframes are fully supported as products in the catalog, the record and the quote (ADR 0016).</p></div>
-            <div class="rail reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M14 14.5c3 0 7 1.5 7 5.5"/></svg><h3>Humans approve tasking</h3><p>The console monitors and advises. Plans need a second approver, and GO at launch is advice; nothing arms or launches.</p></div>
+            <div class="rail reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M14 14.5c3 0 7 1.5 7 5.5"/></svg><h3>Humans approve tasking</h3><p>The console monitors and advises. Plans need a second approver, and GO at launch is advice; nothing arms or launches. In a first responder program a supervisor approves each launch and the pilot's safety call stands.</p></div>
             <div class="rail reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12h12M12 6l6 6-6 6"/><path d="M20 4v16"/></svg><h3>Outbound only</h3><p>CoT for TAK and entity feeds go out. Inbound commands are refused and written to the audit log.</p></div>
             <div class="rail reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg><h3>Releasability at the API</h3><p>Allied tenants never receive withheld fields. Classification banners and portion marks on every page.</p></div>
             <div class="rail reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 4h10v4H7zM7 10h10v4H7zM7 16h10v4H7z"/><path d="M12 8v2M12 14v2"/></svg><h3>Hash-chained audit</h3><p>Every allow and deny, with its reason codes, in a tamper-evident chain an assessor can verify.</p></div>
@@ -334,7 +380,7 @@
       <section class="cta">
         <div class="wrap">
           <h2>See it run.</h2>
-          <p class="lede" style="max-width:620px;margin:0 auto">Sign in as a manufacturer ops lead, a unit commander, an operator, a maintainer or an allied commander, and watch the same record from each side.</p>
+          <p class="lede" style="max-width:620px;margin:0 auto">Sign in as a manufacturer ops lead, a unit commander, an operator, a maintainer or an allied commander, or as a harbor police supervisor and pilot, and watch the same record from each side.</p>
           <div class="hero-ctas">
             <a class="btn btn-primary btn-lg" href="/#home">Open the live console →</a>
             <a class="btn btn-lg" href="/help/#accounts">Which account should I use?</a>

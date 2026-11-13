@@ -30,6 +30,11 @@ const ENDPOINTS: Endpoint[] = [
   { group: "Operations", method: "GET", path: "/v1/ops/queue", desc: "The manufacturer's work queue. Each item carries the action that clears it. A customer gets a 403.", persona: "neros" },
   { group: "Operations", method: "GET", path: "/v1/ops/portal", desc: "The customer's Requests to Neros portal: requests, shipments, sharing.", persona: "commander" },
   { group: "Operations", method: "GET", path: "/v1/cases", desc: "Field fixes cases. A case closes only on a measured cohort-against-control effect.", persona: "neros" },
+  { group: "Public safety", method: "GET", path: "/v1/dfr", desc: "The first responder console: calls waiting with priority and wait time, each dock's readiness, the nearest ready dock by flight time, flights in the air and the shift's checks. Customer D only; another customer gets a 403, and the contractor seat gets a 403 that says why.", persona: "supervisor" },
+  { group: "Public safety", method: "POST", path: "/v1/dfr/act", desc: "Every console decision is one action with a role rule: the supervisor approves (call.approve), the pilot launches (call.launch) and can decline or end a flight (call.decline, flight.terminate) with no role able to override it. This one takes the next call from the simulated dispatch feed.", persona: "supervisor", body: '{"action": "feed.next"}' },
+  { group: "Public safety", method: "GET", path: "/v1/dfr/records", desc: "Flight records prefilled from each flight, their versions and hashes, requests not flown and who decided, signed shift logs, mishaps with the 24-hour clock, the care log, retention and legal holds, and whether the evidence chain is intact.", persona: "pilot" },
+  { group: "Public safety", method: "GET", path: "/v1/dfr/crew", desc: "The 14-day console roster and each pilot's currency file: certificate, recurrent training, hours, TWIC, CJIS, supervised time, and what falls due within 30 days.", persona: "supervisor" },
+  { group: "Public safety", method: "GET", path: "/v1/dfr/program", desc: "The month's activity report and invoice, both built from the signed shift logs: unstaffed hours and hours worked while not current are not payable. Program manager and contractor only; a pilot gets a 403.", persona: "contractor" },
   { group: "Trust", method: "GET", path: "/v1/release", desc: "Releasability rules. The allied persona gets _withheld and _marking on every filtered response.", persona: "allied" },
   { group: "Trust", method: "GET", path: "/v1/thread/updates", desc: "Fleet software updates as the allied commander: build hashes are withheld, and _withheld says which rule removed them.", persona: "allied" },
   { group: "Trust", method: "GET", path: "/v1/audit", desc: "The hash-chained audit log: every allow and deny with reason codes.", persona: "neros" },
@@ -118,6 +123,10 @@ document.querySelectorAll<HTMLButtonElement>("[data-try]").forEach((b) =>
     method.value = m ?? "GET";
     path.value = p ?? "/";
     persona.value = who ?? "commander";
+    if (b.dataset.body) {
+      body = b.dataset.body;
+      desc.innerHTML = `This request: <code>${esc(body)}</code>`;
+    }
     send();
     document.getElementById("explorer")?.scrollIntoView({ behavior: "smooth" });
   }),
