@@ -30,7 +30,9 @@ export type Section =
   | "plans"
   | "release"
   | "access"
-  | "audit";
+  | "audit"
+  | "respond"
+  | "records";
 
 export type Viewer = {
   id: string;

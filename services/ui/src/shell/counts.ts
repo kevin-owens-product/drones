@@ -19,6 +19,7 @@ export function useNavCounts(workspace: Workspace, viewer: Viewer, section: Sect
       if (live) setCounts((c) => (c[id] === n ? c : { ...c, [id]: n }));
     };
     const neros = viewer.org === "neros" || !viewer.org;
+    if (workspace === "responder") return () => undefined;
     if (workspace !== "customer") {
       void api<{ items: { severity: string }[] }>("/v1/ops/queue")
         .then((r) => set("ops", r.body.items.filter((i) => i.severity === "high").length))
