@@ -3,7 +3,8 @@
 //
 //   npm run build:static && node e2e/swarm/serve.mjs 4180 &
 //   SWARM_LOGINS=/path/to/demo-logins.md node e2e/docs/shots.mjs --out /path/to/folder \
-//     [--site public/site-media] [--media ../../docs/media] [--only commander|site-pages|none] [--base http://localhost:4180]
+//     [--site public/site-media] [--media ../../docs/media] [--only commander|site-pages|none] [--gallery respond,invoice]
+//     [--base http://localhost:4180]
 //
 // Logins come from the same markdown table as the persona swarm, never from the repo. Pages are captured at
 // 1440×900 and 2× pixels for people to read. --site also writes the product site's 1600×950 webp gallery and
@@ -22,6 +23,8 @@ const OUT = arg("out", "shots");
 const SITE = arg("site", "");
 const ONLY = arg("only", "");
 const MEDIA = arg("media", "");
+// --gallery respond,invoice retakes only those site pictures.
+const PICK = arg("gallery", "").split(",").filter(Boolean);
 mkdirSync(OUT, { recursive: true });
 
 function logins() {
@@ -133,6 +136,9 @@ const PERSONAS = [
   { user: "operator", prefix: "operator" },
   { user: "maintainer", prefix: "maintainer" },
   { user: "allied", prefix: "allied" },
+  { user: "supervisor", prefix: "supervisor" },
+  { user: "pilot", prefix: "pilot" },
+  { user: "contractor", prefix: "contractor" },
   { user: "admin", prefix: "admin", admin: true },
 ];
 
@@ -234,9 +240,14 @@ if (SITE) {
       await pick(page, /^NX-10$/);
       await reveal(page, /^next sortie/i);
     }],
+    // The public safety program, one picture per seat.
+    ["supervisor", "respond", "respond"],
+    ["pilot", "records", "flight-records"],
+    ["supervisor", "crew", "roster"],
+    ["contractor", "contract", "invoice"],
   ];
   const sessions = {};
-  for (const [user, section, name, before] of GALLERY) {
+  for (const [user, section, name, before] of GALLERY.filter(([, , n]) => !PICK.length || PICK.includes(n))) {
     sessions[user] ??= await open(browser, user, L[user], { width: 1600, height: 950 }, 1);
     const { page } = sessions[user];
     await go(page, section, section === "operate" ? 3500 : 1800);

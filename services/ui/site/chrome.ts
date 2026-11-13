@@ -70,6 +70,7 @@ export function mountChrome(current: "product" | "help" | "developers" | "why"):
           <div><h4>Product</h4><ul>
             <li><a href="/product/#platform">Platform</a></li>
             <li><a href="/product/#loop">Factory to field</a></li>
+            <li><a href="/product/#public-safety">Public safety</a></li>
             <li><a href="/product/#evidence">Evidence</a></li>
             <li><a href="/product/#pricing">Pricing</a></li>
             <li><a href="/#home">Live console</a></li>
@@ -81,6 +82,7 @@ export function mountChrome(current: "product" | "help" | "developers" | "why"):
             <li><a href="/help/#start">Getting started</a></li>
             <li><a href="/help/#accounts">Demo accounts</a></li>
             <li><a href="/help/#operate">The Operate screen</a></li>
+            <li><a href="/help/#responder">First responder program</a></li>
             <li><a href="/help/#shortcuts">Keyboard shortcuts</a></li>
             <li><a href="/help/#simulated">What is simulated</a></li>
           </ul></div>

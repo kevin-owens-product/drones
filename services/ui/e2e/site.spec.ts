@@ -7,6 +7,10 @@ test("product site runs the live picture and links into the console", async ({ p
   await expect(page.locator("#s-air")).not.toHaveText("0");
   await expect(page.locator("#serial")).toContainText("Born on the bench");
   await expect(page.locator(".nav-cta a.btn-primary")).toHaveAttribute("href", "/#home");
+  // Public safety is a second market below the defense story, not in place of it.
+  await expect(page.locator("#public-safety .calls li")).toHaveCount(5);
+  const order = await page.evaluate(() => [...document.querySelectorAll("main > section[id]")].map((s) => s.id));
+  expect(order.indexOf("public-safety")).toBeGreaterThan(order.indexOf("platform"));
 });
 
 test("help center search filters articles", async ({ page }) => {
@@ -26,5 +30,10 @@ test("developer explorer answers from the demo and refuses inbound commands", as
   await expect(page.locator("#ex-res")).toContainText("ADR-0016");
   await page.getByRole("button", { name: "Updates as an allied tenant" }).click();
   await expect(page.locator("#ex-res")).toContainText("_withheld");
+  await page.getByRole("button", { name: "Approve a launch as the pilot" }).click();
+  await expect(page.locator("#ex-status")).toContainText("403");
+  await expect(page.locator("#ex-res")).toContainText("supervisor's approval");
+  await page.getByRole("button", { name: "The live console as the contractor" }).click();
+  await expect(page.locator("#ex-res")).toContainText("stay with the agency");
   await expect(page.locator("#mav tbody tr")).not.toHaveCount(0);
 });

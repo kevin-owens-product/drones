@@ -84,10 +84,10 @@
           <article class="article" id="start" data-tags="sign in login first start begin overview tour">
             <div class="meta"><span class="tag">Start here</span><span class="tag">5 min</span></div>
             <h2>Getting started</h2>
-            <p>Drone Mission Cloud is one platform with two sides: the manufacturer runs its operations, and each customer runs its own fleet. The hosted demo plays a scripted sortie on a real range in California's central coast, with nine vehicles in the air and three on the pad.</p>
+            <p>Drone Mission Cloud is one platform with two sides: the manufacturer runs its operations, and each customer runs its own fleet. The hosted demo plays a scripted sortie on a real range in California's central coast, with nine vehicles in the air and three on the pad. A second kind of customer, a harbor police first responder program, runs docked aircraft on the same platform (see <a href="#responder">First responder program</a>).</p>
             <ol class="steps">
               <li>Open the <a href="/#home">console</a> and sign in with the account you were given (see <a href="#accounts">demo accounts</a>).</li>
-              <li>A customer account opens on <b>Operate</b>. A manufacturer account opens on the <b>Work queue</b>.</li>
+              <li>A customer account opens on <b>Operate</b>. A manufacturer account opens on the <b>Work queue</b>. The first responder program's supervisor and pilot open on <b>Respond</b>, and its contractor seat on <b>Pilots and roster</b>.</li>
               <li>Press <kbd>⌘K</kbd> (or <kbd>Ctrl K</kbd>) to jump to any vehicle, plan, page or filter. Press <kbd>?</kbd> for the shortcut sheet. <b>Walk the demo</b> in ⌘K opens a guided walk through the loop; it opens by itself on a first visit from an invite link.</li>
               <li>Take an action, then sign out and sign in as the other side to see its effect. Demo state lives in your browser tab, so it carries across accounts and survives a reload. A new tab starts fresh, and <b>Reset the demo data</b> in ⌘K clears it.</li>
             </ol>
@@ -100,6 +100,7 @@
             <h2>What's new</h2>
             <p>The newest things in the console, with the full list in the repository's <a href="https://github.com/kevin-owens-product/drones/blob/cursor/a2e-mission-cloud/CHANGELOG.md">CHANGELOG.md</a>.</p>
             <ul class="steps">
+              <li><b>The first responder shift and month.</b> Nothing launches until a pilot has run the start-of-shift checks, and at hand-off the pilot signs a log built from the shift's own records. <b>Pilots and roster</b> keeps 14 days of console cover from pilots who are current. Crane rows and bridge towers are in the pre-flight, and a mishap starts a 24-hour clock. <b>Report and invoice</b> builds the month from the signed shift logs, so unstaffed hours and hours worked while not current don't bill. Records carry retention and legal holds, and records requests go out redacted with a hash manifest. A new <code>contractor</code> seat is for the pilot company. See <a href="#responder">First responder program</a>.</li>
               <li><b>A first responder program.</b> A public safety customer flies docked aircraft from a remote console, on the same platform. Calls come in from dispatch, a supervisor approves each launch, the nearest ready dock is picked by flight time, and the pilot flies it. The pilot can decline or end any flight for safety and no one can override that. Every flight gets a record prefilled from the flight, written once and corrected only by a new version sealed beside the original. Sign in as <code>supervisor</code> or <code>pilot</code>, or switch to it from the admin's workspace menu. See <a href="#responder">First responder program</a>.</li>
               <li><b>Each role's journey, tested end to end.</b> A bot for every demo account walked its journey from this site through sign-in and pressed every button on every page, on a laptop and a phone. What it found is fixed: a customer no longer sees other customers on Releasability, an allied tenant sees its fleet as its own, a button your role cannot use is greyed out with the reason instead of failing, empty tables say what to do next, and drawers and the palette close with <kbd>Esc</kbd>.</li>
               <li><b>Energy, radio shadow and pack ageing.</b> Debrief shows where each vehicle's energy went (lift, drag, climb, wind, cold) and its link margin over the terrain along the flown track. Operate has a Radio shadow layer for where the control link goes thin behind terrain. Stockpile health charts each stored pack's capacity and what a storage charge or a cooler store buys.</li>
@@ -114,7 +115,7 @@
             </ul>
           </article>
 
-          <article class="article" id="accounts" data-tags="accounts users roles password access invite login admin ops commander operator maintainer allied">
+          <article class="article" id="accounts" data-tags="accounts users roles password access invite login admin ops commander operator maintainer allied supervisor pilot contractor">
             <div class="meta"><span class="tag">Start here</span></div>
             <h2>Demo accounts and roles</h2>
             <p>Demo access is by invitation: <a href="mailto:kevin.a.owens@gmail.com?subject=Drone%20Mission%20Cloud%20invite">ask Kevin</a> for an invite link that signs you straight in. There is one account per role, so you can see how each person's screen and permissions differ.</p>
@@ -158,7 +159,7 @@
             <ul>
               <li><span class="tag tag-sitl">PX4 SITL</span> PX4 v1.18 flies in SIH with its own EKF2, and the onboard code closes the loop over MAVLink.</li>
               <li><span class="tag tag-unit">Unit check</span> The onboard C module runs open loop against a synthetic or recorded stream.</li>
-              <li><span class="tag tag-sim">SIM</span> Demo scenario data: fleets, customers, orders, prices, lots, losses and training records.</li>
+              <li><span class="tag tag-sim">SIM</span> Demo scenario data: fleets, customers, orders, prices, lots, losses and training records. The first responder program's harbor is a schematic, and its docks, pilots, calls, weather, hours and rates are made up.</li>
               <li><span class="tag tag-sim">SIM</span> The physics: power, battery, wind over terrain, radio links, thrust, camera optics, pack ageing and wear. The terrain is real (SRTM); every coefficient is an assumption written out in the source, not a Neros figure or a flight-test result.</li>
             </ul>
             <p>Manufacturer catalog items appear as published. Other vendors appear under generic labels, never real product names. Prices are planning assumptions, not anyone's price list.</p>
@@ -356,7 +357,7 @@
             <a class="btn btn-sm go" href="/#release">Open Releasability →</a>
           </article>
 
-          <article class="article" id="responder" data-tags="first responder dfr public safety police dock docked call dispatch supervisor pilot rpic veto decline terminate flight record evidence">
+          <article class="article" id="responder" data-tags="first responder dfr public safety police dock docked call dispatch supervisor pilot rpic veto decline terminate flight record evidence shift roster currency twic mishap crane invoice report contractor retention legal hold records request redaction care battery">
             <div class="meta"><span class="tag">Public safety</span></div>
             <h2>First responder program</h2>
             <p>Customer D is a harbor police program that flies docked aircraft as first responders. It runs on the same platform as the defense customers, in its own operating mode: its own menu (Respond, Flight records, Pilots and roster, Report and invoice), its own words (flight, supervisor, call) and its own records policy (the pilot's name is on every record). Everything in it is simulated: the harbor is a schematic and the docks, pilots, calls and weather are made up.</p>
@@ -387,6 +388,12 @@
               <li><b>Records requests.</b> The custodian gathers the filed records for an incident number or a date range. Plates, phone numbers and private persons' names are redacted, and the package is reviewed and then released with a manifest. The manifest names each sealed version by its hash, and the release itself goes on the chain.</li>
               <li><b>The contractor seat.</b> Sign in as <code>contractor</code>: the pilot company keeps its pilots' files current (a TWIC renewal makes A. Reyes rosterable again), sees the roster, and submits the month. It never sees the live console or the incident records, and the pilots never see the invoice.</li>
             </ul>
+            <div class="hero-ctas" style="margin:14px 0">
+              <a class="btn btn-sm go" href="/#respond">Open Respond →</a>
+              <a class="btn btn-sm" href="/#records">Flight records</a>
+              <a class="btn btn-sm" href="/#crew">Pilots and roster</a>
+              <a class="btn btn-sm" href="/#contract">Report and invoice</a>
+            </div>
             <div class="callout">Sign in as <code>supervisor</code> and as <code>pilot</code> to see each seat on its own. The admin's workspace menu opens the program as Neros, holding both seats so the walk works from one login. The access matrix holds each real login to its own seat.</div>
           </article>
 

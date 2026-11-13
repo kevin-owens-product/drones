@@ -47,11 +47,15 @@ The terrain is real (SRTM); every coefficient is an assumption written out in `s
 
 The hosted build also publishes a product site at `/product/`, a help center at `/help/` and a developer site at `/developers/` (sources in `services/ui/product`, `help`, `developers` and `site`). They run the same scenario engine as the console in the page, so the hero's fleet picture, the per-serial walk-through and the developer API explorer are live demo data, not mock-ups. A first visit to the bare domain lands on `/product/`; deep links such as `/#operate` open the console.
 
+### Public safety: a first responder program
+
+The same platform runs a second kind of customer: a harbor police program flying docked aircraft as first responders (Customer D, SIM), in its own operating mode (`public_safety`) with its own rail and words. A call from a simulated dispatch feed waits for a supervisor's approval, the nearest ready dock is picked by flight time, and the pilot launches it; the pilot can decline or end any flight for safety, and no role can override that. Every flight gets a record prefilled from the flight and sealed into a hash chain, the shift is gated by start-of-shift checks and closed by a signed log, Pilots and roster keeps only current pilots on console, and the month's report and invoice are built from the signed shift logs. Records carry retention, legal holds and redacted records requests. Pages: Respond, Flight records, Pilots and roster, Report and invoice (`demo/dfr.mjs`, `dfrcrew.mjs`, `dfrprogram.mjs`; API under `/v1/dfr`). [Help](services/ui/help/index.html#responder).
+
 ### Hosted demo
 
 `npm run build:static` builds a version with no server: the same scenario code (`demo/scenario.mjs`) answers the console's API calls in the browser. `render.yaml` (a Render Blueprint) builds and publishes it at drones.productexec.co. Add `?fleet=300` to the URL for the fleet-scale view.
 
-The hosted build opens on a sign-in page with six demo accounts:
+The hosted build opens on a sign-in page with nine demo accounts:
 
 | Account | Workspace | Lands on |
 | --- | --- | --- |
@@ -61,6 +65,9 @@ The hosted build opens on a sign-in page with six demo accounts:
 | `operator` | Customer A, operator | Operate |
 | `maintainer` | Customer A, maintainer | Airframes |
 | `allied` | Customer C, an allied tenant: withheld fields never reach the browser | Operate |
+| `supervisor` | Customer D, a harbor police first responder program: approves each launch | Respond |
+| `pilot` | Customer D, contract remote pilot: launches, can decline or end any flight | Respond |
+| `contractor` | Customer D's pilot company: pilot files, roster, the month's invoice; never the console | Pilots and roster |
 
 The left rail is shaped by role: each person sees the pages their work runs through, grouped (Fly, Fleet, Supply, Learn for a customer; Deliver, Make, Sell, Learn for Neros), with counts of what is waiting on them. Every other page in the workspace is one `⌘K` away, and a button the role cannot use is disabled with the reason. A first visit from an invite link opens a guided walk through the loop. The generated [access matrix](docs/security/demo-access-matrix.md) is what a test holds the demo's rules to.
 

@@ -110,11 +110,14 @@ make sitl          <span class="c"># PX4 v1.18 SIH closed-loop trials</span></pr
                 <tr><td><code>maintainer</code></td><td>Close work orders, return airframes to service, receive shipments</td></tr>
                 <tr><td><code>ops_lead</code></td><td>The manufacturer's queue: ship, build, hold lots, plan surges</td></tr>
                 <tr><td><code>admin</code></td><td>Tenants, users, sharing agreements</td></tr>
+                <tr><td><code>mission_commander</code> in a public safety program</td><td>Supervisor: approve each launch, pick the dock, release a flight or stop observation, keep the roster, approve the month's invoice, place legal holds</td></tr>
+                <tr><td><code>operator</code> in a public safety program</td><td>Pilot in command: run the shift checks, launch an approved call, decline or end any flight for safety (no role can override it), file the flight record and sign the shift log</td></tr>
+                <tr><td><code>contractor</code></td><td>The pilot company: keep its pilots' files current, see the roster, submit the month. Never the live console or incident records</td></tr>
               </tbody>
             </table></div>
             <p>Every response carries an <code>X-Classification-Banner</code> header with the highest marking on the page. Clients must show it.</p>
             <h3>Who can read and do what, as a test</h3>
-            <p>The demo probes every read route and the writes that carry a rule as each of its accounts, and publishes the result as a table: <a href="https://github.com/kevin-owens-product/drones/blob/cursor/a2e-mission-cloud/docs/security/demo-access-matrix.md">docs/security/demo-access-matrix.md</a>. A test fails when the table and the code drift, and when any of these stop holding: Neros's own routes answer 403 in a customer session, the audit log needs <code>audit.read</code>, accounts are listed per tenant, an allied tenant never receives a withheld field, an operator cannot approve a plan or hold a lot, and no caller can send a command inbound. Unknown routes answer 404.</p>
+            <p>The demo probes every read route and the writes that carry a rule as each of its accounts, and publishes the result as a table: <a href="https://github.com/kevin-owens-product/drones/blob/cursor/a2e-mission-cloud/docs/security/demo-access-matrix.md">docs/security/demo-access-matrix.md</a>. A test fails when the table and the code drift, and when any of these stop holding: Neros's own routes answer 403 in a customer session, the audit log needs <code>audit.read</code>, accounts are listed per tenant, an allied tenant never receives a withheld field, an operator cannot approve a plan or hold a lot, and no caller can send a command inbound. In the public safety program it also holds the split launch authority: only the supervisor approves, only the pilot launches or ends a flight, and the contractor seat never reads the console or the records. Unknown routes answer 404.</p>
           </article>
 
           <article class="article" id="explorer">
@@ -162,7 +165,7 @@ make sitl          <span class="c"># PX4 v1.18 SIH closed-loop trials</span></pr
                 <tr><td><code>404</code></td><td>Unknown resource in your tenant</td><td><code>unknown</code></td></tr>
               </tbody>
             </table></div>
-            <p>Try it: <button class="btn btn-sm" data-try="POST /v1/interop/inbound?from=external-c2 commander">Send an inbound command</button> <button class="btn btn-sm" data-try="GET /v1/ops/queue commander">Read the maker's queue as a customer</button> <button class="btn btn-sm" data-try="GET /v1/mixed recordplan">All vendors on the Record plan</button> <button class="btn btn-sm" data-try="GET /v1/thread/updates allied">Updates as an allied tenant</button></p>
+            <p>Try it: <button class="btn btn-sm" data-try="POST /v1/interop/inbound?from=external-c2 commander">Send an inbound command</button> <button class="btn btn-sm" data-try="GET /v1/ops/queue commander">Read the maker's queue as a customer</button> <button class="btn btn-sm" data-try="GET /v1/mixed recordplan">All vendors on the Record plan</button> <button class="btn btn-sm" data-try="GET /v1/thread/updates allied">Updates as an allied tenant</button> <button class="btn btn-sm" data-try="POST /v1/dfr/act pilot" data-body='{"action": "call.approve", "args": {"id": "C-1002"}}'>Approve a launch as the pilot</button> <button class="btn btn-sm" data-try="GET /v1/dfr contractor">The live console as the contractor</button></p>
           </article>
 
           <article class="article" id="ingest">
@@ -241,6 +244,7 @@ curl -X POST "$GATEWAY/ingest?topic=dmc/v1/&lt;tenant&gt;/&lt;tail&gt;/telemetry
             <div class="table-wrap"><table>
               <thead><tr><th>Release</th><th>What shipped</th></tr></thead>
               <tbody>
+                <tr><td>First responder program</td><td><code>GET /v1/dfr</code>, <code>/v1/dfr/records</code>, <code>/v1/dfr/crew</code>, <code>/v1/dfr/program</code> and <code>POST /v1/dfr/act</code> for a public safety tenant (operating mode <code>public_safety</code>); the <code>contractor</code> role; flight records, shift logs and invoice decisions sealed into a hash chain</td></tr>
                 <tr><td>Physics in the pages</td><td><code>GET /v1/missions/{id}/physics</code> (and <code>POST</code> to apply a fix), <code>/v1/envelope</code>, <code>/v1/coverage</code>, <code>/v1/wear</code>, <code>POST /v1/intent/height</code>; Brief proposals carry what each camera sees by height; <code>/v1/release</code> lists only the caller's own tenant to a customer</td></tr>
                 <tr><td>Performance model</td><td><code>GET /v1/physics</code>; one quadcopter model behind the sortie, launch energy checks, debrief and the loadout planner; unknown routes answer 404; the access matrix as a test</td></tr>
                 <tr><td>Product site</td><td>This site, the help center and the product page; user-visible brand Drone Mission Cloud; <code>dmc/v1</code> telemetry topics</td></tr>

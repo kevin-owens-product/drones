@@ -7,7 +7,7 @@ import terrain from "../demo/assets/terrain.json";
  * in the page, so every picture and API response on it is live demo data, not a mock-up.
  * Nothing leaves the browser.
  */
-export type Persona = "neros" | "commander" | "operator" | "maintainer" | "recordplan" | "allied";
+export type Persona = "neros" | "commander" | "operator" | "maintainer" | "recordplan" | "allied" | "supervisor" | "pilot" | "contractor";
 
 export const PERSONAS: Record<Persona, { label: string; who: { display_name: string; roles: string[]; org: string; citizenship?: string } }> = {
   neros: { label: "Manufacturer ops lead", who: { display_name: "Demo Ops Lead (Neros)", roles: ["ops_lead"], org: "neros" } },
@@ -16,6 +16,9 @@ export const PERSONAS: Record<Persona, { label: string; who: { display_name: str
   maintainer: { label: "Customer A maintainer", who: { display_name: "Demo Maintainer", roles: ["maintainer"], org: "CUS-A" } },
   recordplan: { label: "Customer B commander (Record plan)", who: { display_name: "Customer B Commander", roles: ["mission_commander", "planner"], org: "CUS-B" } },
   allied: { label: "Customer C allied commander", who: { display_name: "Allied Mission Commander", roles: ["mission_commander", "planner"], org: "CUS-C", citizenship: "Allied (SIM)" } },
+  supervisor: { label: "Customer D supervisor (public safety)", who: { display_name: "Demo Supervisor (Harbor police)", roles: ["mission_commander"], org: "CUS-D" } },
+  pilot: { label: "Customer D contract pilot", who: { display_name: "Demo Pilot (contract RPIC)", roles: ["operator"], org: "CUS-D" } },
+  contractor: { label: "Customer D contractor seat", who: { display_name: "Demo Contractor (pilot company)", roles: ["contractor"], org: "CUS-D" } },
 };
 
 let engine: Demo | null = null;
