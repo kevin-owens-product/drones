@@ -14,7 +14,7 @@ export type Workspace = "neros" | "customer" | "responder" | "all";
  * analyst, auditor); operators fly; maintainers keep airframes ready. A page left out of a role's rail is still one
  * Cmd-K away, and its route still works: the rail is a working list, not a permission.
  */
-export type Profile = "lead" | "operator" | "maintainer";
+export type Profile = "lead" | "operator" | "maintainer" | "contractor";
 const ALL: readonly Profile[] = ["lead", "operator", "maintainer"];
 
 export type NavItem = { id: Section; label: string; group: string; for: readonly Profile[] };
@@ -47,9 +47,10 @@ export const CUSTOMER_NAV: readonly NavItem[] = [
  * flies and files the record. Same platform, its own operating mode and rail (demo/dfr.mjs).
  */
 export const RESPONDER_NAV: readonly NavItem[] = [
-  item("respond", "Respond", "Fly"),
-  item("records", "Flight records", "Fly"),
-  item("crew", "Pilots and roster", "Crew", ["lead"]),
+  item("respond", "Respond", "Fly", ["lead", "operator"]),
+  item("records", "Flight records", "Fly", ["lead", "operator"]),
+  item("crew", "Pilots and roster", "Program", ["lead", "contractor"]),
+  item("contract", "Report and invoice", "Program", ["lead", "contractor"]),
 ];
 
 /** Neros runs its own operations: the work queue first, then delivering, making, selling and learning. */
@@ -90,6 +91,8 @@ export function profilesOf(viewer: Pick<Viewer, "roles">): Profile[] {
   if (viewer.roles.some((r) => LEAD_ROLES.includes(r))) out.push("lead");
   if (viewer.roles.includes("operator")) out.push("operator");
   if (viewer.roles.includes("maintainer")) out.push("maintainer");
+  // A contractor seat on a public safety program: its pilots' files and its invoice, not the console.
+  if (viewer.roles.includes("contractor")) out.push("contractor");
   return out.length ? out : ["lead"];
 }
 
@@ -161,7 +164,7 @@ export function sectionsFor(w: Workspace): Section[] {
 /** Where each person lands: Neros on its work queue, a maintainer on airframes, everyone else on the live map. */
 export function homeOf(w: Workspace, viewer?: Pick<Viewer, "roles">): Section {
   if (w === "neros") return "ops";
-  if (w === "responder") return "respond";
+  if (w === "responder") return viewer && profilesOf(viewer).every((p) => p === "contractor") ? "crew" : "respond";
   if (w === "customer" && viewer && onlyMaintainer(viewer)) return "fleet";
   return "operate";
 }

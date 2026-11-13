@@ -169,3 +169,95 @@ test("a mishap is verbal at once and written within 24 hours; injury or more tha
   assert.match(ms7.body.message ?? JSON.stringify(ms7.body), /FAA within 10 days/);
   assert.equal(r.records().mishaps.find((x) => x.id === "MS-7").faa_reportable, true);
 });
+
+// ---- Phase 3: the month, care, retention, records requests, the contractor seat ----
+
+const CTR = { display_name: "Contractor", roles: ["contractor"], org: "CUS-D" };
+const get = (r, path, who) => r.handle("GET", new URL(`http://demo${path}`), "", who);
+
+test("the invoice comes from the signed shift logs: unstaffed and not-current hours are not payable, and a shift with an unfiled record is held until it is filed", () => {
+  const r = createResponder({ now: T0 });
+  const m = get(r, "/v1/dfr/program", SUP).body;
+  const line = (date) => m.invoice.lines.find((l) => l.date === date);
+  assert.equal(m.invoice.lines.length, 31, "every October shift");
+  assert.equal(line("2026-10-19").billable_h, 0, "nobody on console");
+  assert.match(line("2026-10-31").notes[0], /TWIC lapsed/, "Reyes worked after his TWIC expired");
+  assert.equal(line("2026-10-31").billable_h, 0);
+  assert.deepEqual(line("2026-10-30").held_for, ["FR-38"]);
+  const before = m.invoice.totals.amount_usd;
+  assert.equal(r.act("record.file", { id: "FR-38", narrative: "Seal cut on a container at block 12; units found the door closed and the seal replaced." }, PILOT, T0).status, 200);
+  const after = get(r, "/v1/dfr/program", SUP).body.invoice;
+  assert.equal(after.totals.held_h, 0);
+  assert.equal(after.totals.amount_usd, before + 12 * after.rate_usd, "the held shift is released once its record is filed");
+});
+
+test("the contractor submits the month and the program manager approves or returns it; neither can do the other's part", () => {
+  const r = createResponder({ now: T0 });
+  assert.equal(r.act("month.submit", {}, SUP, T0).status, 403);
+  assert.equal(r.act("month.submit", {}, CTR, T0).status, 200);
+  assert.equal(r.act("month.approve", {}, CTR, T0).status, 403);
+  assert.equal(r.act("month.return", { note: "no" }, SUP, T0).status, 409, "a return needs a reason");
+  assert.equal(r.act("month.return", { note: "File FR-38 first" }, SUP, T0).status, 200);
+  assert.equal(r.act("month.submit", {}, CTR, T0 + 1).status, 200, "resubmitted");
+  assert.equal(r.act("month.approve", {}, SUP, T0 + 2).status, 200);
+  assert.equal(get(r, "/v1/dfr/program", SUP).body.status, "approved");
+  assert.equal(verifyChain(r.evidence.items()), -1);
+});
+
+test("the contractor seat sees its pilots and its invoice, never the console or incident records; the pilot never sees the invoice", () => {
+  const r = createResponder({ now: T0 });
+  assert.equal(get(r, "/v1/dfr", CTR).status, 403);
+  assert.equal(get(r, "/v1/dfr/records", CTR).status, 403);
+  assert.equal(get(r, "/v1/dfr/crew", CTR).status, 200);
+  assert.equal(get(r, "/v1/dfr/program", CTR).status, 200);
+  assert.equal(get(r, "/v1/dfr/program", PILOT).status, 403);
+  assert.equal(r.act("call.approve", { id: r.view(SUP, T0).queue[0].id }, CTR, T0).status, 403);
+});
+
+test("a TWIC renewal makes a pilot assignable again, but the days it was lapsed stay unpayable", () => {
+  const r = createResponder({ now: T0 });
+  assert.equal(r.act("roster.assign", { date: "2026-11-08", pilot: "P-01" }, SUP, T0).status, 409);
+  assert.equal(r.act("crew.renew", { pilot: "P-01", item: "twic", value: "2026-10-01" }, CTR, T0).status, 409, "a renewal expires in the future");
+  assert.equal(r.act("crew.renew", { pilot: "P-01", item: "twic", value: "2031-11-02" }, PILOT, T0).status, 403);
+  assert.equal(r.act("crew.renew", { pilot: "P-01", item: "twic", value: "2031-11-02" }, CTR, T0).status, 200);
+  assert.equal(r.act("roster.assign", { date: "2026-11-08", pilot: "P-01" }, SUP, T0).status, 200);
+  const line = get(r, "/v1/dfr/program", SUP).body.invoice.lines.find((l) => l.date === "2026-10-31");
+  assert.equal(line.billable_h, 0);
+});
+
+test("an overdue care check is a caution; a failed pack grounds the aircraft until a passing check is signed", () => {
+  const r = createResponder({ now: T0 });
+  assert.ok(r.view(PILOT, T0).checklist.some((c) => c.level === "caution" && /DFR-04 weekly/.test(c.text)));
+  assert.equal(r.act("care.sign", { tail: "DFR-01", health_pct: 76, spread_mv: 12 }, SUP, T0).status, 403);
+  assert.equal(r.act("care.sign", { tail: "DFR-01", health_pct: 76, spread_mv: 12 }, PILOT, T0).status, 200);
+  const v = r.view(SUP, T0);
+  assert.equal(v.docks.find((d) => d.id === "D1").state, "grounded");
+  assert.notEqual(v.queue.find((c) => c.kind === "Water rescue").dock, "D1", "the nearest dock is skipped while grounded");
+  assert.equal(r.act("care.sign", { tail: "DFR-01", health_pct: 98, spread_mv: 4, notes: "New pack" }, PILOT, T0).status, 200);
+  assert.equal(r.view(SUP, T0).docks.find((d) => d.id === "D1").state, "ready");
+});
+
+test("a records request gathers the filed record, redacts plates, phones and private names, and is released once with a sealed manifest", () => {
+  const r = createResponder({ now: T0 });
+  const ask = { requester: "Harbor Gazette", number: "PRA-2026-118", incident: "26-111301" };
+  assert.equal(r.act("request.create", ask, PILOT, T0).status, 403);
+  assert.equal(r.act("request.create", ask, SUP, T0).status, 200);
+  const q = r.records(T0).requests[0];
+  const narrative = q.items[0].fields.narrative;
+  assert.ok(!/8KTR214|555-0142|Alvarez/.test(narrative), narrative);
+  assert.deepEqual(q.items[0].redacted.sort(), ["licence plate", "phone number", "private person's name"]);
+  assert.equal(q.items[0].sha256, r.records(T0).items.find((x) => x.id === "FR-41").versions[0].hash, "the manifest names the sealed version");
+  assert.equal(r.act("request.release", { id: q.id }, SUP, T0).status, 200);
+  assert.equal(r.act("request.release", { id: q.id }, SUP, T0).status, 409);
+  assert.equal(r.evidence.items().at(-1).action, "request.release");
+});
+
+test("a legal hold is the custodian's, needs a matter, and shows on the record", () => {
+  const r = createResponder({ now: T0 });
+  assert.equal(r.act("record.hold", { id: "FR-41", matter: "Claim 26-CV-0413" }, PILOT, T0).status, 403);
+  assert.equal(r.act("record.hold", { id: "FR-41", matter: "x" }, SUP, T0).status, 409);
+  assert.equal(r.act("record.hold", { id: "FR-41", matter: "Claim 26-CV-0413" }, SUP, T0).status, 200);
+  assert.equal(r.records(T0).items.find((x) => x.id === "FR-41").retention.hold.matter, "Claim 26-CV-0413");
+  assert.equal(r.act("record.release_hold", { id: "FR-41" }, SUP, T0).status, 200);
+  assert.equal(r.records(T0).items.find((x) => x.id === "FR-41").retention.hold, null);
+});

@@ -17,7 +17,7 @@ interface Flight {
   alert: { level: string; text: string } | null; wind: { wind_mps: number; gust_mps: number }; released: boolean;
   terminated: { by: string; reason: string } | null; observe_stopped: boolean; target: { x: number; y: number };
 }
-interface Dock { id: string; name: string; x: number; y: number; tail: string; charge: number; state: string; out_on: string | null; comms: string; power: string }
+interface Dock { id: string; name: string; x: number; y: number; tail: string; charge: number; state: string; out_on: string | null; comms: string; power: string; care?: { due: string; overdue: boolean; grounded: boolean } }
 interface ChecklistItem { group: string; level: "ok" | "caution" | "fail"; text: string }
 interface ShiftLog {
   id: string; rpic: string; staffed_h: number; scheduled_h: number; flights: number; declined: { call: string; reason: string; note: string; by: string }[];
@@ -117,7 +117,8 @@ export function RespondPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
               <strong>{k.name}</strong>
               <span className="mono">{k.tail}</span>
               <span className="rs-batt" role="img" aria-label={`Charge ${k.charge}%`}><span style={{ width: `${k.charge}%` }} /></span>
-              <span className="meta">{k.state === "out" ? `Out on ${k.out_on}` : k.state === "charging" ? `Charging, ${k.charge}% (60% to launch)` : k.state === "fault" ? `Fault: ${k.power !== "on" ? "no power" : "comms"}` : `Ready, ${k.charge}%`}</span>
+              <span className="meta">{k.state === "out" ? `Out on ${k.out_on}` : k.state === "charging" ? `Charging, ${k.charge}% (60% to launch)` : k.state === "fault" ? `Fault: ${k.power !== "on" ? "no power" : "comms"}` : k.state === "grounded" ? "Grounded at its care check" : `Ready, ${k.charge}%`}</span>
+              {k.care?.overdue && !k.care.grounded ? <a href="#records" className="th-check is-warn">Care check due {k.care.due}</a> : null}
             </li>
           ))}
         </ul>

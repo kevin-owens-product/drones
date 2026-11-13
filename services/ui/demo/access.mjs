@@ -24,7 +24,7 @@ export const READS = [
   ["Supply", ["/v1/thread/receiving", "/v1/thread/accountability", "/v1/ops/portal", "/v1/quote", "/v1/plans"]],
   ["Learn", ["/v1/attrition", "/v1/field-reports", "/v1/eval/runs"]],
   ["Neros only", ["/v1/ops/queue", "/v1/company", "/v1/program", "/v1/thread/quality", "/v1/thread/compliance", "/v1/config/quality", "/v1/surge", "/v1/bid", "/v1/cases"]],
-  ["Responder program", ["/v1/dfr", "/v1/dfr/records", "/v1/dfr/crew"]],
+  ["Responder program", ["/v1/dfr", "/v1/dfr/records", "/v1/dfr/crew", "/v1/dfr/program"]],
   ["Shared", ["/v1/release", "/v1/interop", "/v1/interop/cot", "/v1/interop/entities"]],
   ["Settings", ["/v1/audit"]],
   ["Unknown", ["/v1/no-such-route"]],
@@ -40,6 +40,9 @@ export const WRITES = [
   { label: "Approve a launch (Respond)", method: "POST", path: "/v1/dfr/act", body: { action: "call.approve", args: { id: "C-1004" } } },
   { label: "End a flight for safety (Respond)", method: "POST", path: "/v1/dfr/act", body: { action: "flight.terminate", args: { id: "F-43", reason: "probe" } } },
   { label: "Sign a pilot off for solo (Crew)", method: "POST", path: "/v1/dfr/act", body: { action: "crew.certify", args: { pilot: "P-04" } } },
+  { label: "Record a credential renewal (Crew)", method: "POST", path: "/v1/dfr/act", body: { action: "crew.renew", args: { pilot: "P-04", item: "cjis" } } },
+  { label: "Submit the month's invoice (Report and invoice)", method: "POST", path: "/v1/dfr/act", body: { action: "month.submit" } },
+  { label: "Answer a records request (Flight records)", method: "POST", path: "/v1/dfr/act", body: { action: "request.create", args: { requester: "probe", incident: "26-111301" } } },
   { label: "Inbound command from an external system", method: "POST", path: "/v1/interop/inbound", body: { command: "goto" } },
 ];
 
@@ -78,14 +81,18 @@ export function probe(makeDemo) {
 export function check({ reads, writes }) {
   const breaches = [];
   const idx = (key) => CALLERS.findIndex((c) => c.key === key);
-  const customers = ["commander", "operator", "maintainer", "allied", "supervisor", "pilot"].map(idx);
+  const customers = ["commander", "operator", "maintainer", "allied", "supervisor", "pilot", "contractor"].map(idx);
   const otherCustomers = ["commander", "operator", "maintainer", "allied"].map(idx);
   const rows = reads.flatMap((g) => g.rows);
   for (const row of rows) {
     if (NEROS_ONLY.includes(row.path)) for (const i of customers) if (row.cells[i].status === 200) breaches.push(`${CALLERS[i].key} can read ${row.path}, a Neros-only route`);
     if (RESPONDER.includes(row.path)) for (const i of otherCustomers) if (row.cells[i].status === 200) breaches.push(`${CALLERS[i].key} can read ${row.path}, another customer's program`);
     if (row.path === "/v1/no-such-route") for (const [i, out] of row.cells.entries()) if (out.status !== 404) breaches.push(`${CALLERS[i].key} gets ${out.status} from an unknown route, not 404`);
-    if (row.path === "/v1/audit") for (const k of ["ops", "commander", "operator", "maintainer", "allied", "supervisor", "pilot"]) if (row.cells[idx(k)].status !== 403) breaches.push(`${k} can read the audit log without audit.read`);
+    // A contractor seat never sees the live console or the incident records.
+    if (row.path === "/v1/dfr" || row.path === "/v1/dfr/records") if (row.cells[idx("contractor")].status !== 403) breaches.push(`contractor can read ${row.path}`);
+    // The invoice and its rates are between the program manager and the contractor, not the pilots.
+    if (row.path === "/v1/dfr/program") if (row.cells[idx("pilot")].status !== 403) breaches.push("pilot can read the month's invoice");
+    if (row.path === "/v1/audit") for (const k of ["ops", "commander", "operator", "maintainer", "allied", "supervisor", "pilot", "contractor"]) if (row.cells[idx(k)].status !== 403) breaches.push(`${k} can read the audit log without audit.read`);
     const allied = row.cells[idx("allied")];
     if (allied.status === 200) {
       const leaked = [...keysDeep(allied.body)].filter((k) => WITHHELD.has(k));
@@ -93,7 +100,7 @@ export function check({ reads, writes }) {
     }
     const users = reads.flatMap((g) => g.rows).find((r) => r.path === "/v1/users");
     if (row === users) {
-      for (const k of ["commander", "operator", "maintainer", "allied", "supervisor", "pilot"]) {
+      for (const k of ["commander", "operator", "maintainer", "allied", "supervisor", "pilot", "contractor"]) {
         const who = CALLERS[idx(k)].who;
         const items = row.cells[idx(k)].body?.items ?? [];
         if (items.some((u) => u.org !== who.org)) breaches.push(`${k} can list accounts outside ${who.org}`);
@@ -112,7 +119,12 @@ export function check({ reads, writes }) {
   // Split launch authority: the pilot cannot approve a launch, and no supervisor can end (or keep up) a flight for the pilot.
   expectDeny("Approve a launch (Respond)", ["pilot", "commander", "allied"]);
   expectDeny("End a flight for safety (Respond)", ["supervisor", "commander", "maintainer"]);
-  expectDeny("Sign a pilot off for solo (Crew)", ["pilot", "commander", "allied"]);
+  expectDeny("Sign a pilot off for solo (Crew)", ["pilot", "commander", "allied", "contractor"]);
+  expectDeny("Record a credential renewal (Crew)", ["pilot", "commander", "allied"]);
+  expectDeny("Submit the month's invoice (Report and invoice)", ["supervisor", "pilot", "commander"]);
+  expectDeny("Answer a records request (Flight records)", ["pilot", "contractor", "commander"]);
+  expectDeny("Approve a launch (Respond)", ["contractor"]);
+  expectDeny("End a flight for safety (Respond)", ["contractor"]);
   expectDeny("Inbound command from an external system", CALLERS.map((c) => c.key));
   return breaches;
 }
@@ -125,7 +137,7 @@ export function render({ reads, writes }) {
     "",
     "Generated by `node demo/access-matrix.mjs` in `services/ui` from the demo scenario; `demo/access.test.mjs` fails when this file and the code drift. Cells are the HTTP status each caller gets, with the item count for lists and the number of fields withheld from an allied tenant.",
     "",
-    "What it covers: role gates (the policy matrix in `demo/ledger.mjs`, mirrored from `policies/`), workspace gates (Neros's own routes stay out of customer sessions), the audit gate, account scoping per tenant, releasability for an allied tenant, split launch authority in the public safety program (only a supervisor approves a launch, only the pilot ends a flight for safety), and the refusal of inbound commands (ADR-0016).",
+    "What it covers: role gates (the policy matrix in `demo/ledger.mjs`, mirrored from `policies/`), workspace gates (Neros's own routes stay out of customer sessions), the audit gate, account scoping per tenant, releasability for an allied tenant, split launch authority in the public safety program (only a supervisor approves a launch, only the pilot ends a flight for safety), the contractor seat on that program (its pilots' files and its invoice, never the console or incident records), and the refusal of inbound commands (ADR-0016).",
     "",
     "What it does not claim: the demo has one scripted fleet and sortie, which each customer login sees as its own. Isolation between customers is enforced on accounts, requests, orders, quotes, plans, receiving and the work queue, not on the scripted sortie. The real API enforces both with OPA and row-level security (ADR-0009).",
     "",

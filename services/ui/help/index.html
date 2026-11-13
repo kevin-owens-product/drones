@@ -129,6 +129,7 @@
                 <tr><td><code>allied</code></td><td>Customer C, an allied partner</td><td>Mission commander, planner</td><td>See which fields are withheld and why</td></tr>
                 <tr><td><code>supervisor</code></td><td>Customer D, a harbor police first responder program</td><td>Supervisor (mission commander)</td><td>Approve a launch. Try to end a flight: you can't</td></tr>
                 <tr><td><code>pilot</code></td><td>Customer D</td><td>Contract remote pilot (operator)</td><td>Launch an approved call, end it for gusts, file the record</td></tr>
+                <tr><td><code>contractor</code></td><td>Customer D's console contractor, the pilot company</td><td>Contractor seat</td><td>Record Reyes's TWIC renewal, then submit the October invoice</td></tr>
               </tbody>
             </table></div>
             <div class="callout warn">The hosted demo checks passwords in the browser. It keeps casual visitors out but it is not a security boundary. A real deployment signs in through the organization's identity provider (OIDC, with PIV/CAC).</div>
@@ -358,7 +359,7 @@
           <article class="article" id="responder" data-tags="first responder dfr public safety police dock docked call dispatch supervisor pilot rpic veto decline terminate flight record evidence">
             <div class="meta"><span class="tag">Public safety</span></div>
             <h2>First responder program</h2>
-            <p>Customer D is a harbor police program that flies docked aircraft as first responders. It runs on the same platform as the defense customers, in its own operating mode: its own menu (Respond, Flight records, Pilots and roster), its own words (flight, supervisor, call) and its own records policy (the pilot's name is on every record). Everything in it is simulated: the harbor is a schematic and the docks, pilots, calls and weather are made up.</p>
+            <p>Customer D is a harbor police program that flies docked aircraft as first responders. It runs on the same platform as the defense customers, in its own operating mode: its own menu (Respond, Flight records, Pilots and roster, Report and invoice), its own words (flight, supervisor, call) and its own records policy (the pilot's name is on every record). Everything in it is simulated: the harbor is a schematic and the docks, pilots, calls and weather are made up.</p>
             <h3>A call to a launch</h3>
             <ol class="steps">
               <li><b>Dispatch sends a call.</b> It lands in <b>Calls waiting</b> with its priority, incident number and how long it has waited. <b>Next call from dispatch</b> sends the next scripted call.</li>
@@ -378,6 +379,14 @@
             </ol>
             <h3>Pilots and roster</h3>
             <p>The program manager (the supervisor seat) keeps one pilot on console twelve hours a day for the next 14 days. Each pilot's file shows their certificate, recurrent training, hours, background, TWIC and CJIS, and supervised time, with what falls due within 30 days. A pilot with a lapsed item can't be rostered. A pilot who isn't yet signed off works only with a supervising pilot, and the program manager signs them off for solo shifts once they have three supervised shifts and ten supervised flights. Empty days and problem days are flagged, with the hours they cost.</p>
+            <h3>The month</h3>
+            <ul>
+              <li><b>Report and invoice.</b> The contractor's monthly activity report and invoice are both built from the signed shift logs: calls, flights, call-to-scene times, hours staffed against scheduled, gaps, mishaps, currency and aircraft care. Unstaffed hours are not payable, nor are hours a pilot worked while a credential had lapsed. A shift whose flight record isn't filed is held until it is. The contractor submits the month and the program manager approves it or returns it with a note. Both steps are sealed into the evidence chain.</li>
+              <li><b>Battery and aircraft care.</b> Each aircraft gets a weekly check signed by the pilot on Flight records: pack health, cell spread, swelling, propellers, motors and dock. An overdue check shows as a caution on the console. A pack under 80% health, over 30 mV spread, or swollen grounds the aircraft until a passing check is signed.</li>
+              <li><b>Retention and legal holds.</b> Every record shows how long it is kept (flight records 2 years, shift logs 3, mishap reports 5, SIM policy). The supervisor, as records custodian, can place a legal hold with a matter number, which stops the clock until it is lifted.</li>
+              <li><b>Records requests.</b> The custodian gathers the filed records for an incident number or a date range. Plates, phone numbers and private persons' names are redacted, and the package is reviewed and then released with a manifest. The manifest names each sealed version by its hash, and the release itself goes on the chain.</li>
+              <li><b>The contractor seat.</b> Sign in as <code>contractor</code>: the pilot company keeps its pilots' files current (a TWIC renewal makes A. Reyes rosterable again), sees the roster, and submits the month. It never sees the live console or the incident records, and the pilots never see the invoice.</li>
+            </ul>
             <div class="callout">Sign in as <code>supervisor</code> and as <code>pilot</code> to see each seat on its own. The admin's workspace menu opens the program as Neros, holding both seats so the walk works from one login. The access matrix holds each real login to its own seat.</div>
           </article>
 

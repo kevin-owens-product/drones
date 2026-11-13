@@ -46,7 +46,7 @@
 .rs-alert.is-term { background: var(--surface-3); border: 1px solid var(--line-strong); }
 .rs-docks { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
 .rs-dock { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); font-size: 13px; }
-.rs-dock.is-charging, .rs-dock.is-fault { border-color: var(--warn); }
+.rs-dock.is-charging, .rs-dock.is-fault, .rs-dock.is-grounded { border-color: var(--warn); }
 .rs-dock.is-out { border-color: var(--accent); }
 .rs-map { width: 100%; height: auto; display: block; border-radius: var(--radius); margin-bottom: 10px; }
 .rs-land { fill: var(--surface-3); }
@@ -54,7 +54,7 @@
 .rs-route { stroke: var(--accent); stroke-dasharray: 4 4; stroke-width: 1.5; }
 .rs-map text { font: 11px var(--font-sans); fill: var(--text); }
 .rs-mdock rect { fill: var(--surface); stroke: var(--ok); stroke-width: 1.5; }
-.rs-mdock.is-charging rect, .rs-mdock.is-fault rect { stroke: var(--warn); }
+.rs-mdock.is-charging rect, .rs-mdock.is-fault rect, .rs-mdock.is-grounded rect { stroke: var(--warn); }
 .rs-mdock.is-out rect { stroke: var(--accent); }
 .rs-mcall circle { fill: rgba(244, 180, 67, 0.3); stroke: var(--warn); }
 .rs-mcall.p1 circle { fill: rgba(255, 107, 91, 0.3); stroke: var(--danger); }
@@ -76,3 +76,7 @@ tr.is-selected td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .rs-struct rect { fill: rgba(244, 180, 67, 0.12); stroke: var(--warn); stroke-dasharray: 2 2; }
 .rs-struct text { font-size: 10px; fill: var(--muted); }
 .rs-num { width: 90px; }
+.rs-renew { display: inline-flex; gap: 6px; align-items: center; margin-left: 8px; flex-wrap: wrap; }
+.rs-stack { display: grid; gap: 16px; }
+.rs-request-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; align-items: center; margin-bottom: 12px; }
+.rs-request-form input { width: 100%; min-width: 0; }

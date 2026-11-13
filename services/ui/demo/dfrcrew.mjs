@@ -132,8 +132,33 @@ export function createCrew({ today }) {
     return { ok: true, message: `${p.name} cleared for solo shifts by ${by}, ${today}.` };
   }
 
+  /** The contractor records a renewal or clearance on a pilot's file, which can make them assignable again. */
+  function renew(pilotId, key, value) {
+    const p = byId(pilotId);
+    if (!p) return { ok: false, why: "No such pilot." };
+    const iso = /^\d{4}-\d{2}-\d{2}$/.test(String(value ?? "")) ? String(value) : null;
+    if (key === "twic") {
+      if (!iso || iso <= today) return { ok: false, why: "Enter the new TWIC expiry date, after today." };
+      // A renewal does not reach back: the days it was lapsed stay on the file, and the invoice still checks them.
+      if (p.twic_expires < today) p.lapses = [...(p.lapses ?? []), { item: "TWIC", from: p.twic_expires, to: today }];
+      p.twic_expires = iso;
+      return { ok: true, message: `${p.name}: TWIC renewed, expires ${iso}.${file(p).assignable ? " Assignable again." : ""}` };
+    }
+    if (key === "recurrent") {
+      if (!iso || iso > today || iso <= p.recurrent) return { ok: false, why: `Enter the date recurrent training was completed: after ${p.recurrent}, not after today.` };
+      p.recurrent = iso;
+      return { ok: true, message: `${p.name}: recurrent training ${iso}, next due ${addMonths(iso, RULES.recurrent_months)}.` };
+    }
+    if (key === "cjis" || key === "background") {
+      if (p[key] === "cleared") return { ok: false, why: `${p.name} is already cleared.` };
+      p[key] = "cleared";
+      return { ok: true, message: `${p.name}: ${key === "cjis" ? "CJIS clearance" : "background investigation"} cleared.` };
+    }
+    return { ok: false, why: "That item is not renewed from here." };
+  }
+
   /** Who is rostered on a date. */
   const onDuty = (date) => roster.find((r) => r.date === date) ?? null;
 
-  return { view, assign, certify, onDuty, file: (id) => (byId(id) ? file(byId(id)) : null), pilots, roster };
+  return { view, assign, certify, renew, onDuty, file: (id) => (byId(id) ? file(byId(id)) : null), pilots, roster };
 }
