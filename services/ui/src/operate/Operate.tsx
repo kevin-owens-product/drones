@@ -9,6 +9,9 @@ import { TacMap, type Pulse, type Trail } from "./TacMap";
 import { Timeline } from "./Timeline";
 import { blocker, checks, isGo, median, onGround, seconds, tick, type Check, type ReadyClock } from "./readiness";
 import { ago, diffEvents, fmt, mergeFleet, type OpsEvent, type Vehicle } from "./vehicle";
+import { isLiveSim, liveBase, liveCommand, liveSnapshot, setLiveBase, type LiveSnapshot } from "../livesim";
+import { can } from "../shell/workspace";
+import { FlyPanel, liveMarks, SwarmPanel, type LiveStatus, type PickFor } from "./LiveSim";
 
 // Three.js is large; load it only when the operator asks for 3D.
 const Map3D = lazy(() => import("./Map3D").then((m) => ({ default: m.Map3D })));
@@ -192,6 +195,26 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
   const eventId = useRef(0);
   const readyClock = useRef<ReadyClock>(new Map());
   const [readyTimes, setReadyTimes] = useState<number[]>([]);
+  // Live sim (opt-in with ?live=1): PX4 vehicles through the bridge in sim/swarm.
+  const [liveUrl, setLiveUrl] = useState<string | null>(() => liveBase());
+  const liveUrlRef = useRef(liveUrl);
+  liveUrlRef.current = liveUrl;
+  const [liveStatus, setLiveStatus] = useState<LiveStatus>(() => (liveUrl ? "connecting" : "off"));
+  const [liveSnap, setLiveSnap] = useState<LiveSnapshot | null>(null);
+  const liveSince = useRef(-1);
+  const [scripted, setScripted] = useState(() => {
+    try {
+      return localStorage.getItem("a2e-live-scripted") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [picking, setPicking] = useState<PickFor | null>(null);
+  const [picked, setPicked] = useState<[number, number] | null>(null);
+  const canCommand = can(viewer, "vehicle.command");
+  const logLive = useCallback((tail: string, level: OpsEvent["level"], text: string) => {
+    setEvents((list) => [{ id: ++eventId.current, at: Date.now(), tail, level, text }, ...list].slice(0, 200));
+  }, []);
 
 
   useEffect(() => {
@@ -216,10 +239,26 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
     let stopped = false;
     async function poll() {
       try {
-        const [live, pic] = await Promise.all([api<{ items: LivePoint[]; withheld?: number }>("/v1/telemetry/live"), loadPicture()]);
+        const base = liveUrlRef.current;
+        const simCall = base ? liveSnapshot(base, Math.max(0, liveSince.current)).catch(() => null) : Promise.resolve(null);
+        const [live, pic, sim] = await Promise.all([api<{ items: LivePoint[]; withheld?: number }>("/v1/telemetry/live"), loadPicture(), simCall]);
         if (stopped) return;
         onBannerRef.current(live.banner);
-        const items = Array.isArray(live.body.items) ? live.body.items : [];
+        let items = Array.isArray(live.body.items) ? live.body.items : [];
+        if (base && liveUrlRef.current === base) {
+          if (sim && Array.isArray(sim.items)) {
+            setLiveStatus("up");
+            setLiveSnap(sim);
+            items = [...items, ...sim.items];
+            // The bridge's own log (PX4 status text, command results, separation). Mode changes
+            // come from the console's own diff, so they are not doubled. On first contact, only the last minute.
+            const first = liveSince.current < 0;
+            const fresh = (sim.events ?? []).filter((e) => !e.text.startsWith("Mode ") && (!first || e.at > Date.now() - 60_000));
+            if (sim.events?.length) liveSince.current = Math.max(liveSince.current, ...sim.events.map((e) => e.id));
+            else if (first) liveSince.current = 0;
+            if (fresh.length) setEvents((list) => [...fresh.reverse().map<OpsEvent>((e) => ({ id: ++eventId.current, at: e.at, tail: e.tail, level: e.level, text: e.text })), ...list].slice(0, 200));
+          } else setLiveStatus("down");
+        }
         const at = Date.now();
         const list = history.current;
         list.push({ at, points: items, picture: pic });
@@ -245,13 +284,23 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
     };
   }, []);
 
-  const fleet = useMemo(() => mergeFleet(registry, points, now), [registry, points, now]);
+  // With live sim up, the map and list show the PX4 swarm alone unless the scripted fleet is asked for.
+  const liveUp = liveUrl !== null && liveStatus === "up";
+  const scriptedShown = !liveUp || scripted;
+  const registryShown = useMemo(
+    () => (liveUp && liveSnap ? [...(scriptedShown ? registry : []), ...liveSnap.platforms] : registry),
+    [liveUp, liveSnap, scriptedShown, registry],
+  );
+  const keep = useCallback((list: readonly LivePoint[]) => (scriptedShown ? [...list] : list.filter((pt) => isLiveSim(pt))), [scriptedShown]);
+  const fleet = useMemo(() => mergeFleet(registryShown, keep(points), now), [registryShown, keep, points, now]);
 
   const lastPicture = useRef<Picture | null>(null);
+  const scriptedRef = useRef(scriptedShown);
+  scriptedRef.current = scriptedShown;
   useEffect(() => {
     const changes = replans(lastPicture.current, picture);
     if (picture) lastPicture.current = picture;
-    if (changes.length === 0) return;
+    if (changes.length === 0 || !scriptedRef.current) return;
     const at = Date.now();
     const fresh = replanText(changes).map<OpsEvent>((r) => ({ id: ++eventId.current, at, tail: r.tail, level: "info", text: r.text }));
     setEvents((list) => [...fresh, ...list].slice(0, 200));
@@ -270,10 +319,12 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
   const replaySnap = replayAt === null ? null : snapshotAt(history.current, replayAt);
   const shownAt = replaySnap ? replaySnap.at : now;
   const view = useMemo(
-    () => (replaySnap ? mergeFleet(registry, replaySnap.points, replaySnap.at) : fleet),
-    [replaySnap, registry, fleet],
+    () => (replaySnap ? mergeFleet(registryShown, keep(replaySnap.points), replaySnap.at) : fleet),
+    [replaySnap, registryShown, keep, fleet],
   );
-  const viewPicture = replaySnap ? replaySnap.picture : picture;
+  // With only the live swarm on the map, the scripted sortie's tasks, survey areas and routes are not theirs.
+  const rawPicture = replaySnap ? replaySnap.picture : picture;
+  const viewPicture = useMemo(() => (rawPicture && !scriptedShown ? { ...rawPicture, tasks: [], areas: [], routes: [] } : rawPicture), [rawPicture, scriptedShown]);
   const trails = useMemo(() => trailsAt(history.current, shownAt), [shownAt]);
   const historyFrom = history.current[0]?.at ?? now;
 
@@ -397,6 +448,10 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
         setReporting(true);
         setReportNote("");
       } else if (event.key === "Escape") {
+        if (picking) {
+          setPicking(null);
+          return;
+        }
         if (replayAt !== null) {
           setReplayAt(null);
           setPlaying(false);
@@ -408,7 +463,7 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [step, replayAt, selected]);
+  }, [step, replayAt, selected, picking]);
 
   async function fileReport(tail: string) {
     const since = Date.now() - 30_000;
@@ -462,6 +517,19 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
   useEffect(() => () => setPageCommands([]), []);
 
   const p = current?.live ?? null;
+  const marks = liveUp ? liveMarks(liveSnap, picked, isLiveSim(p) ? p : null) : [];
+  function onPick(lat: number, lon: number) {
+    const what = picking;
+    setPicking(null);
+    if (!what || !liveUrl) return;
+    if (what.for === "goto") {
+      const at = fleet.find((v) => v.tail === what.tail)?.live?.alt_m;
+      void liveCommand(liveUrl, what.tail, { action: "goto", lat, lon, ...(typeof at === "number" && at > 3 ? { alt_m: Math.round(at) } : {}) }).then(
+        (out) => logLive(what.tail, out.ok ? "info" : "warn", `Go to: ${out.detail}`),
+        () => logLive(what.tail, "warn", "Go to: the bridge did not answer"),
+      );
+    } else setPicked([lat, lon]);
+  }
 
   return (
     <section className="operate" aria-label="Operate">
@@ -472,6 +540,35 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
           <div className={counts.denied ? "is-warn" : undefined}><strong className="mono">{counts.denied}</strong><span className="meta">GNSS denied</span></div>
           <div className={counts.ready ? "is-ok" : undefined}><strong className="mono">{counts.ready}<span className="op-summary-of">/{counts.ground}</span></strong><span className="meta">ready</span></div>
         </div>
+        {liveUrl ? (
+          <SwarmPanel
+            base={liveUrl}
+            status={liveStatus}
+            snap={liveSnap}
+            launch={launch}
+            canCommand={canCommand}
+            picking={picking}
+            picked={picked}
+            onPicking={setPicking}
+            onClearPick={() => setPicked(null)}
+            scripted={scripted}
+            onScripted={(on) => {
+              setScripted(on);
+              try {
+                localStorage.setItem("a2e-live-scripted", on ? "1" : "0");
+              } catch {
+                /* not remembered */
+              }
+            }}
+            onOff={() => {
+              setLiveBase(null);
+              setLiveUrl(null);
+              setLiveStatus("off");
+              setLiveSnap(null);
+            }}
+            log={logLive}
+          />
+        ) : null}
         <div className="op-search">
           <input ref={search} id="tail-search" aria-label="Find a vehicle" placeholder="Find a vehicle" value={query} onChange={(e) => setQuery(e.target.value)} />
           <kbd>/</kbd>
@@ -504,7 +601,7 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
             <Map3D fleet={view} picture={viewPicture} layers={layers} selected={selected} follow={follow} onSelect={setSelected} />
           </Suspense>
         ) : (
-          <TacMap fleet={view} trails={trails} selected={selected} follow={follow} onSelect={setSelected} picture={viewPicture} layers={layers} pulses={pulses} density={density} radio={layers.radio ? radio : null} />
+          <TacMap fleet={view} trails={trails} selected={selected} follow={follow} onSelect={setSelected} picture={viewPicture} layers={layers} pulses={pulses} density={density} radio={layers.radio ? radio : null} marks={marks} onPick={picking ? onPick : undefined} minSpanM={scriptedShown ? 400 : 160} />
         )}
         {picture || liveCount > 20 ? (
           <div className="op-layers chips" role="group" aria-label="Map layers">
@@ -641,7 +738,11 @@ export function OperatePage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
                 {reportNote}
               </p>
             ) : null}
-            <p className="meta op-note">This console monitors. It does not send flight commands or arm vehicles; GO is advice to the operator, and tasking goes through an approved mission plan.</p>
+            {isLiveSim(p) && liveUrl ? (
+              <FlyPanel base={liveUrl} point={p} checks={launch.get(current.tail)} canCommand={canCommand} picking={picking} onPicking={setPicking} log={logLive} />
+            ) : (
+              <p className="meta op-note">This console monitors. It does not send flight commands or arm vehicles; GO is advice to the operator, and tasking goes through an approved mission plan.</p>
+            )}
           </>
         ) : (
           <div className="op-empty">

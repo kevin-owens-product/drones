@@ -30,3 +30,4 @@ Status of every record below is **Accepted** as of 2026-10-28. The conservative 
 | [0024](0024-database-role-trust-boundary.md) | What the app database role is trusted to do |
 | [0025](0025-two-person-sharing.md) | Two-person rule for sharing agreements |
 | [0026](0026-raw-sql.md) | Raw SQL instead of an ORM |
+| [0027](0027-live-sim-commands.md) | Operator flight commands through the live sim bridge |

@@ -7,6 +7,10 @@ import "@fontsource-variable/jetbrains-mono";
 import "./styles.css";
 import "./operate/operate.css";
 import { hasDemoSession, installStaticDemo } from "./staticDemo";
+import { adoptLiveParam } from "./livesim";
+
+// ?live=1 connects Operate to a live sim bridge (sim/swarm); ?live=off disconnects. Remembered per browser.
+adoptLiveParam();
 
 // Hosted demo: a first visit to the bare domain lands on the product site. Deep links
 // (#operate, #ops, ...) and signed-in visitors go straight to the console.

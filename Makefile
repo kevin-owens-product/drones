@@ -1,4 +1,4 @@
-.PHONY: up down demo test test-unit test-integration test-scale test-motion scale sitl-clean lint opa ui sbom ci bench-demo
+.PHONY: up down demo test test-unit test-integration test-scale test-motion scale sitl-clean lint opa ui sbom ci bench-demo swarm-up swarm-down swarm-check test-swarm
 
 up:
 	@test -f .env || (echo "Copy .env.example to .env first" && exit 1)
@@ -122,3 +122,19 @@ sbom:
 	./scripts/sbom.sh
 
 ci: lint opa test-unit
+
+# Live sim: PX4 quads in SIH plus the bridge Operate talks to (docs/design/live-sim.md).
+# Open http://localhost:4173/?live=1#operate with the console running (npm run demo in services/ui).
+swarm-up:
+	docker compose -f docker-compose.swarm.yml up -d --build
+	@echo "Bridge on http://localhost:8765/v1/live/vehicles. Console: http://localhost:4173/?live=1#operate"
+
+swarm-down:
+	docker compose -f docker-compose.swarm.yml down
+
+# Fly the running swarm through launch, formations, lost link and a sweep, checking each step.
+swarm-check:
+	python3 sim/swarm/fly_check.py
+
+test-swarm:
+	python3 -m unittest discover -s sim/swarm -p "test_*.py"

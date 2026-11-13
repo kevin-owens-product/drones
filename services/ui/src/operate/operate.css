@@ -1747,3 +1747,122 @@ kbd {
 .tac-shadow.is-lost {
   fill: rgba(255, 107, 91, 0.26);
 }
+
+/* ---- Live sim: PX4 vehicles through the bridge (src/livesim.ts, LiveSim.tsx) ---- */
+.live-panel {
+  flex-shrink: 0;
+  max-height: 48vh;
+  overflow: auto;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.live-fly {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.live-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.live-task,
+.live-note {
+  margin: 0;
+}
+
+.live-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.live-row label {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+
+.live-panel .live-row input:not([type="checkbox"]),
+.live-fly .live-row input:not([type="checkbox"]) {
+  width: 4.5em;
+  padding: 4px 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.live-panel .live-row select {
+  width: auto;
+  min-width: 9em;
+  padding: 4px 26px 4px 6px;
+  font-size: 12px;
+}
+
+.live-group {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 6px 8px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.live-group legend {
+  padding: 0 4px;
+  color: var(--muted);
+}
+
+.live-group:disabled {
+  opacity: 0.55;
+}
+
+.live-nogo {
+  color: var(--warn);
+}
+
+.live-check {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.tac.is-picking {
+  cursor: crosshair;
+}
+
+.tac-mark-area {
+  fill: rgba(92, 200, 255, 0.06);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+}
+
+.tac-mark-path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-opacity: 0.45;
+  stroke-width: 1;
+}
+
+.tac-mark-slot circle {
+  fill: none;
+  stroke: var(--ok);
+  stroke-width: 1.5;
+}
+
+.tac-mark-pick circle {
+  fill: rgba(244, 180, 67, 0.25);
+  stroke: var(--warn);
+  stroke-width: 2;
+}
