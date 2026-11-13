@@ -6,7 +6,7 @@ Around that loop sits one platform with two sides: the manufacturer runs its ope
 
 ![The Operate screen: vehicles that need the operator first, the map with its layers, the flight display for NX-06 after its bingo, and the event timeline](docs/media/operate.png)
 
-The console is one Operate screen. Vehicles that need the operator sort to the top with the reason (link lost, GNSS rejected by the spoof gate, low battery). The tactical picture is a local metric plane that needs no map tiles, so it works air-gapped. `⌘K` jumps to any vehicle, page, or filter, and `J`/`K`, `F`, `A`, `L`, and `/` drive it from the keyboard. It monitors; it does not send flight commands.
+The console is one Operate screen. Vehicles that need the operator sort to the top with the reason (link lost, GNSS rejected by the spoof gate, low battery). The tactical picture is a local metric plane that needs no map tiles, so it works air-gapped. `⌘K` jumps to any vehicle, page, or filter, and `J`/`K`, `F`, `A`, `L`, and `/` drive it from the keyboard. It monitors the scripted fleet and sends no flight commands to it; only vehicles flying through the live sim bridge (below) take commands.
 
 To see it without the stack:
 
@@ -42,6 +42,12 @@ The performance model, a terrain radio model, an electro-thermal pack model, a t
 The terrain is real (SRTM); every coefficient is an assumption written out in `services/ui/demo/*.mjs`, not a Neros figure or a flight-test result. [Performance model](docs/design/physics.md), [physics in the pages](docs/design/physics-check.md).
 
 ![Airframes: wear by flight load for one tail, bearing life per motor and arm fatigue against a flat hours schedule](docs/media/airframes-wear.png)
+
+### Fly a simulated swarm (live sim)
+
+![Operate with four PX4 quads from the simulator sweeping an area, each strip and its progress on the map](docs/media/live-sim.png)
+
+Operate can also fly real PX4 flight software. `make swarm-up` starts four PX4 quads in PX4's built-in simulator (SIH, no Gazebo or GPU) and a MAVLink bridge; open the local console with `?live=1` and they appear in Operate as a fleet with their own launch checks. Launch the ones that are GO, fly a line, column, wedge or circle to a point you click, split an area into strips and sweep it, send one vehicle somewhere, or cut its link and watch PX4 bring it home on its own. The same bridge flies PX4 hardware over a telemetry radio. It is opt-in: the hosted demo never calls a bridge unless you ask it to. This is the one place the console sends flight commands ([ADR 0027](docs/architecture/adrs/0027-live-sim-commands.md)). [Run it, how it works, and hardware that works with it](docs/design/live-sim.md).
 
 ### Product site, help and developers
 

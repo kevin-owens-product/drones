@@ -79,6 +79,12 @@ function linkClass(q: number): string {
   return "tac-link";
 }
 
+export interface MapMark {
+  kind: "area" | "path" | "slot" | "pick";
+  points: readonly (readonly [number, number])[];
+  label?: string;
+}
+
 export function TacMap({
   fleet,
   trails,
@@ -90,6 +96,9 @@ export function TacMap({
   pulses,
   density,
   radio = null,
+  marks = [],
+  onPick,
+  minSpanM = 400,
 }: {
   fleet: readonly Vehicle[];
   trails: ReadonlyMap<string, Trail>;
@@ -101,6 +110,12 @@ export function TacMap({
   layers: Layers;
   pulses: ReadonlyMap<string, Pulse>;
   density: boolean;
+  /** Live sim overlays: a sweep area, planned paths, formation slots (lat, lon). */
+  marks?: readonly MapMark[];
+  /** When set, a click on the map picks a point instead of clearing the selection. */
+  onPick?: ((lat: number, lon: number) => void) | undefined;
+  /** Narrowest view the auto-fit zooms to, metres across. */
+  minSpanM?: number;
 }): JSX.Element {
   const host = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -152,6 +167,7 @@ export function TacMap({
 
   const cosLat = Math.cos((origin.lat * Math.PI) / 180);
   const toXY = (lat: number, lon: number): [number, number] => [(lon - origin.lon) * cosLat * M_PER_DEG_LON, (lat - origin.lat) * M_PER_DEG_LAT];
+  const fromXY = (x: number, y: number): [number, number] => [origin.lat + y / M_PER_DEG_LAT, origin.lon + x / (cosLat * M_PER_DEG_LON)];
 
   // Glide each vehicle from where it was drawn to its newest sample.
   const tweens = useRef(new Map<string, Tween>());
@@ -206,11 +222,11 @@ export function TacMap({
     const x1 = quantile(xs, 1 - trim);
     const y0 = quantile(ys, trim);
     const y1 = quantile(ys, 1 - trim);
-    const span = Math.max(400, (x1 - x0) * 1.25, ((y1 - y0) * 1.25 * size.w) / size.h);
+    const span = Math.max(minSpanM, (x1 - x0) * 1.25, ((y1 - y0) * 1.25 * size.w) / size.h);
     return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, scale: size.w / span };
     // Refit on fleet size, viewport, or every ten seconds, not on every poll.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [live.length, origin.lat, origin.lon, size.w, size.h, Math.round(Date.now() / 10_000)]);
+  }, [live.length, origin.lat, origin.lon, size.w, size.h, minSpanM, Math.round(Date.now() / 10_000)]);
 
   const focusPos = follow && selected ? pos(selected) : null;
   let view: View = manual ?? auto;
@@ -563,7 +579,7 @@ export function TacMap({
   return (
     <div
       ref={host}
-      className="tac"
+      className={onPick ? "tac is-picking" : "tac"}
       onWheel={(e) => {
         const rect = host.current?.getBoundingClientRect();
         if (!rect) return;
@@ -584,7 +600,14 @@ export function TacMap({
       onMouseUp={(e) => {
         const d = drag.current;
         drag.current = null;
-        if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 3) onSelect(density ? nearestCrowd(e.clientX, e.clientY) : null);
+        if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 3) {
+          if (onPick) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const mx = (e.clientX - rect.left - size.w / 2) / view.scale + view.cx;
+            const my = -(e.clientY - rect.top - size.h / 2) / view.scale + view.cy;
+            onPick(...fromXY(mx, my));
+          } else onSelect(density ? nearestCrowd(e.clientX, e.clientY) : null);
+        }
       }}
       onDoubleClick={() => setManual(null)}
     >
@@ -614,6 +637,21 @@ export function TacMap({
         {station}
         {tasks}
         {rings}
+        {marks.length ? (
+          <g className="tac-marks" data-testid="live-marks">
+            {marks.map((m, i) => {
+              if (m.kind === "area") return <path key={i} d={`${polyline(m.points)} Z`} className="tac-mark-area" />;
+              if (m.kind === "path") return <path key={i} d={polyline(m.points)} className="tac-mark-path" />;
+              const [px, py] = ll(m.points[0]![0], m.points[0]![1]);
+              return (
+                <g key={i} className={m.kind === "pick" ? "tac-mark-pick" : "tac-mark-slot"}>
+                  <circle cx={px} cy={py} r={m.kind === "pick" ? 7 : 5} />
+                  {m.label ? <text x={px + 9} y={py + 4} className="tac-label">{m.label}</text> : null}
+                </g>
+              );
+            })}
+          </g>
+        ) : null}
       </svg>
       <canvas ref={canvas} className="tac-canvas" style={{ width: size.w, height: size.h }} aria-hidden="true" />
       <svg width={size.w} height={size.h} className="tac-top" aria-hidden="true">
@@ -645,7 +683,7 @@ export function TacMap({
         <span style={{ width: `${bar * view.scale}px` }} />
         {distance(bar)}
       </div>
-      <div className="tac-hint meta">{manual ? "Double-click to refit" : focusPos ? "Following" : "Scroll to zoom · drag to pan"}</div>
+      <div className="tac-hint meta">{onPick ? "Click the map to place the point" : manual ? "Double-click to refit" : focusPos ? "Following" : "Scroll to zoom · drag to pan"}</div>
     </div>
   );
 }

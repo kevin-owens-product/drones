@@ -1,0 +1,56 @@
+# A simulated swarm for Drone Mission Cloud: several PX4 quads flying in SIH (PX4's
+# built-in simulator: the real flight stack, no Gazebo, no GPU) and the bridge the
+# console talks to. Nothing here is needed by the hosted demo.
+#
+#   make swarm-up          start 4 vehicles and the bridge on http://localhost:8765
+#   SWARM_COUNT=6 make swarm-up
+#   make swarm-down
+#
+# See docs/design/live-sim.md.
+name: a2e-swarm
+
+x-bounded-logs: &bounded-logs
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  px4:
+    logging: *bounded-logs
+    image: px4io/px4-sitl-gazebo:v1.18.0-rc1@sha256:aa4bbf35f0bd6bdb3269cc96e317c8e78b87f1fc769c734c0818094074e1cc0a
+    entrypoint: ["sh", "/swarm/px4-swarm.sh"]
+    environment:
+      SWARM_COUNT: "${SWARM_COUNT:-4}"
+      SWARM_GCS_HOST: 172.28.57.10
+      # The pad, by default at the demo range's station so the console's terrain lines up.
+      SWARM_HOME_LAT: "${SWARM_HOME_LAT:-35.738748}"
+      SWARM_HOME_LON: "${SWARM_HOME_LON:--120.739944}"
+    volumes:
+      - ./deploy/swarm:/swarm:ro
+    # Flight logs (ulog) stay in memory and end with the container.
+    tmpfs:
+      - /root/.local/share/px4:size=512m
+      - /opt/px4-gazebo/log:size=512m
+    working_dir: /opt/px4-gazebo
+    networks:
+      swarm:
+        ipv4_address: 172.28.57.20
+
+  bridge:
+    logging: *bounded-logs
+    build: ./sim/swarm
+    environment:
+      SWARM_COUNT: "${SWARM_COUNT:-4}"
+    # Only this machine can reach the bridge.
+    ports:
+      - "127.0.0.1:8765:8765"
+    networks:
+      swarm:
+        ipv4_address: 172.28.57.10
+
+networks:
+  swarm:
+    ipam:
+      config:
+        - subnet: 172.28.57.0/24
