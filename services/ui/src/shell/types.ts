@@ -32,7 +32,8 @@ export type Section =
   | "access"
   | "audit"
   | "respond"
-  | "records";
+  | "records"
+  | "crew";
 
 export type Viewer = {
   id: string;

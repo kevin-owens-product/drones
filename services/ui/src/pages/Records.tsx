@@ -13,8 +13,18 @@ interface Rec {
   versions: { v: number; at: string; by: string; why: string; hash: string }[];
 }
 interface Declined { call: string; incident: string; kind: string; place: string; received_at: string; by: string; by_role: string; reason: string; note: string }
+interface ShiftLog {
+  id: string; date: string; rpic: string; status: "open" | "signed"; staffed_h: number; scheduled_h: number; flights: number;
+  declined: { reason: string; note: string }[]; gaps: string[]; discrepancies: string[]; records_unfiled: number; signed_by?: string; signed_at?: string; hash?: string;
+}
+interface Mishap {
+  id: string; tail: string; kind: string; text: string; by: string; verbal_at: string; due_at: string; hours_left: number; late: boolean; status: "verbal" | "written";
+  faa_reportable: boolean | null; faa_due: string | null; written: { at: string; by: string; text: string; injury: boolean; damage_usd: number; hash?: string } | null;
+}
 interface Records {
   source: string;
+  shift_logs: ShiftLog[];
+  mishaps: Mishap[];
   items: Rec[];
   declined: Declined[];
   chain: { rows: number; intact: boolean; head: string | null };
@@ -76,6 +86,36 @@ export function RecordsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
         </section>
         {sel ? <RecordForm key={`${sel.id}-${sel.versions.length}`} r={sel} pilot={pilot} busy={page.busy} post={(e, a, args) => { setOpen(sel.id); return page.post(e, a, args); }} /> : null}
       </div>
+
+      <section className="panel" aria-labelledby="rc-mishaps">
+        <div className="panel-head"><h2 id="rc-mishaps">Mishaps and incidents</h2><span className="meta">Verbal to the supervisor at once; written within 24 hours</span></div>
+        <ul className="rs-calls" data-testid="mishaps">
+          {d.mishaps.length === 0 ? <li className="meta">No mishaps on file.</li> : null}
+          {d.mishaps.map((m) => <MishapCard key={m.id + m.status} m={m} pilot={pilot} busy={page.busy} post={page.post} />)}
+        </ul>
+      </section>
+
+      <section className="panel" aria-labelledby="rc-shifts">
+        <div className="panel-head"><h2 id="rc-shifts">Shift logs</h2><span className="meta">Built from each shift's records, signed by the pilot going off console</span></div>
+        <div className="table-wrap" tabIndex={0}>
+          <table data-testid="shift-logs">
+            <thead><tr><th>Shift</th><th>Pilot</th><th>Staffed</th><th>Flights</th><th>Not flown</th><th>Gaps and discrepancies</th><th>Signed</th></tr></thead>
+            <tbody>
+              {d.shift_logs.map((l) => (
+                <tr key={l.id + l.status}>
+                  <td className="mono">{l.id}</td>
+                  <td>{l.rpic}</td>
+                  <td className="mono">{l.staffed_h} of {l.scheduled_h} h</td>
+                  <td className="mono">{l.flights}</td>
+                  <td>{l.declined.length ? l.declined.map((x) => `${x.reason}: ${x.note}`).join("; ") : "None"}</td>
+                  <td>{[...l.gaps, ...l.discrepancies].join(" ") || "None"}{l.records_unfiled ? <span className="th-check is-warn"> {l.records_unfiled} records unfiled</span> : null}</td>
+                  <td>{l.status === "open" ? <span className="th-check is-warn">Open: <a href="#respond">sign on Respond</a></span> : <span className="meta">{l.signed_by}, sha256 {l.hash?.slice(0, 10)}…</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <section className="panel" aria-labelledby="rc-declined">
         <div className="panel-head"><h2 id="rc-declined">Requests not flown, and why</h2></div>
@@ -159,5 +199,36 @@ function RecordForm({ r, pilot, busy, post }: { r: Rec; pilot: boolean; busy: bo
         </ol>
       ) : null}
     </section>
+  );
+}
+
+function MishapCard({ m, pilot, busy, post }: { m: Mishap; pilot: boolean; busy: boolean; post: (endpoint: string, action: string, args: Record<string, unknown>) => Promise<boolean> }) {
+  const [text, setText] = useState(`${m.text} `);
+  const [injury, setInjury] = useState(false);
+  const [damage, setDamage] = useState("0");
+  return (
+    <li className={`rs-call ${m.status === "verbal" ? (m.late ? "p1" : "p2") : ""}`} data-mishap={m.id}>
+      <div className="rs-call-head">
+        <strong>{m.id}: {m.kind}</strong>
+        <span className="mono">{m.tail}</span>
+        <span className="meta">Reported by radio {t(m.verbal_at)} by {m.by}</span>
+        {m.status === "verbal" ? <span className={`th-check ${m.late ? "is-fail" : "is-warn"}`}>{m.late ? "Written report overdue" : `Written report due in ${Math.max(0, Math.round(m.hours_left))} h`}</span> : <span className="th-check is-ok">Written {t(m.written?.at ?? null)}</span>}
+      </div>
+      {m.status === "written" && m.written ? (
+        <>
+          <p className="rs-call-text">{m.written.text}</p>
+          <p className="meta">{m.written.injury ? "Injury reported. " : "No injury. "}Other property damage ${m.written.damage_usd}. {m.faa_reportable ? <strong>Report to the FAA by {m.faa_due?.slice(0, 10)} (14 CFR 107.9).</strong> : "Not reportable to the FAA."} <span className="mono">sha256 {m.written.hash?.slice(0, 10)}…</span></p>
+        </>
+      ) : pilot ? (
+        <div className="rs-mishap-form">
+          <label className="rs-label">What happened, the damage, and what was done<textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} /></label>
+          <div className="rs-actions">
+            <label className="meta"><input type="checkbox" checked={injury} onChange={(e) => setInjury(e.target.checked)} /> Someone was injured</label>
+            <label className="meta">Damage to other property, $ <input type="number" min="0" value={damage} onChange={(e) => setDamage(e.target.value)} className="rs-num" /></label>
+            <button type="button" className="btn btn-primary" disabled={busy || text.trim().length < 20} onClick={() => void post("/v1/dfr/act", "mishap.file", { id: m.id, text, injury, damage_usd: Number(damage) })}>File the written report</button>
+          </div>
+        </div>
+      ) : <p className="meta">{m.text} The pilot files the written report.</p>}
+    </li>
   );
 }

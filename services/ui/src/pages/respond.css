@@ -67,3 +67,12 @@
 .rs-versions { margin-top: 12px; font-size: 13px; }
 tr.is-selected td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .rs-mtarget { fill: none; stroke: var(--danger); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.rs-start { margin-top: 12px; }
+.rs-check-group h3 { font-size: 12px; color: var(--muted); font-weight: 500; margin: 10px 0 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+.rs-check-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 0 16px; }
+.rs-disc { margin: 8px 0 0; padding-left: 18px; font-size: 13px; display: grid; gap: 4px; }
+.rs-grow { flex: 1 1 260px; min-width: 0; }
+.rs-log { margin-top: 10px; padding: 12px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--surface-2); font-size: 13px; }
+.rs-struct rect { fill: rgba(244, 180, 67, 0.12); stroke: var(--warn); stroke-dasharray: 2 2; }
+.rs-struct text { font-size: 10px; fill: var(--muted); }
+.rs-num { width: 90px; }

@@ -49,6 +49,7 @@ export const CUSTOMER_NAV: readonly NavItem[] = [
 export const RESPONDER_NAV: readonly NavItem[] = [
   item("respond", "Respond", "Fly"),
   item("records", "Flight records", "Fly"),
+  item("crew", "Pilots and roster", "Crew", ["lead"]),
 ];
 
 /** Neros runs its own operations: the work queue first, then delivering, making, selling and learning. */

@@ -94,6 +94,7 @@ What it does not claim: the demo has one scripted fleet and sortie, which each c
 |---|---|---|---|---|---|---|---|---|---|
 | `/v1/dfr` | 200 | 200 | 200 | 403 | 403 | 403 | 200 | 200 | 403 |
 | `/v1/dfr/records` | 200 · 2 | 200 · 2 | 200 · 2 | 403 | 403 | 403 | 200 · 2 | 200 · 2 | 403 |
+| `/v1/dfr/crew` | 200 | 200 | 200 | 403 | 403 | 403 | 200 | 200 | 403 |
 
 ### Shared
 
@@ -129,4 +130,5 @@ Each probe runs on a fresh scenario. 403 is a role or tenant refusal recorded in
 | Act on the work queue (Neros) `POST /v1/ops/act` | 200 | 200 | 200 | 403 | 403 | 403 | 403 | 403 | 403 |
 | Approve a launch (Respond) `POST /v1/dfr/act` | 200 | 200 | 403 | 403 | 403 | 403 | 200 | 403 | 403 |
 | End a flight for safety (Respond) `POST /v1/dfr/act` | 409 | 409 | 403 | 403 | 403 | 403 | 403 | 409 | 403 |
+| Sign a pilot off for solo (Crew) `POST /v1/dfr/act` | 200 | 200 | 403 | 403 | 403 | 403 | 200 | 403 | 403 |
 | Inbound command from an external system `POST /v1/interop/inbound` | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 | 403 |

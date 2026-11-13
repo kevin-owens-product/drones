@@ -17,6 +17,8 @@
 // Pure JavaScript, no Node imports: runs behind demo/server.mjs and in the page.
 
 import { createLedger, can, RESPONDER_ORGS, verifyChain } from "./ledger.mjs";
+import { TODAY } from "./company.mjs";
+import { createCrew } from "./dfrcrew.mjs";
 
 /** The public safety program in the demo, and the contractor that staffs its console. */
 export const PROGRAM = { id: "CUS-D", name: "Customer D: Harbor police DFR program (SIM)", mode: "public_safety" };
@@ -53,7 +55,23 @@ export const MAP = {
     { id: "berth-55", label: "Berth 55 pier", x: 800, y: 2500 },
     { id: "cruise-term", label: "Cruise terminal", x: 1900, y: 3700 },
   ],
+  // Tall things the transit has to clear: the console checks each route against them (heights AGL, SIM).
+  structures: [
+    { id: "crane-b", label: "Crane row B", x0: 2150, y0: 2400, x1: 2250, y1: 3300, height_m: 75 },
+    { id: "stacks", label: "Container stacks", x0: 3800, y0: 900, x1: 4300, y1: 1300, height_m: 25 },
+    { id: "bridge", label: "Bridge towers", x0: 2900, y0: 1500, x1: 3000, y1: 2400, height_m: 110 },
+  ],
 };
+/** Transit height and the clearance kept over any structure on the route. */
+const TRANSIT_M = 60;
+const CLEAR_M = 15;
+/** Airspace and harbor activity the shift starts against (SIM). */
+const AIRSPACE = [
+  { level: "caution", text: "TFR over the cruise terminal, surface to 3,000 ft, until 12:00 local (dignitary arrival). Calls there are declined until it lifts." },
+  { level: "ok", text: "NOTAM: crane at Berth 90 raised to 95 m AGL until 20 Nov. Not on a dock route." },
+  { level: "ok", text: "Bridge lift 14:00 to 14:20 local; vessel traffic in the main channel. No effect on transit heights." },
+];
+const CHANNELS = "Harbor 1 (dispatch), Air 2 (air operations)";
 
 const DOCKS = [
   { id: "D1", name: "Dock 1: West basin", x: 1300, y: 2700, tail: "DFR-01" },
@@ -86,6 +104,11 @@ export const DECLINE_REASONS = ["weather", "airspace", "aircraft", "battery", "o
 const r1 = (v) => Math.round(v * 10) / 10;
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const iso = (ms) => new Date(ms).toISOString();
+function addDays(isoDate, n) {
+  const d = new Date(`${isoDate}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
 
 /**
  * @param {object} [o]
@@ -96,7 +119,10 @@ export function createResponder(o = {}) {
   const opened = o.now ?? Date.now();
   const audit = o.audit ?? createLedger();
   // The shift opened three hours ago and runs twelve: one pilot on console, one supervisor approving.
-  const shift = { id: "SH-1", start: opened - 3 * 3600_000, end: opened + 9 * 3600_000, rpic: "P-02", supervisor: SUPERVISOR };
+  const crew = createCrew({ today: TODAY });
+  const shift = { id: `SH-${TODAY}`, date: TODAY, start: opened - 3 * 3600_000, end: opened + 9 * 3600_000, rpic: "P-02", supervisor: SUPERVISOR, started_at: null, checklist: [], docks_at_start: [], discrepancies: [] };
+  const shiftLogs = [];
+  const mishaps = [];
   const docks = DOCKS.map((d, i) => ({ ...d, power: "on", comms: "ok", door: "closed", charge: [96, 100, 48, 91][i], cycles: [212, 188, 240, 97][i] }));
   const calls = [];
   const flights = [];
@@ -227,8 +253,26 @@ export function createResponder(o = {}) {
     add(WEATHER.wind_mps <= LIMITS.wind_mps && WEATHER.gust_mps <= LIMITS.gust_mps ? "go" : "no-go", `Wind ${WEATHER.wind_mps} m/s gusting ${WEATHER.gust_mps}, limits ${LIMITS.wind_mps} and ${LIMITS.gust_mps}. Visibility ${WEATHER.visibility_km} km, ceiling ${WEATHER.ceiling_ft} ft.`);
     if (c.place === "Cruise terminal") add("no-go", "TFR active over the cruise terminal until 12:00 local.");
     else add("go", "No NOTAM or TFR on the route; inside the COA operating area.");
+    for (const x of crossings(d, c)) {
+      const need = x.height_m + CLEAR_M;
+      if (need > TRANSIT_M) add("caution", `Route crosses ${x.label} (${x.height_m} m): the transit climbs to ${need} m over it, ${CLEAR_M} m clear.`);
+      else add("go", `Route crosses ${x.label} (${x.height_m} m); the ${TRANSIT_M} m transit clears it by ${TRANSIT_M - x.height_m} m.`);
+    }
     add("go", "Control and video link margin good on the route (SIM).");
     return { go: !checks.some((x) => x.level === "no-go"), checks };
+  }
+
+  /** Structures the straight route from a dock to a call passes over, sampled every 20 m. */
+  function crossings(a, b) {
+    const n = Math.max(1, Math.ceil(dist(a, b) / 20));
+    return MAP.structures.filter((x) => {
+      for (let i = 0; i <= n; i += 1) {
+        const px = a.x + ((b.x - a.x) * i) / n;
+        const py = a.y + ((b.y - a.y) * i) / n;
+        if (px >= x.x0 && px <= x.x1 && py >= x.y0 && py <= x.y1) return true;
+      }
+      return false;
+    });
   }
 
   /** The nearest dock that passes its checks, by flight time. */
@@ -279,6 +323,96 @@ export function createResponder(o = {}) {
   }
 
   seed();
+  seedShifts();
+
+  // ---- Shifts: the start-of-shift checklist, discrepancies, and the signed shift log ----
+
+  /** Everything the pilot verifies before taking calls: docks, console, weather, airspace, the supervisor and channels. */
+  function checklist(now = Date.now()) {
+    const items = [];
+    const add = (group, level, text) => items.push({ group, level, text });
+    for (const d of docks) {
+      const charge = chargeOf(d, now);
+      if (d.power !== "on" || d.comms !== "ok") add("Docks and aircraft", "fail", `${d.name}: ${d.power !== "on" ? "no power" : "not communicating"}.`);
+      else if (charge < 60) add("Docks and aircraft", "caution", `${d.name}: powered and communicating, door clear; ${d.tail} at ${charge}%, not launchable until 60%.`);
+      else add("Docks and aircraft", "ok", `${d.name}: powered, communicating, door clear; ${d.tail} at ${charge}%, no visible damage.`);
+    }
+    add("Console", "ok", "Ground control station, video link, data link, recording and radio all reporting.");
+    const wx = WEATHER.wind_mps <= LIMITS.wind_mps && WEATHER.gust_mps <= LIMITS.gust_mps && WEATHER.visibility_km >= LIMITS.visibility_km && WEATHER.ceiling_ft >= LIMITS.ceiling_ft;
+    add("Weather", wx ? "ok" : "fail", `Wind ${WEATHER.wind_mps} m/s gusting ${WEATHER.gust_mps} (limits ${LIMITS.wind_mps} and ${LIMITS.gust_mps}); visibility ${WEATHER.visibility_km} km (${LIMITS.visibility_km}); ceiling ${WEATHER.ceiling_ft} ft (${LIMITS.ceiling_ft}); no precipitation. Forecast: gusts building to 13 m/s over the water after 15:00 local.`);
+    for (const a of AIRSPACE) add("Airspace and harbor", a.level, a.text);
+    add("Supervisor and radio", "ok", `${shift.supervisor} on duty and approving. Channels: ${CHANNELS}.`);
+    return items;
+  }
+
+  function seedShifts() {
+    // The current shift was started at 07:04 local equivalent: four minutes after the hour, with Dock 3's slow charge reported.
+    shift.started_at = shift.start + 4 * 60_000;
+    shift.checklist = checklist(shift.start).map((x) => ({ ...x }));
+    shift.docks_at_start = docks.map((d) => ({ id: d.id, tail: d.tail, charge: d.charge }));
+    shift.discrepancies.push({ at: iso(shift.start + 3 * 60_000), by: pilotName(shift.rpic), text: "Dock 3 charger slow: DFR-03 at 41% after two hours. Reported to the supervisor; Dock 3 is not used until it reaches 60%.", reported_to: SUPERVISOR });
+    // The past week's signed logs.
+    const week = [
+      { rpic: "P-03", flights: 3, declined: [{ reason: "weather", note: "Fog under 1,000 ft over the outer harbor" }], gap_min: 0, discrepancies: [] },
+      { rpic: "P-02", flights: 5, declined: [], gap_min: 0, discrepancies: ["Dock 2 door slow to close (11 s); cleared after a cycle"] },
+      { rpic: "P-01", flights: 2, declined: [], gap_min: 30, gap: "07:00 to 07:30: relief pilot late. Reported to the program manager at 06:52.", discrepancies: [] },
+      { rpic: "P-03", flights: 4, declined: [{ reason: "airspace", note: "Medical helicopter landing at the pier heliport" }, { reason: "battery", note: "Nearest aircraft at 52% after the previous call" }], gap_min: 0, discrepancies: [] },
+      { rpic: "P-02", flights: 6, declined: [{ reason: "aircraft", note: "DFR-04 gimbal fault on pre-flight" }], gap_min: 0, discrepancies: ["DFR-04 gimbal fault: grounded, manufacturer ticket opened"] },
+      { rpic: "P-03", flights: 3, declined: [], gap_min: 0, discrepancies: [] },
+    ];
+    week.forEach((w, i) => {
+      const date = addDays(TODAY, -(i + 1));
+      const staffed = 12 - w.gap_min / 60;
+      const log = { id: `SH-${date}`, date, rpic: pilotName(w.rpic), supervisor: SUPERVISOR, scheduled_h: 12, staffed_h: staffed, flights: w.flights, flight_ids: [], declined: w.declined, gaps: w.gap ? [w.gap] : [], discrepancies: w.discrepancies, aircraft_start: "All four docks ready", aircraft_end: "All four docks ready", records_unfiled: 0, signed_by: pilotName(w.rpic), signed_at: `${date}T19:0${i}:00.000Z` };
+      const row = evidence.append({ actor: log.signed_by, action: "shift.sign", resource_type: "shift_log", resource_id: log.id, detail: JSON.stringify(log), at: Date.parse(log.signed_at) });
+      shiftLogs.push({ ...log, hash: row.row_hash });
+    });
+    // A mishap from yesterday evening: a hard landing on Dock 3, reported by radio, the written report still due.
+    mishaps.push({ id: "MS-7", tail: "DFR-03", dock: "D3", flight: null, kind: "Hard landing", verbal_at: opened - 20 * 3600_000, reported_to: SUPERVISOR, by: pilotName("P-03"), text: "Gust on final into Dock 3; aircraft touched the dock lip and one propeller chipped. Landed and secured.", written: null });
+  }
+
+  /** The shift log as it stands: built from the shift's own records, so the pilot reviews and signs rather than types it. */
+  function shiftDraft(now = Date.now()) {
+    const inShift = (ms) => ms >= shift.start && ms <= now;
+    const mine = flights.filter((f) => inShift(f.launched_at));
+    const notFlown = calls.filter((c) => (c.status === "declined" || c.status === "cancelled") && inShift(c.received_at));
+    const unfiled = records.filter((r) => r.status !== "filed" && mine.some((f) => f.id === r.flight));
+    const gapMin = shift.started_at ? Math.max(0, Math.round((shift.started_at - shift.start) / 60_000) - 5) : null;
+    const staffedTo = Math.min(now, shift.end);
+    return {
+      id: shift.id,
+      date: shift.date,
+      rpic: pilotName(shift.rpic),
+      supervisor: shift.supervisor,
+      start: iso(shift.start),
+      end: iso(shift.end),
+      started_at: shift.started_at ? iso(shift.started_at) : null,
+      scheduled_h: 12,
+      staffed_h: shift.started_at ? r1((staffedTo - shift.started_at) / 3600_000) : 0,
+      flights: mine.length,
+      flight_ids: mine.map((f) => f.id),
+      declined: notFlown.map((c) => ({ call: c.id, reason: (c.declined ?? c.cancelled).reason, note: (c.declined ?? c.cancelled).note, by: c.status === "declined" ? "RPIC" : "Supervisor" })),
+      gaps: gapMin ? [`Console unstaffed ${gapMin} min at the start of the shift.`] : [],
+      discrepancies: shift.discrepancies.map((x) => x.text),
+      aircraft_start: shift.docks_at_start.map((d) => `${d.tail} ${d.charge}%`).join(", "),
+      aircraft_end: docks.map((d) => `${d.tail} ${chargeOf(d, now)}%`).join(", "),
+      records_unfiled: unfiled.length,
+    };
+  }
+
+  function nextShift(now) {
+    const date = addDays(shift.date, 1);
+    const day = crew.onDuty(date);
+    Object.assign(shift, { id: `SH-${date}`, date, start: now, end: now + 12 * 3600_000, rpic: day?.pilot ?? null, supervisor: SUPERVISOR, started_at: null, checklist: [], docks_at_start: [], discrepancies: [] });
+  }
+
+  // ---- Mishaps: verbal at once, written within 24 hours, and whether the FAA must hear of it ----
+  const MISHAP_HOURS = 24;
+  function mishapView(m, now = Date.now()) {
+    const due = m.verbal_at + MISHAP_HOURS * 3600_000;
+    const faa = m.written ? m.written.injury || m.written.damage_usd > 500 : null;
+    return { ...m, verbal_at: iso(m.verbal_at), due_at: iso(due), hours_left: r1((due - now) / 3600_000), late: !m.written && now > due, status: m.written ? "written" : "verbal", faa_reportable: faa, faa_due: faa ? iso(m.verbal_at + 10 * 86_400_000) : null };
+  }
 
   // ---- Views ----
   const roleOf = (who) => {
@@ -320,10 +454,14 @@ export function createResponder(o = {}) {
       source: "Simulated program (SIM): schematic harbor, made-up docks, pilots, calls and weather. Nothing here commands an aircraft.",
       program: PROGRAM,
       role,
-      shift: { ...shift, start: iso(shift.start), end: iso(shift.end), rpic_name: pilotName(shift.rpic) },
+      shift: { id: shift.id, date: shift.date, start: iso(shift.start), end: iso(shift.end), rpic: shift.rpic, rpic_name: shift.rpic ? pilotName(shift.rpic) : "No pilot rostered", supervisor: shift.supervisor, started: Boolean(shift.started_at), started_at: shift.started_at ? iso(shift.started_at) : null, discrepancies: shift.discrepancies },
+      checklist: shift.started_at ? shift.checklist : checklist(now),
+      shift_log: shiftDraft(now),
+      mishaps_open: mishaps.filter((m) => !m.written).map((m) => mishapView(m, now)),
       limits: LIMITS,
       weather: WEATHER,
       map: MAP,
+      transit_m: TRANSIT_M,
       docks: docks.map((d) => {
         const out = flights.find((f) => f.dock === d.id && !f.scripted && flightView(f, now).phase !== "docked");
         const charge = chargeOf(d, now);
@@ -352,6 +490,8 @@ export function createResponder(o = {}) {
       items: list.sort((a, b) => (a.flight < b.flight ? 1 : -1)),
       declined: calls.filter((c) => c.status === "declined" || c.status === "cancelled").map((c) => ({ call: c.id, incident: c.incident, kind: c.kind, place: c.place, received_at: iso(c.received_at), ...(c.declined ?? c.cancelled), by_role: c.status === "declined" ? "RPIC" : "Supervisor" })),
       chain: { rows: chain.length, intact: broken === -1, broken_at: broken, head: chain.at(-1)?.row_hash ?? null },
+      shift_logs: [{ ...shiftDraft(now), status: "open" }, ...shiftLogs.map((l) => ({ ...l, status: "signed" }))],
+      mishaps: mishaps.map((m) => mishapView(m, now)),
       fields: ["Launch and recovery time", "Aircraft", "Launch location", "Incident location", "Duration", "Reason for flight", "Incident or call number", "Approving authority", "RPIC", "Weather and airspace", "Narrative", "Anomaly"],
     };
   }
@@ -377,6 +517,7 @@ export function createResponder(o = {}) {
       case "call.approve": {
         if (!role.supervisor) return deny("Every launch needs a supervisor's approval. The pilot does not self-initiate flights.");
         if (!call || call.status !== "waiting") return no(409, "That call is not waiting for approval.");
+        if (!shift.started_at) return no(409, "No pilot has started the shift checklist. Nothing launches until someone is on console.");
         const dockId = String(args.dock ?? "") || bestDock(call).pick?.d.id;
         const d = dockId ? dockOf(dockId) : null;
         if (!d) return no(409, "No dock passes its launch checks for this call.");
@@ -419,6 +560,7 @@ export function createResponder(o = {}) {
       case "call.launch": {
         if (!role.pilot) return deny("The RPIC launches, after the pre-flight checks.");
         if (!call || call.status !== "approved") return no(409, "Only an approved call can launch.");
+        if (!shift.started_at) return no(409, "Start the shift checklist before launching.");
         const d = dockOf(call.dock);
         const pre = preflight(d, call);
         if (!pre.go) return no(409, `Pre-flight checks fail: ${pre.checks.filter((x) => x.level === "no-go").map((x) => x.text).join(" ")} Decline it or pick another dock.`);
@@ -471,12 +613,84 @@ export function createResponder(o = {}) {
         audit.append({ actor, action: `dfr.${action.split(".")[1]}`, resource_type: "flight_record", resource_id: rec.id, detail: why || "filed", at: now });
         return ok(action === "record.file" ? `${rec.id} filed and sealed into the evidence chain.` : `${rec.id} corrected: version ${rec.versions.length} sits beside the original.`);
       }
+      case "shift.start": {
+        if (!role.pilot) return deny("The pilot coming on console runs the start-of-shift checks.");
+        if (shift.started_at) return no(409, "This shift has already started.");
+        if (!shift.rpic) return no(409, "No pilot is rostered for this shift. Fill the gap on Pilots and roster first.");
+        const items = checklist(now);
+        shift.started_at = now;
+        shift.checklist = items;
+        shift.docks_at_start = docks.map((d) => ({ id: d.id, tail: d.tail, charge: chargeOf(d, now) }));
+        // Anything not right at the start is reported to the supervisor and logged before it can affect a response.
+        for (const x of items.filter((i) => i.level !== "ok" && i.group === "Docks and aircraft")) shift.discrepancies.push({ at: iso(now), by: pilotName(shift.rpic), text: x.text, reported_to: shift.supervisor });
+        audit.append({ actor, action: "dfr.shift_start", resource_type: "shift", resource_id: shift.id, detail: `${items.filter((i) => i.level !== "ok").length} items to watch`, at: now });
+        return ok(`Shift started with ${items.length} checks. ${shift.discrepancies.length ? `${shift.discrepancies.length} discrepancy reported to ${shift.supervisor}.` : "Nothing to report."}`);
+      }
+      case "shift.discrepancy": {
+        if (!role.pilot) return deny("The pilot on console reports discrepancies.");
+        const text = String(args.text ?? "").trim();
+        if (text.length < 8) return no(400, "Say what is wrong and where.");
+        shift.discrepancies.push({ at: iso(now), by: pilotName(shift.rpic), text, reported_to: shift.supervisor });
+        audit.append({ actor, action: "dfr.discrepancy", resource_type: "shift", resource_id: shift.id, detail: text, at: now });
+        return ok(`Reported to ${shift.supervisor} and logged on ${shift.id}.`);
+      }
+      case "shift.end": {
+        if (!role.pilot) return deny("The pilot going off console signs the shift log.");
+        if (!shift.started_at) return no(409, "This shift has not started.");
+        if (flights.some((f) => !f.scripted && flightState(f, now).phase !== "docked")) return no(409, "An aircraft is still out. Recover it before signing off.");
+        const log = { ...shiftDraft(now), signed_by: role.preview ? `${actor} (as RPIC)` : who ? actor : pilotName(shift.rpic), signed_at: iso(now) };
+        const row = evidence.append({ actor: log.signed_by, action: "shift.sign", resource_type: "shift_log", resource_id: log.id, detail: JSON.stringify(log), at: now });
+        shiftLogs.unshift({ ...log, hash: row.row_hash });
+        audit.append({ actor, action: "dfr.shift_end", resource_type: "shift", resource_id: log.id, detail: `${log.flights} flights, ${log.declined.length} not flown, ${log.records_unfiled} records unfiled`, at: now });
+        nextShift(now);
+        return ok(`${log.id} signed and sealed: ${log.staffed_h} h staffed, ${log.flights} flights, ${log.declined.length} not flown${log.records_unfiled ? `, ${log.records_unfiled} records still to file` : ""}. Next on console: ${shift.rpic ? pilotName(shift.rpic) : "nobody rostered"}.`);
+      }
+      case "mishap.report": {
+        if (!role.pilot) return deny("The pilot reports a mishap to the supervisor.");
+        const text = String(args.text ?? "").trim();
+        const f = args.flight ? flights.find((x) => x.id === args.flight) : null;
+        if (text.length < 8) return no(400, "Say what happened.");
+        const m = { id: `MS-${8 + mishaps.length}`, tail: f?.tail ?? String(args.tail ?? ""), dock: f?.dock ?? null, flight: f?.id ?? null, kind: String(args.kind ?? "Incident"), verbal_at: now, reported_to: shift.supervisor, by: pilotName(shift.rpic), text, written: null };
+        mishaps.unshift(m);
+        audit.append({ actor, action: "dfr.mishap_verbal", resource_type: "mishap", resource_id: m.id, detail: text, at: now });
+        return ok(`${m.id} reported to ${shift.supervisor}. The written report is due within ${MISHAP_HOURS} hours.`);
+      }
+      case "mishap.file": {
+        if (!role.pilot) return deny("The pilot writes the mishap report.");
+        const m = mishaps.find((x) => x.id === args.id);
+        if (!m) return no(404, "No such mishap.");
+        if (m.written) return no(409, "Already written. A correction is filed as an addendum.");
+        const text = String(args.text ?? "").trim();
+        if (text.length < 20) return no(400, "Write what happened, the damage, and what was done.");
+        const damage = Math.max(0, Number(args.damage_usd) || 0);
+        m.written = { at: iso(now), by: role.preview ? `${actor} (as RPIC)` : who ? actor : pilotName(shift.rpic), text, injury: Boolean(args.injury), damage_usd: damage, aircraft_damage: String(args.aircraft_damage ?? "").trim() };
+        const row = evidence.append({ actor: m.written.by, action: "mishap.file", resource_type: "mishap", resource_id: m.id, detail: JSON.stringify(m.written), at: now });
+        m.written.hash = row.row_hash;
+        const late = now > m.verbal_at + MISHAP_HOURS * 3600_000;
+        const faa = m.written.injury || damage > 500;
+        audit.append({ actor, action: "dfr.mishap_written", resource_type: "mishap", resource_id: m.id, detail: faa ? "FAA reportable" : "not FAA reportable", at: now });
+        return ok(`${m.id} written${late ? " (late)" : ""} and sealed. ${faa ? "Serious injury or more than $500 of other property damage: report it to the FAA within 10 days (14 CFR 107.9)." : "Not reportable to the FAA: no serious injury, other property damage under $500."}`);
+      }
+      case "roster.assign": {
+        if (!role.supervisor) return deny("The program manager sets the roster.");
+        const out = crew.assign(String(args.date ?? ""), args.pilot ? String(args.pilot) : null, args.supervised_by ? String(args.supervised_by) : null);
+        if (!out.ok) return no(409, out.why);
+        audit.append({ actor, action: "dfr.roster", resource_type: "roster", resource_id: String(args.date ?? ""), detail: out.message, at: now });
+        return ok(out.message);
+      }
+      case "crew.certify": {
+        if (!role.supervisor) return deny("The program manager signs a pilot off for solo shifts.");
+        const out = crew.certify(String(args.pilot ?? ""), role.preview ? `${actor} (as program manager)` : who ? actor : SUPERVISOR);
+        if (!out.ok) return no(409, out.why);
+        audit.append({ actor, action: "dfr.certify", resource_type: "pilot", resource_id: String(args.pilot), detail: out.message, at: now });
+        return ok(out.message);
+      }
       default:
         return no(400, `unknown action ${action}`);
     }
   }
 
-  const ROUTES = ["/v1/dfr", "/v1/dfr/act", "/v1/dfr/records"];
+  const ROUTES = ["/v1/dfr", "/v1/dfr/act", "/v1/dfr/records", "/v1/dfr/crew"];
   const owns = (path) => ROUTES.includes(path);
 
   /** Whose program this is: the program's own people, Neros previewing it, or the local demo with no sign-in. */
@@ -497,8 +711,9 @@ export function createResponder(o = {}) {
     }
     if (url.pathname === "/v1/dfr") return { status: 200, body: console_(who) };
     if (url.pathname === "/v1/dfr/records") return { status: 200, body: recordsView() };
+    if (url.pathname === "/v1/dfr/crew") return { status: 200, body: { source: "Simulated program (SIM): made-up pilots, certificate numbers and dates.", today: TODAY, on_console: shift.rpic, ...crew.view() } };
     return no(404, "unknown");
   }
 
-  return { owns, handle, act, view: console_, records: recordsView, flightState, evidence, shift, calls, flights };
+  return { owns, handle, act, view: console_, records: recordsView, flightState, evidence, shift, calls, flights, crew, mishaps };
 }
