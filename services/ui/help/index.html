@@ -358,7 +358,7 @@
           <article class="article" id="responder" data-tags="first responder dfr public safety police dock docked call dispatch supervisor pilot rpic veto decline terminate flight record evidence">
             <div class="meta"><span class="tag">Public safety</span></div>
             <h2>First responder program</h2>
-            <p>Customer D is a harbor police program that flies docked aircraft as first responders. It runs on the same platform as the defense customers, in its own operating mode: its own menu (Respond, Flight records), its own words (flight, supervisor, call) and its own records policy (the pilot's name is on every record). Everything in it is simulated: the harbor is a schematic and the docks, pilots, calls and weather are made up.</p>
+            <p>Customer D is a harbor police program that flies docked aircraft as first responders. It runs on the same platform as the defense customers, in its own operating mode: its own menu (Respond, Flight records, Pilots and roster), its own words (flight, supervisor, call) and its own records policy (the pilot's name is on every record). Everything in it is simulated: the harbor is a schematic and the docks, pilots, calls and weather are made up.</p>
             <h3>A call to a launch</h3>
             <ol class="steps">
               <li><b>Dispatch sends a call.</b> It lands in <b>Calls waiting</b> with its priority, incident number and how long it has waited. <b>Next call from dispatch</b> sends the next scripted call.</li>
@@ -369,6 +369,15 @@
             </ol>
             <h3>The flight record</h3>
             <p>Every flight gets a record due before the shift ends. Launch and recovery times, aircraft, dock, incident location and number, reason, approver, pilot, weather and airspace come from the flight; the pilot writes the narrative and any anomaly. A filed record is never edited. A correction is a new version with a reason, kept beside the original, and every version is hashed onto the one before it, so a changed record breaks the chain. Requests not flown are listed with who decided and why.</p>
+            <h3>The shift</h3>
+            <ol class="steps">
+              <li><b>Start-of-shift checks.</b> Before the first launch the pilot runs the checks on Respond: each dock and aircraft, weather against the waiver limits, NOTAMs and TFRs, the supervisor and radio. A dock problem is reported to the supervisor and logged when the shift starts. Nothing is approved or launched until a pilot has started the shift.</li>
+              <li><b>Tall structures.</b> The map shows the crane rows, container stacks and bridge towers. When a route crosses one, the pre-flight says how high the transit climbs to clear it.</li>
+              <li><b>Mishaps.</b> The pilot reports a mishap to the supervisor at once and writes it up within 24 hours; the console counts down. The written report says whether it goes to the FAA: a serious injury or more than $500 of damage to other property, within 10 days.</li>
+              <li><b>The shift log.</b> At the end of the shift the pilot reads a log built from the shift's own records (hours staffed, flights, requests not flown, gaps, discrepancies, records still to file) and signs it. The signed log is sealed into the same evidence chain as the flight records, and the console passes to the next rostered pilot.</li>
+            </ol>
+            <h3>Pilots and roster</h3>
+            <p>The program manager (the supervisor seat) keeps one pilot on console twelve hours a day for the next 14 days. Each pilot's file shows their certificate, recurrent training, hours, background, TWIC and CJIS, and supervised time, with what falls due within 30 days. A pilot with a lapsed item can't be rostered. A pilot who isn't yet signed off works only with a supervising pilot, and the program manager signs them off for solo shifts once they have three supervised shifts and ten supervised flights. Empty days and problem days are flagged, with the hours they cost.</p>
             <div class="callout">Sign in as <code>supervisor</code> and as <code>pilot</code> to see each seat on its own. The admin's workspace menu opens the program as Neros, holding both seats so the walk works from one login. The access matrix holds each real login to its own seat.</div>
           </article>
 

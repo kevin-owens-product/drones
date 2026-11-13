@@ -37,6 +37,7 @@ const PlansPage = lazy(() => import("./pages/Plans").then((m) => ({ default: m.P
 const ReleasabilityPage = lazy(() => import("./pages/Releasability").then((m) => ({ default: m.ReleasabilityPage })));
 const MixedFleetPage = lazy(() => import("./pages/MixedFleet").then((m) => ({ default: m.MixedFleetPage })));
 const RespondPage = lazy(() => import("./pages/Respond").then((m) => ({ default: m.RespondPage })));
+const CrewPage = lazy(() => import("./pages/Crew").then((m) => ({ default: m.CrewPage })));
 const RecordsPage = lazy(() => import("./pages/Records").then((m) => ({ default: m.RecordsPage })));
 const ConfigurationPage = lazy(() => import("./pages/Configuration").then((m) => ({ default: m.ConfigurationPage })));
 
@@ -79,6 +80,7 @@ const SECTIONS: readonly Section[] = [
   "audit",
   "respond",
   "records",
+  "crew",
 ];
 
 // Pages folded into others in the Admin clean-up; old links land on the page that replaced them.
@@ -284,6 +286,7 @@ export function App() {
       {section === "config" ? <ConfigurationPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "access" ? <AccessPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "respond" ? <RespondPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "crew" ? <CrewPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "records" ? <RecordsPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "audit" ? <AuditPage viewer={viewer} onBanner={setBanner} /> : null}
       </Suspense>

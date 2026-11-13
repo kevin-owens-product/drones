@@ -24,7 +24,7 @@ export const READS = [
   ["Supply", ["/v1/thread/receiving", "/v1/thread/accountability", "/v1/ops/portal", "/v1/quote", "/v1/plans"]],
   ["Learn", ["/v1/attrition", "/v1/field-reports", "/v1/eval/runs"]],
   ["Neros only", ["/v1/ops/queue", "/v1/company", "/v1/program", "/v1/thread/quality", "/v1/thread/compliance", "/v1/config/quality", "/v1/surge", "/v1/bid", "/v1/cases"]],
-  ["Responder program", ["/v1/dfr", "/v1/dfr/records"]],
+  ["Responder program", ["/v1/dfr", "/v1/dfr/records", "/v1/dfr/crew"]],
   ["Shared", ["/v1/release", "/v1/interop", "/v1/interop/cot", "/v1/interop/entities"]],
   ["Settings", ["/v1/audit"]],
   ["Unknown", ["/v1/no-such-route"]],
@@ -39,6 +39,7 @@ export const WRITES = [
   { label: "Act on the work queue (Neros)", method: "POST", path: "/v1/ops/act", body: { action: "po.expedite", args: { id: "PO-41207" } } },
   { label: "Approve a launch (Respond)", method: "POST", path: "/v1/dfr/act", body: { action: "call.approve", args: { id: "C-1004" } } },
   { label: "End a flight for safety (Respond)", method: "POST", path: "/v1/dfr/act", body: { action: "flight.terminate", args: { id: "F-43", reason: "probe" } } },
+  { label: "Sign a pilot off for solo (Crew)", method: "POST", path: "/v1/dfr/act", body: { action: "crew.certify", args: { pilot: "P-04" } } },
   { label: "Inbound command from an external system", method: "POST", path: "/v1/interop/inbound", body: { command: "goto" } },
 ];
 
@@ -111,6 +112,7 @@ export function check({ reads, writes }) {
   // Split launch authority: the pilot cannot approve a launch, and no supervisor can end (or keep up) a flight for the pilot.
   expectDeny("Approve a launch (Respond)", ["pilot", "commander", "allied"]);
   expectDeny("End a flight for safety (Respond)", ["supervisor", "commander", "maintainer"]);
+  expectDeny("Sign a pilot off for solo (Crew)", ["pilot", "commander", "allied"]);
   expectDeny("Inbound command from an external system", CALLERS.map((c) => c.key));
   return breaches;
 }

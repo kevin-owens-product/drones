@@ -98,3 +98,74 @@ test("another customer cannot read or act on the program", () => {
   assert.equal(r.handle("POST", new URL("http://x/v1/dfr/act"), JSON.stringify({ action: "feed.next" }), OTHER).status, 403);
   assert.equal(r.handle("GET", new URL("http://x/v1/dfr"), "", SUP).status, 200);
 });
+
+// ---- Phase 2: shift, roster, currency, mishaps, structures ----
+
+test("the water-rescue route from Dock 1 climbs over Crane row B, and says so in the pre-flight", () => {
+  const r = createResponder({ now: T0 });
+  const id = r.view(SUP, T0).queue[0].id;
+  r.act("call.approve", { id }, SUP, T0);
+  const pre = r.view(PILOT, T0).queue.find((c) => c.id === id).preflight;
+  const crane = pre.checks.find((x) => x.text.includes("Crane row B"));
+  assert.equal(crane.level, "caution");
+  assert.match(crane.text, /90 m/);
+  assert.equal(pre.go, true, "a caution does not stop the launch");
+});
+
+test("signing the shift log seals it on the evidence chain and hands the console to the next rostered pilot; nothing is approved until they start", () => {
+  const r = createResponder({ now: T0 });
+  assert.equal(r.act("shift.end", {}, SUP, T0).status, 403);
+  const end = r.act("shift.end", {}, PILOT, T0 + 60_000);
+  assert.equal(end.status, 200);
+  const logs = r.records().shift_logs;
+  assert.equal(logs[0].status, "open", "the next shift's log is open");
+  const signed = logs.find((l) => l.id === "SH-2026-11-03");
+  assert.equal(signed.status, "signed");
+  assert.ok(signed.hash);
+  assert.equal(verifyChain(r.evidence.items()), -1);
+  assert.equal(r.shift.rpic, "P-03", "Whitfield is rostered for the next day");
+  const id = r.view(SUP, T0 + 120_000).queue[0].id;
+  assert.equal(r.act("call.approve", { id }, SUP, T0 + 120_000).status, 409, "no pilot on console yet");
+  assert.equal(r.act("shift.start", {}, PILOT, T0 + 180_000).status, 200);
+  assert.equal(r.act("call.approve", { id }, SUP, T0 + 200_000).status, 200);
+});
+
+test("the roster refuses a pilot with an expired TWIC and a not-yet-solo pilot without a supervising pilot", () => {
+  const r = createResponder({ now: T0 });
+  const day = "2026-11-08";
+  assert.equal(r.act("roster.assign", { date: day, pilot: "P-02" }, PILOT, T0).status, 403, "only the program manager sets the roster");
+  const reyes = r.act("roster.assign", { date: day, pilot: "P-01" }, SUP, T0);
+  assert.equal(reyes.status, 409);
+  assert.match(reyes.body.detail, /TWIC/);
+  assert.equal(r.act("roster.assign", { date: day, pilot: "P-04" }, SUP, T0).status, 409);
+  assert.equal(r.act("roster.assign", { date: day, pilot: "P-04", supervised_by: "P-03" }, SUP, T0).status, 200);
+  const crew = r.crew.view();
+  assert.equal(crew.counts.coverage_gaps, 0, "the empty day is now filled");
+});
+
+test("the program manager signs a ready pilot off for solo shifts once, and that clears the unsupervised day", () => {
+  const r = createResponder({ now: T0 });
+  const before = r.crew.view().roster.find((d) => d.date === "2026-11-12");
+  assert.ok(before.flags.some((f) => /not cleared for solo/.test(f)));
+  assert.equal(r.act("crew.certify", { pilot: "P-04" }, PILOT, T0).status, 403);
+  assert.equal(r.act("crew.certify", { pilot: "P-01" }, SUP, T0).status, 409, "an expired TWIC blocks sign-off");
+  assert.equal(r.act("crew.certify", { pilot: "P-04" }, SUP, T0).status, 200);
+  assert.equal(r.act("crew.certify", { pilot: "P-04" }, SUP, T0).status, 409, "already signed off");
+  const after = r.crew.view().roster.find((d) => d.date === "2026-11-12");
+  assert.deepEqual(after.flags, []);
+});
+
+test("a mishap is verbal at once and written within 24 hours; injury or more than $500 of damage makes it FAA reportable", () => {
+  const r = createResponder({ now: T0 });
+  assert.equal(r.act("mishap.report", { tail: "DFR-02", text: "Prop strike on the dock lid" }, SUP, T0).status, 403);
+  const rep = r.act("mishap.report", { tail: "DFR-02", kind: "Prop strike", text: "Prop strike on the dock lid" }, PILOT, T0);
+  assert.equal(rep.status, 200);
+  const m = r.mishaps[0];
+  assert.equal(r.act("mishap.file", { id: m.id, text: "short" }, PILOT, T0).status, 400);
+  const minor = r.act("mishap.file", { id: m.id, text: "Propeller touched the dock lid on landing; one blade replaced.", damage_usd: 120 }, PILOT, T0 + 3600_000);
+  assert.equal(minor.status, 200);
+  assert.match(minor.body.message ?? JSON.stringify(minor.body), /Not reportable/);
+  const ms7 = r.act("mishap.file", { id: "MS-7", text: "Hard landing on Dock 3 lip; dock lid hinge bent, contractor quote $1,800.", damage_usd: 1800 }, PILOT, T0);
+  assert.match(ms7.body.message ?? JSON.stringify(ms7.body), /FAA within 10 days/);
+  assert.equal(r.records().mishaps.find((x) => x.id === "MS-7").faa_reportable, true);
+});

@@ -18,14 +18,24 @@ interface Flight {
   terminated: { by: string; reason: string } | null; observe_stopped: boolean; target: { x: number; y: number };
 }
 interface Dock { id: string; name: string; x: number; y: number; tail: string; charge: number; state: string; out_on: string | null; comms: string; power: string }
+interface ChecklistItem { group: string; level: "ok" | "caution" | "fail"; text: string }
+interface ShiftLog {
+  id: string; rpic: string; staffed_h: number; scheduled_h: number; flights: number; declined: { call: string; reason: string; note: string; by: string }[];
+  gaps: string[]; discrepancies: string[]; aircraft_start: string; aircraft_end: string; records_unfiled: number;
+}
+interface Mishap { id: string; tail: string; kind: string; hours_left: number; late: boolean }
 interface Console {
   source: string;
+  checklist: ChecklistItem[];
+  shift_log: ShiftLog;
+  mishaps_open: Mishap[];
+  transit_m: number;
   program: { name: string };
   role: { supervisor: boolean; pilot: boolean; preview: boolean };
-  shift: { start: string; end: string; rpic_name: string; supervisor: string };
+  shift: { id: string; date: string; start: string; end: string; rpic: string | null; rpic_name: string; supervisor: string; started: boolean; started_at: string | null; discrepancies: { at: string; text: string; reported_to: string }[] };
   limits: { wind_mps: number; gust_mps: number };
   weather: { wind_mps: number; gust_mps: number; visibility_km: number; ceiling_ft: number };
-  map: { width_m: number; height_m: number; water: number[][][]; places: { id: string; label: string; x: number; y: number }[] };
+  map: { width_m: number; height_m: number; water: number[][][]; places: { id: string; label: string; x: number; y: number }[]; structures: { id: string; label: string; x0: number; y0: number; x1: number; y1: number; height_m: number }[] };
   docks: Dock[];
   queue: Call[];
   flights: Flight[];
@@ -65,6 +75,12 @@ export function RespondPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
       </div>
       <p className="meta rs-seat">{seat}</p>
       <Note note={page.note} />
+      {d.mishaps_open.map((m) => (
+        <p key={m.id} className={`rs-alert ${m.late ? "is-no-go" : "is-caution"}`} role="status" data-testid="mishap-due">
+          {m.id}: {m.kind}, {m.tail}. Reported by radio; the written report is {m.late ? "overdue" : `due in ${Math.max(0, Math.round(m.hours_left))} h`}. <a href="#records">Write it on Flight records</a>
+        </p>
+      ))}
+      <ShiftPanel d={d} busy={page.busy} act={act} />
 
       <div className="rs-grid">
         <section className="panel" aria-labelledby="rs-queue">
@@ -135,6 +151,85 @@ export function RespondPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
 }
 
 type Act = (action: string, args: Record<string, unknown>) => Promise<boolean>;
+
+const LEVEL = { ok: "is-ok", caution: "is-warn", fail: "is-fail" } as const;
+
+/** Start of shift: the checks before the first call, discrepancies as they come, and the log the pilot signs going off. */
+function ShiftPanel({ d, busy, act }: { d: Console; busy: boolean; act: Act }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [ending, setEnding] = useState(false);
+  const watch = d.checklist.filter((x) => x.level !== "ok");
+  const groups = [...new Set(d.checklist.map((x) => x.group))];
+  const log = d.shift_log;
+  if (!d.shift.started) {
+    return (
+      <section className="panel rs-start" aria-labelledby="rs-start" data-testid="shift-start">
+        <div className="panel-head"><h2 id="rs-start">Start of shift {d.shift.id}: {d.shift.rpic_name}</h2><span className="meta">Nothing launches until the pilot on console has run these</span></div>
+        {groups.map((g) => (
+          <div key={g} className="rs-check-group">
+            <h3>{g}</h3>
+            <ul className="rs-checks">{d.checklist.filter((x) => x.group === g).map((x) => <li key={x.text} className={`th-check ${LEVEL[x.level]}`}>{x.text}</li>)}</ul>
+          </div>
+        ))}
+        <div className="rs-actions">
+          {d.role.pilot ? <button type="button" className="btn btn-primary" disabled={busy || !d.shift.rpic} onClick={() => void act("shift.start", {})}>Checks done: start the shift</button> : <span className="meta">Waiting for the pilot to come on console.</span>}
+          {!d.shift.rpic ? <a href="#crew">No pilot rostered: fill the gap</a> : null}
+          {watch.length ? <span className="meta">{watch.length} to watch; dock problems are reported to the supervisor and logged when the shift starts.</span> : null}
+        </div>
+      </section>
+    );
+  }
+  return (
+    <section className="panel rs-start" aria-labelledby="rs-shiftp" data-testid="shift-panel">
+      <div className="panel-head">
+        <h2 id="rs-shiftp">Shift {d.shift.id}</h2>
+        <button type="button" className="btn btn-quiet" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+          Start-of-shift checks: {d.checklist.length - watch.length} clear, {watch.length} to watch
+        </button>
+      </div>
+      {open ? (
+        <div className="rs-check-cols">
+          {groups.map((g) => (
+            <div key={g} className="rs-check-group">
+              <h3>{g}</h3>
+              <ul className="rs-checks">{d.checklist.filter((x) => x.group === g).map((x) => <li key={x.text} className={`th-check ${LEVEL[x.level]}`}>{x.text}</li>)}</ul>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {d.shift.discrepancies.length ? (
+        <ul className="rs-disc" data-testid="discrepancies">
+          {d.shift.discrepancies.map((x) => <li key={x.at + x.text}><span className="mono meta">{x.at.slice(11, 16)}Z</span> {x.text} <span className="meta">Reported to {x.reported_to}.</span></li>)}
+        </ul>
+      ) : null}
+      {d.role.pilot ? (
+        <div className="rs-actions">
+          <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Aircraft, dock or system discrepancy" aria-label="Discrepancy to report" className="rs-grow" />
+          <button type="button" className="btn btn-quiet" disabled={busy || text.trim().length < 8} onClick={() => void act("shift.discrepancy", { text }).then((ok) => ok && setText(""))}>Report to supervisor</button>
+          <button type="button" className="btn btn-quiet" onClick={() => setEnding((e) => !e)} aria-expanded={ending}>End shift and sign the log</button>
+        </div>
+      ) : null}
+      {ending ? (
+        <div className="rs-log" data-testid="shift-log-draft">
+          <p><strong>Shift log, built from the shift's records.</strong> Read it, then sign. Once signed it is sealed into the evidence chain.</p>
+          <dl className="rs-fields">
+            <div><dt>Hours staffed</dt><dd>{log.staffed_h} of {log.scheduled_h} scheduled</dd></div>
+            <div><dt>Flights</dt><dd>{log.flights}</dd></div>
+            <div><dt>Aircraft at start</dt><dd>{log.aircraft_start}</dd></div>
+            <div><dt>Aircraft now</dt><dd>{log.aircraft_end}</dd></div>
+            <div><dt>Not flown</dt><dd>{log.declined.length ? log.declined.map((x) => `${x.call} (${x.by}, ${x.reason}): ${x.note}`).join("; ") : "None"}</dd></div>
+            <div><dt>Coverage gaps</dt><dd>{log.gaps.length ? log.gaps.join(" ") : "None"}</dd></div>
+            <div><dt>Discrepancies</dt><dd>{log.discrepancies.length ? log.discrepancies.join(" ") : "None"}</dd></div>
+            <div><dt>Records not filed</dt><dd>{log.records_unfiled ? <a href="#records">{log.records_unfiled} to file</a> : "All filed"}</dd></div>
+          </dl>
+          <button type="button" className="btn btn-primary" disabled={busy || d.flights.length > 0} onClick={() => void act("shift.end", {}).then((ok) => ok && setEnding(false))}>Sign and go off console</button>
+          {d.flights.length ? <span className="meta"> Recover the aircraft that is out first.</span> : null}
+        </div>
+      ) : null}
+    </section>
+  );
+}
 
 function CallCard({ c, d, busy, act }: { c: Call; d: Console; busy: boolean; act: Act }) {
   const [declining, setDeclining] = useState(false);
@@ -252,6 +347,12 @@ function HarborMap({ d }: { d: Console }) {
     <svg className="rs-map" viewBox="0 0 600 400" role="img" aria-label="Harbor map: docks, calls waiting, and aircraft in flight" data-testid="harbor-map">
       <rect x="0" y="0" width="600" height="400" className="rs-land" />
       {d.map.water.map((poly, i) => <polygon key={i} className="rs-water" points={poly.map((pt) => `${X(pt[0] ?? 0)},${Y(pt[1] ?? 0)}`).join(" ")} />)}
+      {d.map.structures.map((x) => (
+        <g key={x.id} className="rs-struct">
+          <rect x={X(x.x0)} y={Y(x.y1)} width={X(x.x1) - X(x.x0)} height={Y(x.y0) - Y(x.y1)} />
+          <text x={X(x.x1) + 4} y={Y(x.y0) - 4}>{x.label} {x.height_m} m</text>
+        </g>
+      ))}
       {d.flights.map((f) => <line key={`l-${f.id}`} className="rs-route" x1={X(d.docks.find((k) => k.id === f.dock)?.x ?? f.x)} y1={Y(d.docks.find((k) => k.id === f.dock)?.y ?? f.y)} x2={X(f.target.x)} y2={Y(f.target.y)} />)}
       {d.docks.map((k) => (
         <g key={k.id} className={`rs-mdock is-${k.state}`}>
