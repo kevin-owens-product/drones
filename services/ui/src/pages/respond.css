@@ -1,0 +1,69 @@
+/* Responder console (Respond, Flight records): calls, docks, flights, records. */
+.rs-shift {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  align-items: center;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 13px;
+}
+.rs-shift strong { color: var(--muted); font-weight: 500; margin-right: 4px; }
+.rs-seat { margin: 8px 0 0; }
+.rs-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.rs-grid-records { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); }
+@media (max-width: 1100px) { .rs-grid, .rs-grid-records { grid-template-columns: minmax(0, 1fr); } }
+.rs-calls, .rs-flights, .rs-docks, .rs-checks, .rs-versions { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.rs-call, .rs-flight {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  background: var(--surface-2);
+}
+.rs-call.p1 { border-left-color: var(--danger); }
+.rs-call.p2 { border-left-color: var(--warn); }
+.rs-call.is-approved { border-color: var(--accent); }
+.rs-flight.has-no-go { border-color: var(--danger); }
+.rs-call-head { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+.rs-call-text { margin: 6px 0; font-size: 13px; color: var(--text); }
+.rs-prio { font: 600 11px var(--font-mono); padding: 1px 6px; border-radius: 4px; background: var(--surface-3); }
+.rs-prio.p1 { background: rgba(255, 107, 91, 0.18); color: var(--danger); }
+.rs-prio.p2 { background: rgba(244, 180, 67, 0.16); color: var(--warn); }
+.rs-actions, .rs-decline { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+.rs-decline input { flex: 1 1 220px; min-width: 0; }
+.rs-decline-open { margin-top: 6px; }
+.rs-checks li { display: block; }
+.rs-flight-row { display: flex; gap: 10px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+.rs-batt { display: inline-block; width: 90px; height: 8px; border-radius: 4px; background: var(--surface-3); overflow: hidden; }
+.rs-batt > span { display: block; height: 100%; background: var(--ok); }
+.rs-batt > span.is-low { background: var(--warn); }
+.rs-alert { margin: 8px 0 0; padding: 8px 10px; border-radius: var(--radius); font-size: 13px; }
+.rs-alert.is-no-go { background: rgba(255, 107, 91, 0.14); border: 1px solid var(--danger); }
+.rs-alert.is-caution { background: rgba(244, 180, 67, 0.12); border: 1px solid var(--warn); }
+.rs-alert.is-term { background: var(--surface-3); border: 1px solid var(--line-strong); }
+.rs-docks { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.rs-dock { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); font-size: 13px; }
+.rs-dock.is-charging, .rs-dock.is-fault { border-color: var(--warn); }
+.rs-dock.is-out { border-color: var(--accent); }
+.rs-map { width: 100%; height: auto; display: block; border-radius: var(--radius); margin-bottom: 10px; }
+.rs-land { fill: var(--surface-3); }
+.rs-water { fill: rgba(92, 200, 255, 0.14); stroke: rgba(92, 200, 255, 0.3); }
+.rs-route { stroke: var(--accent); stroke-dasharray: 4 4; stroke-width: 1.5; }
+.rs-map text { font: 11px var(--font-sans); fill: var(--text); }
+.rs-mdock rect { fill: var(--surface); stroke: var(--ok); stroke-width: 1.5; }
+.rs-mdock.is-charging rect, .rs-mdock.is-fault rect { stroke: var(--warn); }
+.rs-mdock.is-out rect { stroke: var(--accent); }
+.rs-mcall circle { fill: rgba(244, 180, 67, 0.3); stroke: var(--warn); }
+.rs-mcall.p1 circle { fill: rgba(255, 107, 91, 0.3); stroke: var(--danger); }
+.rs-mflight circle { fill: var(--accent); stroke: var(--bg); stroke-width: 1.5; }
+.rs-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; margin: 0 0 12px; font-size: 13px; }
+.rs-fields dt { color: var(--muted); font-size: 12px; }
+.rs-fields dd { margin: 0; }
+.rs-label { display: grid; gap: 4px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+.rs-label textarea, .rs-label input { width: 100%; box-sizing: border-box; }
+.rs-versions { margin-top: 12px; font-size: 13px; }
+tr.is-selected td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.rs-mtarget { fill: none; stroke: var(--danger); stroke-width: 1.5; stroke-dasharray: 3 3; }

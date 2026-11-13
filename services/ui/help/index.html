@@ -70,6 +70,8 @@
           <a href="#bid">Bid desk and surge</a>
           <a href="#attrition">Attrition and the fix loop</a>
           <a href="#release">Allied tenants and releasability</a>
+          <h4>Public safety</h4>
+          <a href="#responder">First responder program</a>
           <h4>Trust</h4>
           <a href="#guardrails">What the console will never do</a>
           <a href="#audit">Access and the audit log</a>
@@ -98,6 +100,7 @@
             <h2>What's new</h2>
             <p>The newest things in the console, with the full list in the repository's <a href="https://github.com/kevin-owens-product/drones/blob/cursor/a2e-mission-cloud/CHANGELOG.md">CHANGELOG.md</a>.</p>
             <ul class="steps">
+              <li><b>A first responder program.</b> A public safety customer flies docked aircraft from a remote console, on the same platform. Calls come in from dispatch, a supervisor approves each launch, the nearest ready dock is picked by flight time, and the pilot flies it. The pilot can decline or end any flight for safety and no one can override that. Every flight gets a record prefilled from the flight, written once and corrected only by a new version sealed beside the original. Sign in as <code>supervisor</code> or <code>pilot</code>, or switch to it from the admin's workspace menu. See <a href="#responder">First responder program</a>.</li>
               <li><b>Each role's journey, tested end to end.</b> A bot for every demo account walked its journey from this site through sign-in and pressed every button on every page, on a laptop and a phone. What it found is fixed: a customer no longer sees other customers on Releasability, an allied tenant sees its fleet as its own, a button your role cannot use is greyed out with the reason instead of failing, empty tables say what to do next, and drawers and the palette close with <kbd>Esc</kbd>.</li>
               <li><b>Energy, radio shadow and pack ageing.</b> Debrief shows where each vehicle's energy went (lift, drag, climb, wind, cold) and its link margin over the terrain along the flown track. Operate has a Radio shadow layer for where the control link goes thin behind terrain. Stockpile health charts each stored pack's capacity and what a storage charge or a cooler store buys.</li>
               <li><b>Wind over terrain, camera height and wear.</b> Missions has a Wind view on the plan map: where the terrain speeds the forecast wind up and where the air sinks on a lee slope, with what that costs each vehicle. Brief shows what each camera sees of each task by height, and a commander can set the height before approving. Airframes shows each tail's wear by how it was flown, not only its hours, and lets a maintainer ground it for a check.</li>
@@ -124,6 +127,8 @@
                 <tr><td><code>operator</code></td><td>Customer A</td><td>Operator</td><td>Supervise the fleet. Try to approve a plan: you can't</td></tr>
                 <tr><td><code>maintainer</code></td><td>Customer A</td><td>Maintainer</td><td>Close a work order and return an airframe to service</td></tr>
                 <tr><td><code>allied</code></td><td>Customer C, an allied partner</td><td>Mission commander, planner</td><td>See which fields are withheld and why</td></tr>
+                <tr><td><code>supervisor</code></td><td>Customer D, a harbor police first responder program</td><td>Supervisor (mission commander)</td><td>Approve a launch. Try to end a flight: you can't</td></tr>
+                <tr><td><code>pilot</code></td><td>Customer D</td><td>Contract remote pilot (operator)</td><td>Launch an approved call, end it for gusts, file the record</td></tr>
               </tbody>
             </table></div>
             <div class="callout warn">The hosted demo checks passwords in the browser. It keeps casual visitors out but it is not a security boundary. A real deployment signs in through the organization's identity provider (OIDC, with PIV/CAC).</div>
@@ -348,6 +353,23 @@
             <h2>Allied tenants and releasability</h2>
             <p>An allied tenant has its own workspace. Its releasability rules run on every response before it leaves the server: withheld fields are removed at any depth and never reach the browser. The page lists each withheld field with the rule that withheld it, and shows the marking.</p>
             <a class="btn btn-sm go" href="/#release">Open Releasability →</a>
+          </article>
+
+          <article class="article" id="responder" data-tags="first responder dfr public safety police dock docked call dispatch supervisor pilot rpic veto decline terminate flight record evidence">
+            <div class="meta"><span class="tag">Public safety</span></div>
+            <h2>First responder program</h2>
+            <p>Customer D is a harbor police program that flies docked aircraft as first responders. It runs on the same platform as the defense customers, in its own operating mode: its own menu (Respond, Flight records), its own words (flight, supervisor, call) and its own records policy (the pilot's name is on every record). Everything in it is simulated: the harbor is a schematic and the docks, pilots, calls and weather are made up.</p>
+            <h3>A call to a launch</h3>
+            <ol class="steps">
+              <li><b>Dispatch sends a call.</b> It lands in <b>Calls waiting</b> with its priority, incident number and how long it has waited. <b>Next call from dispatch</b> sends the next scripted call.</li>
+              <li><b>The supervisor approves.</b> The console picks the dock with the shortest flight time whose aircraft passes its checks (charged to 60%, dock powered and communicating, energy for the round trip with a 20% reserve). The supervisor can pick another dock, change the priority, or stand the request down.</li>
+              <li><b>The pilot launches.</b> Pre-flight checks run again for that dock: aircraft, dock, energy, wind against the waiver limits, NOTAMs and TFRs, link. The pilot never launches without an approval.</li>
+              <li><b>The pilot's safety call stands.</b> The pilot can decline a call or end a flight at any point, with a reason. No role has an override: the supervisor's screen has a <b>Release to dock</b> button, not a "keep flying" one. On the water rescue call the gusts rise past the 12 m/s waiver limit after arrival, to show it.</li>
+              <li><b>Privacy.</b> The supervisor can tell the pilot to stop observing: the camera goes to the horizon and the record says when.</li>
+            </ol>
+            <h3>The flight record</h3>
+            <p>Every flight gets a record due before the shift ends. Launch and recovery times, aircraft, dock, incident location and number, reason, approver, pilot, weather and airspace come from the flight; the pilot writes the narrative and any anomaly. A filed record is never edited. A correction is a new version with a reason, kept beside the original, and every version is hashed onto the one before it, so a changed record breaks the chain. Requests not flown are listed with who decided and why.</p>
+            <div class="callout">Sign in as <code>supervisor</code> and as <code>pilot</code> to see each seat on its own. The admin's workspace menu opens the program as Neros, holding both seats so the walk works from one login. The access matrix holds each real login to its own seat.</div>
           </article>
 
           <article class="article" id="guardrails" data-tags="weapons strike adr 0016 command arm launch never refuse inbound">

@@ -1,5 +1,5 @@
 import type { Section, Viewer } from "./types";
-import { can, type Workspace } from "./workspace";
+import { can, isResponderOrg, type Workspace } from "./workspace";
 
 /**
  * A guided walk through the demo: the loop from a customer's shared field data to Neros's
@@ -122,9 +122,38 @@ const CUSTOMER: readonly TourStep[] = [
   },
 ];
 
+/** The public safety program's walk: a call to a launch to a record. Each seat sees the steps it acts on. */
+const RESPONDER: readonly TourStep[] = [
+  {
+    id: "respond-call",
+    section: "respond",
+    workspace: "responder",
+    title: "A call comes in; the supervisor approves",
+    body: "Dispatch sends the call. The console picks the nearest ready dock by flight time and runs its checks. A supervisor approves every launch; the pilot never self-initiates a flight.",
+    action: "Approve the water rescue. Then sign in as the pilot (or have them) to launch it.",
+  },
+  {
+    id: "respond-veto",
+    section: "respond",
+    workspace: "responder",
+    title: "The pilot's safety call stands",
+    body: "On scene, the gusts rise past the waiver limit. Ending the flight is the pilot's decision under Part 107, and the supervisor's screen has no button to override it. The reason goes on the record.",
+    action: "As the pilot, launch the approved call and end the flight when the gust alert shows.",
+  },
+  {
+    id: "records",
+    section: "records",
+    workspace: "responder",
+    title: "Every flight gets its record before the shift ends",
+    body: "Times, aircraft, dock, incident number, approver, pilot, weather and airspace come from the flight. The pilot writes what happened. A correction is a new version beside the original, sealed into the same chain.",
+    action: "File the waiting record, then correct it and see both versions.",
+  },
+];
+
 /** The steps this person can take: Neros staff who can switch walk the whole loop; a customer walks their fleet. */
 export function tourFor(viewer: Pick<Viewer, "roles" | "org">): readonly TourStep[] {
   if (!viewer.org) return [...NEROS.filter((s) => s.workspace === "neros" && s.id !== "audit"), ...CUSTOMER];
+  if (isResponderOrg(viewer.org)) return RESPONDER;
   if (viewer.org !== "neros") return CUSTOMER.filter((s) => s.section !== "brief" || can(viewer, "mission.draft"));
   const switcher = viewer.roles.includes("admin");
   return NEROS.filter((s) => (switcher || s.workspace === "neros") && (s.section !== "audit" || can(viewer, "audit.read")));

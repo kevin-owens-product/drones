@@ -21,10 +21,13 @@ const DEMO_USERS: Record<string, DemoUser> = {
   commander: { hash: "18e32bb2630f85d10a6fa11de2083f90402e78f9b9dbacb4d232d0e298a48619", display_name: "Demo Mission Commander", roles: ["mission_commander", "planner"], org: "CUS-A" },
   operator: { hash: "ffe651590c6442ba0b5752d8429128f244573922fbfc3277df6582cf0ba518b1", display_name: "Demo Operator", roles: ["operator"], org: "CUS-A" },
   maintainer: { hash: "37f7a353b0255284ec2aab24ae00007231ced0adc76f2ee61448b867ca70c7be", display_name: "Demo Maintainer", roles: ["maintainer"], org: "CUS-A" },
+  // A public safety program (demo/dfr.mjs): the supervisor approves launches, the contract pilot flies them.
+  supervisor: { hash: "ba37d8e57dbd3377ebf6ef231192c4124a19f6af3be0f7df90a09bb7bf143b04", display_name: "Demo Supervisor (Harbor police)", roles: ["mission_commander"], org: "CUS-D" },
+  pilot: { hash: "e13d8bb8cbcfb34ff9a278d088bc5660a75b027d169281f6fbdaa7fe24742bf0", display_name: "Demo Pilot (contract RPIC)", roles: ["operator"], org: "CUS-D" },
   // An allied tenant: every response passes through its releasability rules (demo/release.mjs).
   allied: { hash: "51c4f22372e7dd37a22b614e69f894e82062dfb17c5d77e77c3b1132f62def54", display_name: "Allied Mission Commander", roles: ["mission_commander", "planner"], org: "CUS-C", citizenship: "Allied (SIM)" },
 };
-const ORG_NAMES: Record<string, string> = { neros: "Neros Technologies (operations)", "CUS-A": "Customer A: Army brigade program (SIM)", "CUS-C": "Customer C: allied partner (SIM)" };
+const ORG_NAMES: Record<string, string> = { neros: "Neros Technologies (operations)", "CUS-A": "Customer A: Army brigade program (SIM)", "CUS-C": "Customer C: allied partner (SIM)", "CUS-D": "Customer D: Harbor police DFR program (SIM)" };
 const SESSION_KEY = "a2e-demo-session";
 const SESSION_MS = 12 * 60 * 60_000;
 

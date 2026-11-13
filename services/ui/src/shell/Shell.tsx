@@ -94,7 +94,8 @@ export function Shell(props: {
     setTour(false);
   }
   // Audit is in Settings only for the roles that can read it; Access (who can do what) is for everyone.
-  const ADMIN = useMemo(() => ADMIN_ALL.filter((item) => !item.needs || can(props.viewer, item.needs)), [props.viewer]);
+  // A public safety program has no defense integrations (TAK, NGC2 feeds), so its settings stop at Access and Audit.
+  const ADMIN = useMemo(() => ADMIN_ALL.filter((item) => (!item.needs || can(props.viewer, item.needs)) && !(props.workspace === "responder" && item.id === "integrations")), [props.viewer, props.workspace]);
   const orgRef = useRef<HTMLDivElement>(null);
   const pageCommands = usePageCommands();
   const { onSection, onLogout, onWorkspace } = props;
@@ -106,21 +107,26 @@ export function Shell(props: {
   const more = useMemo(() => hiddenCount(props.workspace, props.viewer), [props.workspace, props.viewer]);
   const counts = useNavCounts(props.workspace, props.viewer, props.section);
   const switchable = canSwitch(props.viewer);
-  const viewing = switchable && props.workspace === "customer";
+  const viewing = switchable && (props.workspace === "customer" || props.workspace === "responder");
+  const viewedName = props.workspace === "responder" ? "Customer D, the harbor police program" : "Customer A";
   const [orgName, orgSub] = useMemo(() => {
-    if (viewing) return ["Customer A", "Viewing as Neros"];
+    if (viewing) return [props.workspace === "responder" ? "Customer D" : "Customer A", "Viewing as Neros"];
     const raw = props.viewer.org_name ?? "";
     if (!raw) return ["All workspaces", "Local demo"];
     const [name = raw, rest] = raw.split(":");
     return [name.replace(" (operations)", ""), (rest ?? (props.viewer.org === "neros" ? "Operations" : "")).replace(" (SIM)", "").trim()];
-  }, [viewing, props.viewer]);
+  }, [viewing, props.viewer, props.workspace]);
 
   const commands = useMemo<Command[]>(
     () => [
       ...pageCommands,
       ...[...PRIMARY, ...ADMIN].map((item) => ({ id: `go-${item.id}`, label: item.label, group: "Go to", run: () => onSection(item.id) })),
       ...(switchable
-        ? [{ id: "workspace", label: props.workspace === "customer" ? "Switch to Neros operations" : "Switch to the customer view", group: "Workspace", run: () => onWorkspace(props.workspace === "customer" ? "neros" : "customer") }]
+        ? [
+            ...(props.workspace !== "neros" ? [{ id: "workspace", label: "Switch to Neros operations", group: "Workspace", run: () => onWorkspace("neros") }] : []),
+            ...(props.workspace !== "customer" ? [{ id: "workspace-customer", label: "Switch to the customer view", group: "Workspace", run: () => onWorkspace("customer") }] : []),
+            ...(props.workspace !== "responder" ? [{ id: "workspace-responder", label: "Switch to the first responder program", group: "Workspace", run: () => onWorkspace("responder") }] : []),
+          ]
         : []),
       { id: "rail", label: hidden ? "Show the menu" : "Hide the menu", group: "View", run: () => toggleRail() },
       { id: "help", label: "Keyboard shortcuts", group: "Help", hint: "?", run: () => setHelp(true) },
@@ -233,7 +239,7 @@ export function Shell(props: {
       </header>
       {viewing ? (
         <div className="viewing-strip" role="status">
-          <span>Viewing Customer A as Neros. You see what they see; anything you do is recorded as Neros.</span>
+          <span>Viewing {viewedName} as Neros. You see what they see; anything you do is recorded as Neros.</span>
           <button type="button" className="btn btn-quiet" onClick={() => onWorkspace("neros")}>
             Back to Neros operations
           </button>
@@ -257,6 +263,9 @@ export function Shell(props: {
                 </button>
                 <button type="button" role="menuitemradio" aria-checked={props.workspace === "customer"} className={props.workspace === "customer" ? "is-active" : undefined} onClick={() => { setOrgMenu(false); onWorkspace("customer"); }}>
                   Customer A, as they see it
+                </button>
+                <button type="button" role="menuitemradio" aria-checked={props.workspace === "responder"} className={props.workspace === "responder" ? "is-active" : undefined} onClick={() => { setOrgMenu(false); onWorkspace("responder"); }}>
+                  Customer D, first responder program
                 </button>
               </div>
             ) : null}

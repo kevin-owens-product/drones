@@ -36,6 +36,8 @@ const StockpilePage = lazy(() => import("./pages/Stockpile").then((m) => ({ defa
 const PlansPage = lazy(() => import("./pages/Plans").then((m) => ({ default: m.PlansPage })));
 const ReleasabilityPage = lazy(() => import("./pages/Releasability").then((m) => ({ default: m.ReleasabilityPage })));
 const MixedFleetPage = lazy(() => import("./pages/MixedFleet").then((m) => ({ default: m.MixedFleetPage })));
+const RespondPage = lazy(() => import("./pages/Respond").then((m) => ({ default: m.RespondPage })));
+const RecordsPage = lazy(() => import("./pages/Records").then((m) => ({ default: m.RecordsPage })));
 const ConfigurationPage = lazy(() => import("./pages/Configuration").then((m) => ({ default: m.ConfigurationPage })));
 
 import { Shell } from "./shell/Shell";
@@ -75,6 +77,8 @@ const SECTIONS: readonly Section[] = [
   "config",
   "access",
   "audit",
+  "respond",
+  "records",
 ];
 
 // Pages folded into others in the Admin clean-up; old links land on the page that replaced them.
@@ -210,7 +214,7 @@ export function App() {
   // Visit alerts: which console pages an invited visitor opens, each once per tab.
   useEffect(() => {
     if (!viewer || !invited() || !sectionsFor(workspace).includes(section) || window.location.hash !== `#${section}`) return;
-    const label = [...navFor("neros"), ...navFor("customer")].find((n) => n.id === section)?.label ?? section;
+    const label = [...navFor("neros"), ...navFor("customer"), ...navFor("responder")].find((n) => n.id === section)?.label ?? section;
     notify(`Viewed ${label}`, `Opened ${label} in the console as ${viewer.display_name}.`, `page-${section}`);
   }, [viewer, section, workspace]);
 
@@ -279,6 +283,8 @@ export function App() {
       {section === "mixed" ? <MixedFleetPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "config" ? <ConfigurationPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "access" ? <AccessPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "respond" ? <RespondPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "records" ? <RecordsPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "audit" ? <AuditPage viewer={viewer} onBanner={setBanner} /> : null}
       </Suspense>
     </Shell>

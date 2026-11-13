@@ -4,6 +4,7 @@ What shipped, newest first, by release. Each line names the pull request. Everyt
 
 ## Unreleased
 
+- First responder program, phase 1: a public safety customer (Customer D, a harbor police program, SIM) on the same platform in its own operating mode. Respond: calls from a simulated dispatch feed, supervisor approval for every launch, the nearest ready dock picked by flight time, pre-flight checks, a pilot decline or termination that no role can override, release and stop-observation for the supervisor. Flight records: prefilled from the flight, filed once by the pilot, corrected only by a new version sealed into a hash chain; requests not flown and why. New `supervisor` and `pilot` logins; the admin's workspace menu opens the program as Neros
 - Documentation rebuilt against the current build: README, help center (Missions and launch checks, a Loadout planner guide, physics on Operate, Brief, Airframes, Stockpile and the Denial map), the product page's Plan tab and screenshots, the developer explorer's Physics routes, and a script that retakes every screenshot (`services/ui/e2e/docs/shots.mjs`)
 
 ## Physics in the pages (2026-11-12)

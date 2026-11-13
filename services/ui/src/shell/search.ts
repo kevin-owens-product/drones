@@ -20,7 +20,7 @@ export function useEntityCommands(open: boolean, workspace: Workspace, viewer: V
   const loadedFor = useRef("");
   const key = `${workspace}:${section}:${viewer.username}`;
   useEffect(() => {
-    if (!open || loadedFor.current === key || workspace === "neros") return;
+    if (!open || loadedFor.current === key || workspace === "neros" || workspace === "responder") return;
     loadedFor.current = key;
     void api<{ items: Platform[] }>("/v1/platforms")
       .then((r) => setTails(r.body.items))
@@ -29,7 +29,7 @@ export function useEntityCommands(open: boolean, workspace: Workspace, viewer: V
       .then((r) => setMissions(r.body.items))
       .catch(() => undefined);
   }, [open, key, workspace]);
-  if (workspace === "neros") return [];
+  if (workspace === "neros" || workspace === "responder") return [];
   return [
     ...tails.map((p) => ({
       id: `tail-${p.id}`,

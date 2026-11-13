@@ -28,6 +28,7 @@ export const TENANTS = [
   { org: "CUS-A", name: "Customer A: Army brigade program (SIM)", country: "US", marking: "US", hosting: "Neros cloud (US)" },
   { org: "CUS-B", name: "Customer B: Marine Corps evaluation (SIM)", country: "US", marking: "US", hosting: "Neros cloud (US)" },
   { org: "CUS-C", name: "Customer C: allied partner (SIM)", country: "Allied", marking: "REL TO allied partner (SIM)", hosting: "Sovereign region, air-gapped option (SIM)" },
+  { org: "CUS-D", name: "Customer D: Harbor police DFR program (SIM)", country: "US", marking: "US", hosting: "Agency-controlled US region, CJIS-aligned (SIM)" },
 ];
 
 /**

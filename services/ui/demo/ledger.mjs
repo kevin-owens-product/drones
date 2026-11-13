@@ -19,6 +19,9 @@ export function can(roles, permission) {
   return roles.some((role) => (ROLE_MATRIX[role] ?? []).includes(permission));
 }
 
+/** Orgs that run a public safety program (demo/dfr.mjs): their workspace is the responder rail. */
+export const RESPONDER_ORGS = ["CUS-D"];
+
 // The four hosted-demo sign-ins (passwords are shared out of band; see staticDemo.ts).
 export const ACCOUNTS = [
   // `org` picks the workspace: "neros" runs operations, a customer id runs its own fleet (demo/ops.mjs).
@@ -27,6 +30,9 @@ export const ACCOUNTS = [
   { id: "demo-commander", username: "commander", display_name: "Demo Mission Commander", roles: ["mission_commander", "planner"], org: "CUS-A" },
   { id: "demo-operator", username: "operator", display_name: "Demo Operator", roles: ["operator"], org: "CUS-A" },
   { id: "demo-maintainer", username: "maintainer", display_name: "Demo Maintainer", roles: ["maintainer"], org: "CUS-A" },
+  // A public safety program (demo/dfr.mjs): a supervisor approves launches, a contract pilot flies them.
+  { id: "demo-supervisor", username: "supervisor", display_name: "Demo Supervisor (Harbor police)", roles: ["mission_commander"], org: "CUS-D" },
+  { id: "demo-pilot", username: "pilot", display_name: "Demo Pilot (contract RPIC)", roles: ["operator"], org: "CUS-D" },
 ];
 
 // ---- SHA-256 (FIPS 180-4), synchronous, UTF-8 input, lowercase hex output ----

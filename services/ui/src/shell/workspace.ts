@@ -1,4 +1,4 @@
-import { ROLE_MATRIX } from "../../demo/ledger.mjs";
+import { RESPONDER_ORGS, ROLE_MATRIX } from "../../demo/ledger.mjs";
 import type { Section, Viewer } from "./types";
 
 /**
@@ -7,7 +7,7 @@ import type { Section, Viewer } from "./types";
  * runs its own fleet (operate, plan, maintain, and ask Neros for resupply).
  * Neros staff can switch to the customer view to see what a customer sees.
  */
-export type Workspace = "neros" | "customer" | "all";
+export type Workspace = "neros" | "customer" | "responder" | "all";
 
 /**
  * Who a page is for in the rail. "lead" is anyone who plans, approves or runs the unit (commander, planner, admin,
@@ -42,6 +42,15 @@ export const CUSTOMER_NAV: readonly NavItem[] = [
   item("reports", "Field reports", "Learn"),
 ];
 
+/**
+ * A public safety program flies docked aircraft from a remote console: calls in, a supervisor approves, the pilot
+ * flies and files the record. Same platform, its own operating mode and rail (demo/dfr.mjs).
+ */
+export const RESPONDER_NAV: readonly NavItem[] = [
+  item("respond", "Respond", "Fly"),
+  item("records", "Flight records", "Fly"),
+];
+
 /** Neros runs its own operations: the work queue first, then delivering, making, selling and learning. */
 export const NEROS_NAV: readonly NavItem[] = [
   item("ops", "Work queue", ""),
@@ -67,9 +76,10 @@ export const NEROS_NAV: readonly NavItem[] = [
 export function navFor(w: Workspace): readonly NavItem[] {
   if (w === "neros") return NEROS_NAV;
   if (w === "customer") return CUSTOMER_NAV;
+  if (w === "responder") return RESPONDER_NAV;
   // No organization (the local demo server): every page, the work queue first, each page once.
   const out: NavItem[] = [NEROS_NAV[0]!];
-  for (const n of [...CUSTOMER_NAV, ...NEROS_NAV.slice(1)]) if (!out.some((m) => m.id === n.id)) out.push(n);
+  for (const n of [...CUSTOMER_NAV, ...NEROS_NAV.slice(1), ...RESPONDER_NAV]) if (!out.some((m) => m.id === n.id)) out.push(n);
   return out;
 }
 
@@ -117,11 +127,18 @@ export function canSwitch(viewer: Viewer): boolean {
   return viewer.org === "neros";
 }
 
+/** True when this org runs a public safety program (the responder rail). */
+export function isResponderOrg(org: string | undefined): boolean {
+  return Boolean(org && (RESPONDER_ORGS as readonly string[]).includes(org));
+}
+
 export function workspaceOf(viewer: Viewer): Workspace {
   if (!viewer.org) return "all";
+  if (isResponderOrg(viewer.org)) return "responder";
   if (viewer.org !== "neros") return "customer";
   try {
-    return localStorage.getItem(KEY) === "customer" ? "customer" : "neros";
+    const kept = localStorage.getItem(KEY);
+    return kept === "customer" || kept === "responder" ? kept : "neros";
   } catch {
     return "neros";
   }
@@ -136,12 +153,14 @@ export function rememberWorkspace(w: Workspace): void {
 }
 
 export function sectionsFor(w: Workspace): Section[] {
+  if (w === "responder") return [...navFor(w).map((n) => n.id), "access", "audit"];
   return [...navFor(w).map((n) => n.id), "access", "integrations", "audit"];
 }
 
 /** Where each person lands: Neros on its work queue, a maintainer on airframes, everyone else on the live map. */
 export function homeOf(w: Workspace, viewer?: Pick<Viewer, "roles">): Section {
   if (w === "neros") return "ops";
+  if (w === "responder") return "respond";
   if (w === "customer" && viewer && onlyMaintainer(viewer)) return "fleet";
   return "operate";
 }

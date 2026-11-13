@@ -22,6 +22,7 @@ import { createThread } from "./thread.mjs";
 import { createInterop } from "./interop.mjs";
 import { createProgram } from "./program.mjs";
 import { createMarket } from "./market.mjs";
+import { createResponder, RESPONDER_ORGS } from "./dfr.mjs";
 import { AIRFRAMES, ASSUMED, describe as describePhysics, flyPlan, lawnmowerPath, linkBudget, orbitPath, pathLength, power, sampleAt, vioSigma, windAt, windFrom } from "./physics.mjs";
 
 export const BANNER = "UNCLASSIFIED // DEMO DATA";
@@ -527,6 +528,8 @@ export function createDemo(opts = {}) {
     now: T0,
   });
   const EVAL = parseEvalTable(opts.readme ?? "");
+  // A public safety program on the same platform: docked aircraft, a call queue, split launch authority (demo/dfr.mjs).
+  const responder = createResponder({ audit, now: T0 });
 
     const ROUTES = {
     "/v1/session/config": () => ({ auth_mode: "dev", dev_login: true, system_high: "UNCLASSIFIED", login_url: "" }),
@@ -962,6 +965,9 @@ export function createDemo(opts = {}) {
       syncFleet();
       if (url.pathname === "/v1/audit" && caller && !can(caller.roles, "audit.read")) return { status: 403, body: { detail: "role_denied" } };
       const customer = caller?.org && caller.org !== NEROS.id;
+      if (responder.owns(url.pathname)) return responder.handle(method, url, raw, caller);
+      // A public safety program's people see their program, not the defense fleet's pages.
+      if (caller?.org && RESPONDER_ORGS.includes(caller.org) && !["/v1/me", "/v1/users", "/v1/audit", "/v1/no-such-route"].includes(url.pathname)) return { status: 403, body: { detail: "That page belongs to another workspace." } };
       // Neros internals stay out of customer workspaces.
       if (customer && (url.pathname.startsWith("/v1/company") || url.pathname === "/v1/ops/queue")) return { status: 403, body: { detail: "That is Neros's own workspace." } };
       // Loss data is the customer's. Neros sees it only while Customer A shares it.

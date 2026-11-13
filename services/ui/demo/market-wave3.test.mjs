@@ -110,5 +110,5 @@ test("releasability: a customer sees only its own tenant row, never Neros's othe
     assert.ok(!body.includes(other), `${org} must not see ${other}`);
   }
   const neros = d.handle("GET", new URL("http://x/v1/release"), "", { username: "n", roles: ["admin"], org: "neros" }).body;
-  assert.equal(neros.tenants.length, 3);
+  assert.equal(neros.tenants.length, 4);
 });
