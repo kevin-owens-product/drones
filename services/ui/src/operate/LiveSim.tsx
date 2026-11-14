@@ -1,7 +1,8 @@
 import { useState, type JSX } from "react";
-import { liveCommand, liveSwarm, type LiveResult, type LiveSimPoint, type LiveSnapshot, type SwarmTask, type VehicleAction } from "../livesim";
+import { liveCommand, liveSnapshot, liveSwarm, type LiveResult, type LiveSimPoint, type LiveSnapshot, type SwarmTask, type VehicleAction } from "../livesim";
 import type { MapMark } from "./TacMap";
 import { blocker, isGo, type Check } from "./readiness";
+import { clearPlanForLive, metresBetween, readPlanForLive, type PlanForLive } from "../livePlan";
 
 /** What a click on the map is for while picking. */
 export type PickFor = { for: "formation" | "sweep" } | { for: "goto"; tail: string };
@@ -74,6 +75,8 @@ export function SwarmPanel(props: {
   const [lane, setLane] = useState("20");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
+  const [plan, setPlan] = useState<PlanForLive | null>(() => readPlanForLive());
+  const [areaIx, setAreaIx] = useState(0);
 
   const items = snap?.items ?? [];
   const air = items.filter((p) => p.armed && !p.landed);
@@ -94,6 +97,64 @@ export function SwarmPanel(props: {
     const out = await send(() => liveSwarm(base, task), log, "SWARM", label);
     setNote(out.ok ? `${label}: sent` : out.detail);
     setBusy(false);
+  }
+
+  /** Launch the GO vehicles if none is up, wait for them to reach height, then sweep the plan's area. */
+  async function flyPlan(p: PlanForLive) {
+    const area = p.areas[areaIx] ?? p.areas[0]!;
+    const climb = num(alt, 20, 5, 120);
+    setBusy(true);
+    if (air.length === 0) {
+      const tails = go.map((v) => v.tail_number);
+      setNote(`Launching ${tails.length} for ${area.label}…`);
+      const up = await send(() => liveSwarm(base, { task: "launch", alt_m: climb, tails }), log, "SWARM", `${p.name}: launch ${tails.length}`);
+      if (!up.ok) {
+        setNote(up.detail);
+        setBusy(false);
+        return;
+      }
+      setNote(`Climbing to ${climb} m…`);
+      if (!(await climbed(tails, climb * 0.8, 60_000))) {
+        setNote("Not every vehicle reached height within a minute, so the sweep was not sent. Check the timeline.");
+        setBusy(false);
+        return;
+      }
+    }
+    setNote(`Sweeping ${area.label}…`);
+    const out = await send(
+      () =>
+        liveSwarm(base, {
+          task: "sweep",
+          width_m: num(width, 160, 20, 2000),
+          height_m: num(height, 120, 20, 2000),
+          lane_m: num(lane, 20, 5, 200),
+          heading_deg: num(heading, 0, -360, 360),
+          alt_m: climb,
+          then: "rtl",
+          lat: area.lat,
+          lon: area.lon,
+        }),
+      log,
+      "SWARM",
+      `${p.name}: sweep ${area.label}`,
+    );
+    setNote(out.ok ? `${p.name}: sweeping ${area.label}, then home` : out.detail);
+    setBusy(false);
+  }
+
+  async function climbed(tails: string[], minAlt: number, within: number): Promise<boolean> {
+    const until = Date.now() + within;
+    while (Date.now() < until) {
+      await new Promise((r) => setTimeout(r, 1000));
+      try {
+        const now = await liveSnapshot(base, Number.MAX_SAFE_INTEGER);
+        const up = now.items.filter((v) => tails.includes(v.tail_number) && v.armed && !v.landed && v.alt_m >= minAlt);
+        if (up.length === tails.length) return true;
+      } catch {
+        /* keep waiting */
+      }
+    }
+    return false;
   }
 
   if (status === "down" || status === "connecting") {
@@ -139,6 +200,46 @@ export function SwarmPanel(props: {
         </button>
         {noGo > 0 ? <span className="meta live-nogo">{noGo} held by launch checks</span> : null}
       </div>
+
+      {plan ? (
+        <fieldset className="live-group live-plan" data-testid="live-plan" disabled={busy || !canCommand}>
+          <legend>Plan · {plan.name}</legend>
+          <div className="live-row">
+            <select aria-label="Area to sweep" value={areaIx} onChange={(e) => setAreaIx(Number(e.target.value))}>
+              {plan.areas.map((a, i) => (
+                <option key={`${a.label}-${i}`} value={i}>{a.label}</option>
+              ))}
+            </select>
+            {(() => {
+              const a = plan.areas[areaIx] ?? plan.areas[0];
+              const from = items[0];
+              return a && from ? <span className="meta">{(metresBetween(from, a) / 1000).toFixed(1)} km from the swarm</span> : null;
+            })()}
+          </div>
+          <p className="meta">Sweeps a {num(width, 160, 20, 2000)} by {num(height, 120, 20, 2000)} m area centred on the plan's point (size and lanes under Area sweep), then each vehicle returns home.</p>
+          <div className="live-row">
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={air.length === 0 && go.length === 0}
+              title={why ?? (air.length === 0 && go.length === 0 ? "No vehicle on the ground passes its launch checks" : undefined)}
+              onClick={() => void flyPlan(plan)}
+            >
+              {air.length ? `Sweep ${plan.areas[areaIx]?.label ?? "the area"}` : `Launch ${go.length} and sweep`}
+            </button>
+            <button
+              type="button"
+              className="chip"
+              onClick={() => {
+                clearPlanForLive();
+                setPlan(null);
+              }}
+            >
+              Clear plan
+            </button>
+          </div>
+        </fieldset>
+      ) : null}
 
       <fieldset className="live-group" disabled={busy || !canCommand || air.length === 0}>
         <legend>Formation</legend>

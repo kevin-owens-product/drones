@@ -51,6 +51,9 @@ PARAMS_ON_CONNECT: dict[str, tuple[float, str]] = {
     # PX4 ignores these on real hardware.
     "SIM_BAT_DRAIN": (900, "float"),
     "SIM_BAT_MIN_PCT": (20, "float"),
+    # Cruise for missions, go-to and return: 12 m/s (PX4's default is 5), so a plan's
+    # search area a couple of kilometres from the pad is minutes away, not ten.
+    "MPC_XY_CRUISE": (12, "float"),
 }
 
 PX4_MAIN = {1: "MANUAL", 2: "ALTCTL", 3: "POSCTL", 4: "AUTO", 5: "ACRO", 6: "OFFBOARD", 7: "STABILIZED", 8: "RATTITUDE"}
