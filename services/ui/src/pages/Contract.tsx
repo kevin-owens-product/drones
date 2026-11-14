@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Viewer } from "../shell/types";
 import { Loading, Note, PageHead, Stat, usePageData } from "./thread";
 import "./respond.css";
+import { MonthBars, PayBar } from "./respondViz";
 
 interface Line {
   shift: string; date: string; pilot: string; scheduled_h: number; staffed_h: number; billable_h: number; held_h: number; excluded_h: number;
@@ -40,13 +41,15 @@ export function ContractPage({ onBanner }: { viewer: Viewer; onBanner: (banner: 
   const page = usePageData<Month>("/v1/dfr/program", onBanner);
   const [note, setNote] = useState("");
   const [all, setAll] = useState(false);
+  const [pick, setPick] = useState<string | null>(null);
   if (!page.data) return <Loading fault={page.fault} />;
   const d = page.data;
   const r = d.report;
   const inv = d.invoice;
   const act = (action: string, args: Record<string, unknown> = {}) => page.post("/v1/dfr/act", action, args);
   const flagged = inv.lines.filter((l) => l.notes.length);
-  const lines = all ? inv.lines : flagged;
+  const lines = pick ? inv.lines.filter((l) => l.shift === pick) : all ? inv.lines : flagged;
+  const unstaffed = Math.round((inv.totals.scheduled_h - inv.totals.staffed_h) * 10) / 10;
   const canSubmit = d.role.contractor && (d.status === "draft" || d.status === "returned");
   const canDecide = d.role.supervisor && d.status === "submitted";
 
@@ -61,6 +64,12 @@ export function ContractPage({ onBanner }: { viewer: Viewer; onBanner: (banner: 
         <Stat label="Payable" value={usd(inv.totals.amount_usd)} hint={`${inv.totals.billable_h} h at ${usd(inv.rate_usd)}`} />
         <Stat label="Held or not payable" value={`${inv.totals.held_h + inv.totals.excluded_h} h`} hint={`${inv.totals.held_h} h held, ${inv.totals.excluded_h} h not payable`} />
       </div>
+
+      <section className="panel" aria-labelledby="ct-month">
+        <div className="panel-head"><h2 id="ct-month">The month, day by day</h2><span className="meta">{inv.totals.scheduled_h} console hours scheduled</span></div>
+        <PayBar pay={inv.totals.billable_h} held={inv.totals.held_h} excluded={inv.totals.excluded_h} gap={unstaffed} />
+        <MonthBars lines={inv.lines} picked={pick} onPick={(s) => setPick(pick === s ? null : s)} />
+      </section>
 
       <section className="panel" aria-labelledby="ct-status" data-testid="month-status">
         <div className="panel-head"><h2 id="ct-status">{inv.number}, {inv.label}</h2><span className={`th-check ${d.status === "approved" ? "is-ok" : d.status === "returned" ? "is-fail" : "is-warn"}`}>{STATUS[d.status]}</span></div>
@@ -114,7 +123,7 @@ export function ContractPage({ onBanner }: { viewer: Viewer; onBanner: (banner: 
         <section className="panel" aria-labelledby="ct-invoice" data-testid="invoice">
           <div className="panel-head">
             <h2 id="ct-invoice">Invoice lines</h2>
-            <button type="button" className="btn btn-quiet" aria-pressed={all} onClick={() => setAll((x) => !x)}>{all ? `Only the ${flagged.length} with a note` : `All ${inv.lines.length} shifts`}</button>
+            {pick ? <button type="button" className="btn btn-quiet" onClick={() => setPick(null)}>Show every flagged line</button> : <button type="button" className="btn btn-quiet" aria-pressed={all} onClick={() => setAll((x) => !x)}>{all ? `Only the ${flagged.length} with a note` : `All ${inv.lines.length} shifts`}</button>}
           </div>
           <div className="table-wrap" tabIndex={0}>
             <table>

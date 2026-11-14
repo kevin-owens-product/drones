@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Viewer } from "../shell/types";
 import { Loading, Note, PageHead, Stat, usePageData } from "./thread";
 import "./respond.css";
+import { CurrencyGrid, RosterStrip } from "./respondViz";
 
 interface Item { key: string; label: string; value: string; level: "ok" | "warn" | "fail"; note: string }
 interface Pilot { id: string; name: string; items: Item[]; assignable: boolean; solo: boolean; certifiable: boolean; blocking: string[]; warnings: string[]; recurrent_due: string; rate: string }
@@ -57,6 +58,7 @@ export function CrewPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (bann
 
       <section className="panel" aria-labelledby="cr-roster">
         <div className="panel-head"><h2 id="cr-roster">Roster, next 14 days</h2><span className="meta">Changes within 24 hours go to the program manager</span></div>
+        <RosterStrip days={d.roster} today={d.today} solo={(id) => Boolean(d.pilots.find((p) => p.id === id)?.solo)} />
         <div className="table-wrap" tabIndex={0}>
           <table data-testid="roster">
             <thead><tr><th>Day</th><th>On console</th><th>Supervising pilot</th><th>Problems</th></tr></thead>
@@ -90,6 +92,7 @@ export function CrewPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (bann
 
       <section className="panel" aria-labelledby="cr-files">
         <div className="panel-head"><h2 id="cr-files">Personnel and currency files</h2><span className="meta">Updated within 5 business days of any change</span></div>
+        <CurrencyGrid pilots={d.pilots} onPick={(id) => { setOpen(id); window.setTimeout(() => document.querySelector(`[data-pilot="${id}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" }), 50); }} />
         <ul className="rs-calls" data-testid="pilot-files">
           {d.pilots.map((p) => (
             <li key={p.id} className={`rs-call ${!p.assignable ? "p1" : p.warnings.length || !p.solo ? "p2" : ""}`} data-pilot={p.id}>
