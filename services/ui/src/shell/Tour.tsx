@@ -1,5 +1,5 @@
 import { useEffect, useState, type JSX } from "react";
-import { readTour, saveTour, tourFor, type TourStep } from "./tour";
+import { readTour, saveTour, tourFor, type TourStep } from "./tourSteps";
 import type { Section, Viewer } from "./types";
 import type { Workspace } from "./workspace";
 

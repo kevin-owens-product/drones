@@ -4,7 +4,7 @@ import { useNavCounts } from "./counts";
 import { Palette } from "./Palette";
 import { useEntityCommands } from "./search";
 import { Tour } from "./Tour";
-import { readTour, saveTour, tourFor } from "./tour";
+import { readTour, saveTour, tourFor } from "./tourSteps";
 import { invited } from "../notify";
 import "../pages/ops.css";
 import "./shell.css";
