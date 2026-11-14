@@ -41,15 +41,18 @@ function vehicle(tail: string, i: number, over: Record<string, unknown> = {}) {
 }
 
 /** A fake bridge: three vehicles, PX4-03 with a pack too low to pass launch checks. Records what the console posts. */
-async function fakeBridge(page: Page, opts: { airborne?: boolean } = {}): Promise<Posted[]> {
+async function fakeBridge(page: Page, opts: { airborne?: boolean; climbOnLaunch?: boolean } = {}): Promise<Posted[]> {
   const posted: Posted[] = [];
-  const up = opts.airborne ? { armed: true, landed: false, alt_m: 20, mode: "HOLD" } : {};
+  const flying = { armed: true, landed: false, alt_m: 20, mode: "HOLD" };
+  let up: Record<string, unknown> = opts.airborne ? flying : {};
   await page.route(`${BRIDGE}/**`, async (route) => {
     const url = new URL(route.request().url());
     const cors = { "access-control-allow-origin": "*", "access-control-allow-headers": "content-type", "content-type": "application/json" };
     if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers: cors });
     if (route.request().method() === "POST") {
-      posted.push({ path: url.pathname, body: route.request().postDataJSON() as Record<string, unknown> });
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      posted.push({ path: url.pathname, body });
+      if (opts.climbOnLaunch && body.task === "launch") up = flying;
       return route.fulfill({ status: 200, headers: cors, body: JSON.stringify({ ok: true, detail: "accepted" }) });
     }
     const items = [vehicle("PX4-01", 0, up), vehicle("PX4-02", 1, up), vehicle("PX4-03", 2, { ...up, battery_pct: 40 })];
@@ -144,4 +147,33 @@ test("no bridge running: the console says so and can switch live sim off", async
   await page.goto("/#operate");
   await expect(page.locator("#fleet [data-tail]")).toHaveCount(12);
   await expect(page.locator(".live-panel")).toHaveCount(0);
+});
+
+test("an approved plan from Missions launches the GO vehicles and sweeps its area", async ({ page }) => {
+  const posted = await fakeBridge(page, { climbOnLaunch: true });
+  await page.goto("/?live=1#missions");
+  const root = page.getByTestId("missions");
+  // A plan still in review cannot be flown.
+  await root.getByRole("button", { name: /Ridge relay under GNSS denial/ }).click();
+  await expect(page.getByTestId("live-handoff")).toContainText("Approve the plan first.");
+  await expect(page.getByRole("button", { name: "Fly on live sim" })).toBeDisabled();
+
+  await root.getByRole("button", { name: /Survey grid north/ }).click();
+  await expect(page.getByTestId("live-handoff")).toContainText("Area A (north-west field)");
+  await page.getByRole("button", { name: "Fly on live sim" }).click();
+  await expect(page).toHaveURL(/#operate$/);
+  const plan = page.getByTestId("live-plan");
+  await expect(plan).toContainText("Plan · Survey grid north");
+  await plan.getByLabel("Area to sweep").selectOption({ label: "Ridge" });
+  await plan.getByRole("button", { name: "Launch 2 and sweep" }).click();
+
+  // Launch only the GO vehicles, wait for them to climb, then sweep the Ridge and come home.
+  await expect.poll(() => posted.length, { timeout: 15_000 }).toBe(2);
+  expect(posted[0]!.body).toMatchObject({ task: "launch", tails: ["PX4-01", "PX4-02"] });
+  expect(posted[1]!.body).toMatchObject({ task: "sweep", then: "rtl" });
+  expect(typeof posted[1]!.body.lat).toBe("number");
+  await expect(page.getByTestId("live-panel")).toContainText("Survey grid north: sweeping Ridge, then home");
+
+  await plan.getByRole("button", { name: "Clear plan" }).click();
+  await expect(page.getByTestId("live-plan")).toHaveCount(0);
 });

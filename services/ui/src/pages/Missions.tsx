@@ -4,6 +4,8 @@ import { MissionRoute } from "./MissionRoute";
 import { RangeMap, colorFor, toMetres, type MapPath, type RangeFrame } from "./RangeMap";
 import { EmitterMark, WindCells, compassOf, linkLayer, windLayer, type Fix, type PhysicsCheck } from "./physics-parts";
 import { ConditionsPanel, LinkDetail, PacksThrustPanel, PhysicsFindings, WindDetail, type Ask } from "./plan-physics";
+import { liveBase } from "../livesim";
+import { handPlanToLive, planAreas, type PlanArea } from "../livePlan";
 import "./plan.css";
 
 interface Viewer {
@@ -644,6 +646,8 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
   const caution = [...shownChecks.filter((c) => c.level === "caution"), ...(phys?.findings ?? []).filter((x) => x.severity !== "info")];
   const editablePlan = selected ? selected.state !== "closed" && selected.state !== "active" : false;
   const stepAllowed = selectedStep ? roleCan(viewer.roles, selectedStep.action) : false;
+  const liveOn = liveBase() !== null;
+  const liveAreas = useMemo(() => planAreas(objectives), [objectives]);
   // Editing a draft is the planner's job; everyone else reads it.
   const canEdit = ["planner", "mission_commander", "admin"].some((role) => viewer.roles.includes(role));
   const blockedByChecks = selected?.state === "approved" && nogo.length > 0;
@@ -988,6 +992,7 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
               ) : (
                 <p className="empty">Closed. The replay is on Debrief.</p>
               )}
+              {liveOn ? <LiveHandoff mission={selected} areas={liveAreas} /> : null}
             </section>
             {phys && phys.tails.length && editablePlan ? <ConditionsPanel check={phys} ask={ask} setAsk={setAsk} canSave={canEdit} busy={busy} onSave={() => void saveForecast(selected)} /> : null}
             {selected.state !== "closed" && selected.state !== "active" ? (
@@ -1117,6 +1122,31 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
         <p className="empty">Select a plan.</p>
       )}
     </section>
+  );
+}
+
+/** With live sim on, send an approved plan's search areas to the swarm in Operate. */
+function LiveHandoff({ mission, areas }: { mission: MissionRow; areas: PlanArea[] }) {
+  const flyable = mission.state === "approved" || mission.state === "active";
+  const why = !flyable ? "Approve the plan first." : areas.length === 0 ? "This plan has no search, loiter or custody point to sweep." : null;
+  return (
+    <div className="live-handoff" data-testid="live-handoff">
+      <button
+        type="button"
+        className="btn"
+        disabled={why !== null}
+        title={why ?? undefined}
+        onClick={() => {
+          handPlanToLive({ id: mission.id, name: mission.name, areas });
+          window.location.hash = "operate";
+        }}
+      >
+        Fly on live sim
+      </button>
+      <p className="meta">
+        {why ?? `Opens Operate with ${areas.length === 1 ? "this plan's area" : `this plan's ${areas.length} areas`} (${areas.map((a) => a.label).join(", ")}) ready to sweep with the PX4 swarm. Launch checks and your role still apply there.`}
+      </p>
+    </div>
   );
 }
 
