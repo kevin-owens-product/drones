@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { Viewer } from "../shell/types";
 import { EmptyRow, Loading, Note, PageHead, Stat, usePageData } from "./thread";
 import "./respond.css";
+import { ChainStrip, type Block } from "./respondViz";
 
 interface Fields {
   launch_at: string; recovery_at: string | null; aircraft: string; launch_location: string; incident_location: string;
@@ -73,6 +74,11 @@ export function RecordsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
         <Stat label="Requests not flown" value={String(d.declined.length)} hint="Declined by the pilot or stood down" />
         <Stat label="Evidence chain" value={d.chain.intact ? "Intact" : "Broken"} hint={`${d.chain.rows} sealed versions${d.chain.head ? `, head ${d.chain.head.slice(0, 12)}…` : ""}`} />
       </div>
+
+      <section className="panel" aria-labelledby="rc-chain">
+        <div className="panel-head"><h2 id="rc-chain">Evidence chain</h2><span className="meta">Flight records, corrections, shift logs and mishap reports, sealed in the order they were written</span></div>
+        <ChainStrip blocks={chainBlocks(d)} intact={d.chain.intact} rows={d.chain.rows} />
+      </section>
 
       <div className="rs-grid rs-grid-records">
         <section className="panel" aria-labelledby="rc-list">
@@ -369,4 +375,13 @@ function Requests({ d, custodian, busy, post }: { d: Records; custodian: boolean
       </ul>
     </section>
   );
+}
+
+/** The newest sealed versions across the program, oldest first, for the chain picture. */
+function chainBlocks(d: Records): Block[] {
+  const out: (Block & { at: string })[] = [];
+  for (const r of d.items) for (const v of r.versions) out.push({ id: `${r.id}-v${v.v}`, label: v.v > 1 ? `${r.id} v${v.v}` : r.id, sub: v.v > 1 ? "Correction" : "Flight record", hash: v.hash, kind: v.v > 1 ? "correction" : "record", at: v.at });
+  for (const l of d.shift_logs) if (l.status === "signed" && l.hash && l.signed_at) out.push({ id: l.id, label: l.id.replace(/^SH-/, "Log "), sub: `Shift log, ${l.rpic}`, hash: l.hash, kind: "log", at: l.signed_at });
+  for (const m of d.mishaps) if (m.written?.hash) out.push({ id: m.id, label: m.id, sub: "Mishap report", hash: m.written.hash, kind: "mishap", at: m.written.at });
+  return out.sort((a, b) => (a.at < b.at ? -1 : 1)).slice(-6);
 }

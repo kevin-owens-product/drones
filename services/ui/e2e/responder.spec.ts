@@ -87,3 +87,22 @@ test("a records request is gathered, redacted and released; an overdue care chec
   await care.getByRole("button", { name: "Sign the check" }).click();
   await expect(care).toContainText("Next due");
 });
+
+test("each page leads with a picture of its decision", async ({ page }) => {
+  await page.goto("/#respond");
+  const strip = page.getByTestId("ops-strip");
+  await expect(strip).toContainText("Calls waiting");
+  await expect(strip).toContainText("Wind vs waiver");
+  await expect(page.getByTestId("harbor-map").locator(".rv-call")).not.toHaveCount(0);
+  await expect(page.getByTestId("shift-line").locator(".rv-mark")).not.toHaveCount(0);
+  await page.goto("/#records");
+  await expect(page.getByTestId("chain-strip")).toContainText("Intact");
+  await page.goto("/#crew");
+  await expect(page.getByTestId("roster-strip").locator("li")).toHaveCount(14);
+  await expect(page.getByTestId("currency-grid").locator(".rv-cell.is-fail")).not.toHaveCount(0);
+  await page.goto("/#contract");
+  const bars = page.getByTestId("month-bars").locator("button");
+  await expect(bars).toHaveCount(31);
+  await bars.last().click();
+  await expect(page.getByTestId("invoice").locator("tbody tr")).toHaveCount(1);
+});

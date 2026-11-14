@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { Viewer } from "../shell/types";
 import { Loading, Note, PageHead, usePageData } from "./thread";
 import "./respond.css";
+import { HarborMap, PhaseSteps, Ring, ShiftLine, WindDial } from "./respondViz";
 
 interface Check { level: "go" | "caution" | "no-go"; text: string }
 interface DockOption { dock: string; name: string; eta_s: number; go: boolean; why: string[] }
@@ -34,7 +35,7 @@ interface Console {
   role: { supervisor: boolean; pilot: boolean; preview: boolean };
   shift: { id: string; date: string; start: string; end: string; rpic: string | null; rpic_name: string; supervisor: string; started: boolean; started_at: string | null; discrepancies: { at: string; text: string; reported_to: string }[] };
   limits: { wind_mps: number; gust_mps: number };
-  weather: { wind_mps: number; gust_mps: number; visibility_km: number; ceiling_ft: number };
+  weather: { wind_mps: number; gust_mps: number; visibility_km: number; ceiling_ft: number; wind_from_deg?: number };
   map: { width_m: number; height_m: number; water: number[][][]; places: { id: string; label: string; x: number; y: number }[]; structures: { id: string; label: string; x0: number; y0: number; x1: number; y1: number; height_m: number }[] };
   docks: Dock[];
   queue: Call[];
@@ -74,6 +75,7 @@ export function RespondPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
         {d.records_due.length ? <a href="#records" className="th-check is-warn">{d.records_due.length} flight record{d.records_due.length === 1 ? "" : "s"} to file this shift</a> : <span className="th-check is-ok">Records up to date</span>}
       </div>
       <p className="meta rs-seat">{seat}</p>
+      <OpsStrip d={d} />
       <Note note={page.note} />
       {d.mishaps_open.map((m) => (
         <p key={m.id} className={`rs-alert ${m.late ? "is-no-go" : "is-caution"}`} role="status" data-testid="mishap-due">
@@ -82,7 +84,7 @@ export function RespondPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
       ))}
       <ShiftPanel d={d} busy={page.busy} act={act} />
 
-      <div className="rs-grid">
+      <div className="rs-grid rs-grid-respond">
         <section className="panel" aria-labelledby="rs-queue">
           <div className="panel-head">
             <h2 id="rs-queue">Calls waiting</h2>
@@ -99,7 +101,7 @@ export function RespondPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
         <section className="panel" aria-labelledby="rs-air">
           <div className="panel-head">
             <h2 id="rs-air">In the air</h2>
-            <span className="meta">Schematic harbor, not to a real port's layout</span>
+            <span className="meta">{d.flights.length ? `${d.flights.length} airborne` : "Nothing airborne"} · {d.docks.filter((k) => k.state === "ready").length} of {d.docks.length} docks ready</span>
           </div>
           <HarborMap d={d} />
           {d.flights.length === 0 ? <p className="meta">Nothing flying. An approved call launches from its dock once the pilot runs the pre-flight checks.</p> : null}
@@ -116,7 +118,7 @@ export function RespondPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
             <li key={k.id} className={`rs-dock is-${k.state}`}>
               <strong>{k.name}</strong>
               <span className="mono">{k.tail}</span>
-              <span className="rs-batt" role="img" aria-label={`Charge ${k.charge}%`}><span style={{ width: `${k.charge}%` }} /></span>
+              <Ring pct={k.charge} size={52} tone={k.state === "ready" ? "ok" : k.state === "out" ? "accent" : k.state === "fault" || k.state === "grounded" ? "bad" : "warn"} label={`Charge ${k.charge}%`}>{k.state === "out" ? "out" : `${Math.round(k.charge)}%`}</Ring>
               <span className="meta">{k.state === "out" ? `Out on ${k.out_on}` : k.state === "charging" ? `Charging, ${k.charge}% (60% to launch)` : k.state === "fault" ? `Fault: ${k.power !== "on" ? "no power" : "comms"}` : k.state === "grounded" ? "Grounded at its care check" : `Ready, ${k.charge}%`}</span>
               {k.care?.overdue && !k.care.grounded ? <a href="#records" className="th-check is-warn">Care check due {k.care.due}</a> : null}
             </li>
@@ -125,7 +127,8 @@ export function RespondPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (b
       </section>
 
       <section className="panel" aria-labelledby="rs-recent">
-        <div className="panel-head"><h2 id="rs-recent">Earlier this shift</h2><a href="#records" className="meta">Flight records and requests not flown</a></div>
+        <div className="panel-head"><h2 id="rs-recent">This shift</h2><a href="#records" className="meta">Flight records and requests not flown</a></div>
+        <ShiftLine start={d.shift.start} end={d.shift.end} now={Date.now()} calls={[...d.recent, ...d.queue]} />
         <div className="table-wrap" tabIndex={0}>
           <table data-testid="recent">
             <thead><tr><th>Call</th><th>Received</th><th>What</th><th>Where</th><th>Outcome</th></tr></thead>
@@ -311,8 +314,8 @@ function FlightCard({ f, d, busy, act }: { f: Flight; d: Console; busy: boolean;
         <span className="meta mono">{f.id} · {f.incident} · RPIC {f.rpic} · approved by {f.approver}</span>
       </div>
       <div className="rs-flight-row">
-        <span className="rs-batt" role="img" aria-label={`Battery ${f.battery}%`}><span style={{ width: `${f.battery}%` }} className={f.battery < 35 ? "is-low" : undefined} /></span>
-        <span className="mono">{Math.round(f.battery)}%</span>
+        <Ring pct={f.battery} size={46} tone={f.battery < 35 ? "warn" : "ok"} label={`Battery ${Math.round(f.battery)}%`}>{`${Math.round(f.battery)}%`}</Ring>
+        <PhaseSteps phase={f.phase} />
         <span className="meta">Wind {f.wind.wind_mps} m/s gusting {f.wind.gust_mps}</span>
         {f.observe_stopped ? <span className="th-check is-warn">Observation stopped</span> : null}
       </div>
@@ -338,42 +341,44 @@ function FlightCard({ f, d, busy, act }: { f: Flight; d: Console; busy: boolean;
   );
 }
 
-function HarborMap({ d }: { d: Console }) {
-  const W = d.map.width_m;
-  const H = d.map.height_m;
-  const X = (x: number) => (x / W) * 600;
-  const Y = (y: number) => 400 - (y / H) * 400;
-  const calls = d.queue;
+/** The console at a glance: what is waiting, what is up, what can launch, the wind against the waiver, and the shift clock. */
+function OpsStrip({ d }: { d: Console }) {
+  const oldest = d.queue.reduce((m, c) => Math.max(m, c.waited_s), 0);
+  const p1 = d.queue.filter((c) => c.priority === 1).length;
+  const ready = d.docks.filter((k) => k.state === "ready");
+  const t0 = Date.parse(d.shift.start);
+  const t1 = Date.parse(d.shift.end);
+  const done = Math.max(0, Math.min(1, (Date.now() - t0) / Math.max(1, t1 - t0)));
+  const left = Math.max(0, Math.round((t1 - Date.now()) / 3_600_000 * 10) / 10);
+  const tone = (n: number, warn: number, bad: number) => (n >= bad ? "is-bad" : n >= warn ? "is-warn" : "is-ok");
   return (
-    <svg className="rs-map" viewBox="0 0 600 400" role="img" aria-label="Harbor map: docks, calls waiting, and aircraft in flight" data-testid="harbor-map">
-      <rect x="0" y="0" width="600" height="400" className="rs-land" />
-      {d.map.water.map((poly, i) => <polygon key={i} className="rs-water" points={poly.map((pt) => `${X(pt[0] ?? 0)},${Y(pt[1] ?? 0)}`).join(" ")} />)}
-      {d.map.structures.map((x) => (
-        <g key={x.id} className="rs-struct">
-          <rect x={X(x.x0)} y={Y(x.y1)} width={X(x.x1) - X(x.x0)} height={Y(x.y0) - Y(x.y1)} />
-          <text x={X(x.x1) + 4} y={Y(x.y0) - 4}>{x.label} {x.height_m} m</text>
-        </g>
-      ))}
-      {d.flights.map((f) => <line key={`l-${f.id}`} className="rs-route" x1={X(d.docks.find((k) => k.id === f.dock)?.x ?? f.x)} y1={Y(d.docks.find((k) => k.id === f.dock)?.y ?? f.y)} x2={X(f.target.x)} y2={Y(f.target.y)} />)}
-      {d.docks.map((k) => (
-        <g key={k.id} className={`rs-mdock is-${k.state}`}>
-          <rect x={X(k.x) - 7} y={Y(k.y) - 7} width="14" height="14" rx="2" />
-          <text x={X(k.x) + 10} y={Y(k.y) + 4}>{k.id}</text>
-        </g>
-      ))}
-      {calls.map((c) => (
-        <g key={c.id} className={`rs-mcall p${c.priority}`}>
-          <circle cx={X(c.x)} cy={Y(c.y)} r="7" />
-          <text x={X(c.x) > 430 ? X(c.x) - 10 : X(c.x) + 10} y={Y(c.y) - 8} textAnchor={X(c.x) > 430 ? "end" : "start"}>{c.id} {c.kind}</text>
-        </g>
-      ))}
-      {d.flights.map((f) => <circle key={`t-${f.id}`} className="rs-mtarget" cx={X(f.target.x)} cy={Y(f.target.y)} r="9" />)}
-      {d.flights.map((f) => (
-        <g key={f.id} className="rs-mflight">
-          <circle cx={X(f.x)} cy={Y(f.y)} r="5" />
-          <text x={X(f.x) + 8} y={Y(f.y) + 14}>{f.tail}</text>
-        </g>
-      ))}
-    </svg>
+    <div className="rv-strip" data-testid="ops-strip">
+      <div className={`rv-tile ${d.queue.length ? (p1 ? "is-bad" : "is-warn") : "is-ok"}`}>
+        <span className="rv-tile-k">Calls waiting</span>
+        <strong>{d.queue.length}</strong>
+        <span className="meta">{d.queue.length ? `${p1} priority 1 · oldest ${oldest >= 60 ? `${Math.floor(oldest / 60)}m ${oldest % 60}s` : `${oldest}s`}` : "Queue clear"}</span>
+      </div>
+      <div className={`rv-tile ${d.flights.some((f) => f.alert?.level === "no-go" && !f.terminated) ? "is-bad" : d.flights.length ? "is-accent" : ""}`}>
+        <span className="rv-tile-k">In the air</span>
+        <strong>{d.flights.length}</strong>
+        <span className="meta">{d.flights.length ? d.flights.map((f) => `${f.tail} ${PHASE[f.phase].toLowerCase()}`).join(" · ") : "All aircraft docked"}</span>
+      </div>
+      <div className={`rv-tile ${tone(d.docks.length - ready.length, 2, d.docks.length)}`}>
+        <span className="rv-tile-k">Docks ready</span>
+        <strong>{ready.length}<small> / {d.docks.length}</small></strong>
+        <span className="rv-chips" aria-hidden="true">{d.docks.map((k) => <i key={k.id} className={`is-${k.state}`} title={`${k.id} ${k.state}`} />)}</span>
+      </div>
+      <div className="rv-tile rv-tile-dial">
+        <span className="rv-tile-k">Wind vs waiver</span>
+        <WindDial wind={d.weather.wind_mps} gust={d.weather.gust_mps} windLimit={d.limits.wind_mps} gustLimit={d.limits.gust_mps} />
+        <span className="meta">{d.weather.wind_mps} / {d.limits.wind_mps} m/s · gusts {d.weather.gust_mps} / {d.limits.gust_mps}</span>
+      </div>
+      <div className={`rv-tile ${d.records_due.length ? "is-warn" : ""}`}>
+        <span className="rv-tile-k">Shift {d.shift.started ? "on" : "not started"}</span>
+        <strong>{left}<small> h left</small></strong>
+        <span className="rv-progress" aria-hidden="true"><span style={{ width: `${done * 100}%` }} /></span>
+        <span className="meta">{d.records_due.length ? `${d.records_due.length} record${d.records_due.length === 1 ? "" : "s"} to file` : "Records up to date"}</span>
+      </div>
+    </div>
   );
 }

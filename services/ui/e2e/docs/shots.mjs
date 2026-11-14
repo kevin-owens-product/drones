@@ -241,7 +241,13 @@ if (SITE) {
       await reveal(page, /^next sortie/i);
     }],
     // The public safety program, one picture per seat.
-    ["supervisor", "respond", "respond"],
+    // The supervisor approves the water rescue so the map shows a call, a route and the docks' reach.
+    ["supervisor", "respond", "respond", async (page) => {
+      await page.locator(".workspace").getByRole("button", { name: "Approve launch" }).first().click().catch(() => {});
+      await page.waitForTimeout(800);
+      await page.evaluate(() => document.getElementById("rs-queue")?.closest("section")?.scrollIntoView({ block: "start" }));
+      await page.waitForTimeout(700);
+    }],
     ["pilot", "records", "flight-records"],
     ["supervisor", "crew", "roster"],
     ["contractor", "contract", "invoice"],
