@@ -29,6 +29,12 @@ What it does not claim: the demo has one scripted fleet and sortie, which each c
 | `/v1/users` | 200 · 8 | 200 · 8 | 200 · 8 | 200 · 3 | 200 · 3 | 200 · 3 | 200 · 3 | 200 · 3 | 200 · 3 | 200 · 0 |
 | `/v1/org` | 200 · 1 | 200 · 1 | 200 · 1 | 200 · 1 | 200 · 1 | 200 · 1 | 403 | 403 | 403 | 200 · 1 |
 
+### Today
+
+| Route | `anon` | `admin` | `ops` | `commander` | `operator` | `maintainer` | `supervisor` | `pilot` | `contractor` | `allied` |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `/v1/today` | 200 · 14 | 200 · 12 | 200 · 12 | 200 · 12 | 200 · 2 | 200 · 7 | 403 | 403 | 403 | 200 · 10 |
+
 ### Fly
 
 | Route | `anon` | `admin` | `ops` | `commander` | `operator` | `maintainer` | `supervisor` | `pilot` | `contractor` | `allied` |
@@ -127,6 +133,7 @@ Each probe runs on a fresh scenario. 403 is a role or tenant refusal recorded in
 |---|---|---|---|---|---|---|---|---|---|---|
 | Hold a lot (Attrition) `POST /v1/attrition/hold` | 200 | 200 | 200 | 200 | 403 | 200 | 403 | 403 | 403 | 200 |
 | Approve a plan (Missions) `POST /v1/missions/M-1033/transition` | 200 | 200 | 403 | 200 | 403 | 403 | 403 | 403 | 403 | 200 |
+| Ask maintenance for a tail (Missions, Today) `POST /v1/missions/M-1034/tail` | 200 | 200 | 403 | 200 | 403 | 403 | 403 | 403 | 403 | 200 |
 | Ground an airframe (Fleet) `PATCH /v1/platforms/NX-01` | 200 | 200 | 403 | 200 | 403 | 200 | 403 | 403 | 403 | 200 |
 | Close a work order (Fleet) `POST /v1/maintenance/close` | 200 | 200 | 200 | 200 | 403 | 200 | 403 | 403 | 403 | 200 |
 | Act on the work queue (Neros) `POST /v1/ops/act` | 200 | 200 | 200 | 403 | 403 | 403 | 403 | 403 | 403 | 403 |

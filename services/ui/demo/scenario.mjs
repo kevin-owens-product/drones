@@ -4,6 +4,7 @@
 // the browser (src/staticDemo.ts). All data is synthetic and labeled so.
 import { createCompany } from "./company.mjs";
 import { createOps, NEROS } from "./ops.mjs";
+import { buildToday } from "./today.mjs";
 import { plan as planConfig } from "./configure.mjs";
 import { nameOf, skuForTail } from "./supply.mjs";
 import { AREA as DENIAL_AREA, denialPicture } from "./denial.mjs";
@@ -508,6 +509,8 @@ export function createDemo(opts = {}) {
   // Mission plans and their debriefs (demo/missions.mjs), on the same range,
   // fleet register, attrition holds and audit log as the rest of the scenario.
   const flagged = (opts.attrition?.autopsy?.alerts ?? []).filter((a) => a.flagged);
+  // Held parts a maintainer replaced, by tail and lot (a closed quality-hold work order).
+  const replaced = new Set();
   const lotOf = (tail) => BIRTH.find((b) => b.tail_number === tail)?.parts.map((p) => p.lot) ?? [];
   const missions = createMissions({
     toLL,
@@ -517,7 +520,10 @@ export function createDemo(opts = {}) {
     places: PLACES,
     platforms: PLATFORMS,
     padBattery: Object.fromEntries(FLEET.filter((c) => c.kind === "pad").map((c) => [c.tail, c.battery])),
-    heldTails: () => new Map(FLEET.map((c) => [c.tail, lotOf(c.tail).find((lot) => holds.some((h) => h.value === lot))]).filter(([, lot]) => lot)),
+    // A tail whose held part was replaced (its quality-hold work order closed) no longer carries the lot.
+    heldTails: () => {
+      return new Map(FLEET.map((c) => [c.tail, lotOf(c.tail).find((lot) => holds.some((h) => h.value === lot) && !replaced.has(`${c.tail}:${lot}`))]).filter(([, lot]) => lot));
+    },
     watchTails: Object.fromEntries(
       FLEET.map((c) => [c.tail, flagged.find((a) => lotOf(c.tail).includes(a.value))]).filter(([, a]) => a).map(([tail, a]) => [tail, { lot: a.value, ratio: a.ratio }]),
     ),
@@ -803,6 +809,7 @@ export function createDemo(opts = {}) {
     const out = company.closeWorkOrder(id, holds, actor);
     if (out.error) return { status: out.status, body: { detail: out.error } };
     const wo = out.work_order;
+    if (wo.lot) replaced.add(`${wo.tail}:${wo.lot}`);
     audit.append({ actor, action: "work_order.close", resource_type: "work_order", resource_id: wo.id, detail: `${wo.tail}: ${wo.issued.map((x) => `${x.qty} ${x.pn} from ${x.lot}`).join(", ") || "no parts"}` });
     const before = PLATFORMS.find((p) => p.tail_number === wo.tail)?.airworthiness;
     syncFleet();
@@ -998,6 +1005,17 @@ export function createDemo(opts = {}) {
           return { status: 403, body: { detail: "Closing a work order needs the maintainer, mission commander or admin role." } };
         }
         return closeWorkOrder(String(msg.id ?? ""), actor);
+      }
+      if (url.pathname === "/v1/today" && method === "GET") {
+        // What is waiting on this person, read through the same routes (and the same tenant and allied filters) their pages use.
+        // Neros staff on the Customer switch see Customer A's, as every customer page shows them.
+        const who = caller;
+        const get = (path) => {
+          const out = market.release.filter(ownFleet(routeRequest("GET", new URL(path, "http://demo.local"), "", who), who), who);
+          caller = who;
+          return out?.status === 200 ? out.body : null;
+        };
+        return { status: 200, body: buildToday({ get, viewer: who }) };
       }
       if (url.pathname === "/v1/maintenance") {
         const items = company.openWorkOrders(holds).filter((w) => w.status === "open").map((w) => ({ id: w.id, tail_number: w.tail, summary: w.summary, status: "open" }));

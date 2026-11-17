@@ -3,9 +3,10 @@ import { invited, markInvited, notify } from "./notify";
 import { api, sessionLost, type SessionConfig } from "./api";
 import { OperatePage } from "./operate/Operate";
 import { OpsPage } from "./pages/Ops";
+import { TodayPage } from "./pages/Today";
 import { Login } from "./shell/Login";
 
-// Operate and the work queue are the two home pages, so they ship with the shell; every other page loads
+// Operate, Today and the work queue are the home pages, so they ship with the shell; every other page loads
 // the first time it opens. Each is a few kilobytes; the shell no longer carries all thirty at once.
 const AccessPage = lazy(() => import("./pages/Access").then((m) => ({ default: m.AccessPage })));
 const AttritionPage = lazy(() => import("./pages/Attrition").then((m) => ({ default: m.AttritionPage })));
@@ -48,6 +49,7 @@ import { homeOf, navFor, rememberWorkspace, sectionsFor, workspaceOf, type Works
 
 const SECTIONS: readonly Section[] = [
   "operate",
+  "today",
   "ops",
   "supply",
   "fleet",
@@ -256,6 +258,7 @@ export function App() {
   const page = viewer ? (
     <Shell banner={banner} viewer={viewer} section={section} onSection={onSection} workspace={workspace} onWorkspace={onWorkspace} onLogout={() => void onLogout()}>
       {section === "ops" ? <OpsPage viewer={viewer} onBanner={setBanner} /> : null}
+      {section === "today" ? <TodayPage viewer={viewer} onBanner={setBanner} /> : null}
       <Suspense fallback={<section className="page" aria-busy="true"><p className="meta">Loading…</p></section>}>
       {section === "supply" ? <PortalPage viewer={viewer} onBanner={setBanner} /> : null}
       {section === "operate" ? <OperatePage viewer={viewer} onBanner={setBanner} /> : null}
