@@ -42,6 +42,10 @@ interface Check {
   level?: "go" | "caution" | "no-go";
   area?: string;
   finding?: string;
+  /** An unready tail's own fixes: swap another airframe onto its legs, or ask maintenance for it. */
+  tail?: string;
+  fixes?: { id: string; label: string; why: string }[];
+  asked?: { by: string; at: string };
 }
 
 interface HistoryStep {
@@ -486,6 +490,22 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
       const r = await api<{ state: string; note: string }>(`/v1/missions/${encodeURIComponent(mission.id)}/physics`, { method: "POST", body: JSON.stringify({ fix: fix.id, forecast: ask }) });
       reportBanner.current(r.banner);
       setPhysNote(`${r.body.note}.`);
+      await loadMissions();
+      await loadObjectives(mission.id);
+    } catch (error) {
+      setPhysNote(error instanceof Error && error.message === "role_denied" ? "Your role cannot change a plan. Planners and mission commanders can." : `That fix could not be applied (${error instanceof Error ? error.message : "error"}).`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function applyTailFix(mission: MissionRow, fix: { id: string }) {
+    setBusy(true);
+    setPhysNote("");
+    try {
+      const r = await api<{ state: string; note: string }>(`/v1/missions/${encodeURIComponent(mission.id)}/tail`, { method: "POST", body: JSON.stringify({ fix: fix.id }) });
+      reportBanner.current(r.banner);
+      setPhysNote(r.body.note.endsWith(".") ? r.body.note : `${r.body.note}.`);
       await loadMissions();
       await loadObjectives(mission.id);
     } catch (error) {
@@ -1017,7 +1037,19 @@ export function MissionsPage({ viewer, onBanner }: { viewer: Viewer; onBanner: (
                         return (
                           <li key={check.detail}>
                             <span className={`ms-lv ms-lv-${level}`}>{level}</span>
-                            <span>{check.detail}</span>
+                            <span>
+                              {check.detail}
+                              {check.asked ? <span className="meta"> Maintenance asked by {check.asked.by} at {check.asked.at.slice(11, 16)}Z.</span> : null}
+                              {check.fixes?.length && editablePlan ? (
+                                <span className="ms-tailfix" data-testid="tail-fixes">
+                                  {check.fixes.map((f) => (
+                                    <button key={f.id} type="button" className="btn btn-quiet" title={f.why} disabled={busy || !canEdit} onClick={() => void applyTailFix(selected, f)}>
+                                      {f.label}
+                                    </button>
+                                  ))}
+                                </span>
+                              ) : null}
+                            </span>
                           </li>
                         );
                       })}

@@ -700,3 +700,11 @@
 .br-rung .is-good {
   background: rgba(63, 214, 154, 0.2);
 }
+
+/* An unready tail's fixes, under its launch check: swap another airframe in, or ask maintenance. */
+.ms-tailfix {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}

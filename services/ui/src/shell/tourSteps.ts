@@ -79,6 +79,13 @@ const NEROS: readonly TourStep[] = [
 
 const CUSTOMER: readonly TourStep[] = [
   {
+    id: "today",
+    section: "today",
+    title: "Start where your day starts: Today",
+    body: "Everything waiting on you, from every page, soonest first: a plan to approve before H-hour, an airframe a plan needs back in service, a delivery to sign for, a lot to hold. Each item has the button that clears it.",
+    action: "Press “Approve” on M-1033. The item clears, and the plan is approved on Missions too.",
+  },
+  {
     id: "operate",
     section: "operate",
     title: "Your fleet, live",

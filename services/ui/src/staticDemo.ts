@@ -125,6 +125,7 @@ export function resetDemoData(): void {
   try {
     sessionStorage.removeItem(ACTIONS_KEY);
     sessionStorage.removeItem("a2e-ops-done");
+    for (const k of Object.keys(sessionStorage)) if (k.startsWith("a2e-today-done")) sessionStorage.removeItem(k);
   } catch {
     /* nothing kept */
   }

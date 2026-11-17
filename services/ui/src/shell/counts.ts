@@ -6,7 +6,7 @@ import { can, type Workspace } from "./workspace";
 export type NavCounts = Partial<Record<Section, number>>;
 
 /**
- * What is waiting on this person, for the rail: work-queue items that need someone now, deliveries waiting to be
+ * What is waiting on this person, for the rail: work-queue and Today items that need someone now, deliveries waiting to be
  * received, and plans waiting for a second person's approval. Read from the same routes the pages use, refreshed
  * whenever the person moves between pages (an action on a page changes its count). A count that fails to load is
  * simply not shown.
@@ -26,6 +26,9 @@ export function useNavCounts(workspace: Workspace, viewer: Viewer, section: Sect
         .catch(() => undefined);
     }
     if (workspace !== "neros") {
+      void api<{ now: number }>("/v1/today")
+        .then((r) => set("today", r.body.now))
+        .catch(() => undefined);
       void api<{ stats: { waiting: number } }>(`/v1/thread/receiving${neros ? "?org=CUS-A" : ""}`)
         .then((r) => set("receiving", r.body.stats.waiting))
         .catch(() => undefined);

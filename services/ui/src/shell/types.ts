@@ -1,5 +1,6 @@
 export type Section =
   | "operate"
+  | "today"
   | "ops"
   | "supply"
   | "fleet"

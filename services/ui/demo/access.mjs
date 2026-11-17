@@ -19,6 +19,7 @@ export const CALLERS = [
 /** Every read route the console uses, grouped the way the rail groups pages. */
 export const READS = [
   ["Session", ["/v1/me", "/v1/users", "/v1/org"]],
+  ["Today", ["/v1/today"]],
   ["Fly", ["/v1/platforms", "/v1/telemetry/live", "/v1/operations/picture", "/v1/physics", "/v1/missions", "/v1/intent", "/v1/configure", "/v1/envelope", "/v1/denial-map", "/v1/coverage", "/v1/maintenance", "/v1/wear"]],
   ["Fleet", ["/v1/birth-records", "/v1/mixed", "/v1/config", "/v1/stockpile", "/v1/thread/readiness", "/v1/thread/updates"]],
   ["Supply", ["/v1/thread/receiving", "/v1/thread/accountability", "/v1/ops/portal", "/v1/quote", "/v1/plans"]],
@@ -34,6 +35,7 @@ export const READS = [
 export const WRITES = [
   { label: "Hold a lot (Attrition)", method: "POST", path: "/v1/attrition/hold", body: { attribute: "esc_lot", value: "ESC-2611" } },
   { label: "Approve a plan (Missions)", method: "POST", path: "/v1/missions/M-1033/transition", body: { action: "mission.approve" } },
+  { label: "Ask maintenance for a tail (Missions, Today)", method: "POST", path: "/v1/missions/M-1034/tail", body: { fix: "ask:NX-12" } },
   { label: "Ground an airframe (Fleet)", method: "PATCH", path: "/v1/platforms/NX-01", body: { airworthiness: "grounded", reason: "probe" } },
   { label: "Close a work order (Fleet)", method: "POST", path: "/v1/maintenance/close", body: { id: "WO-5101" } },
   { label: "Act on the work queue (Neros)", method: "POST", path: "/v1/ops/act", body: { action: "po.expedite", args: { id: "PO-41207" } } },

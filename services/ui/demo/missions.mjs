@@ -311,6 +311,8 @@ export function createMissions(o) {
       no_go: ready ? ready.checks.filter((c) => c.level === "no-go").length : 0,
       cautions: ready ? ready.checks.filter((c) => c.level === "caution").length : 0,
       source: m.source ?? null,
+      // Maintenance asked for a tail this plan still needs (cleared once the tail's check passes).
+      asks: ready ? ready.checks.filter((c) => c.asked).map((c) => ({ tail: c.tail, ...c.asked })) : [],
       sim: true,
     };
   }
@@ -330,11 +332,70 @@ export function createMissions(o) {
     return (Math.hypot(b[0] - a[0], b[1] - a[1]) * inside) / n;
   }
 
+  // Maintenance asked for a tail a plan needs, by plan and tail. It shows until the tail's check passes.
+  const asks = new Map();
+
+  /** Tails that could fly an unready tail's legs: airworthy, not held, charged, not on another plan in the air, not in this one. Same airframe first. */
+  function swapsFor(m, tail) {
+    const inPlan = new Set(tailsOf(m));
+    const busy = busyTails();
+    const held = o.heldTails();
+    const sku = skuOf(tail);
+    return o.platforms
+      .filter((p) => !inPlan.has(p.tail_number) && !busy.has(p.tail_number) && p.airworthiness === "airworthy" && !held.has(p.tail_number))
+      .filter((p) => o.padBattery[p.tail_number] === undefined || o.padBattery[p.tail_number] >= 50)
+      .map((p) => {
+        const same = skuOf(p.tail_number) === sku;
+        const pad = o.padBattery[p.tail_number];
+        return { tail: p.tail_number, same, pad, why: `${p.tail_number} (${p.designation}${pad !== undefined ? `, ${pad}% on the pad` : ""}) takes ${tail}'s legs.${same ? "" : " A different airframe: the energy check runs again."}` };
+      })
+      .sort((a, b) => Number(b.same) - Number(a.same) || (b.pad ?? 0) - (a.pad ?? 0))
+      .slice(0, 2);
+  }
+
+  /** Swap an unready tail out, or ask maintenance for it. A swap changes the plan, so a plan in review or approved goes back to draft. */
+  function tailFixApply(m, msg, who) {
+    const actor = who?.display_name ?? "Demo Planner";
+    const [kind, tail, into] = String(msg.fix ?? "").split(":");
+    if (m.state === "active" || m.state === "closed") return { status: 409, body: { detail: "not_editable" } };
+    if (who && !o.can(who.roles, "mission.draft")) {
+      o.audit.append({ actor, action: kind === "ask" ? "mission.ask_maintenance" : "mission.swap_tail", resource_type: "mission", resource_id: m.name, decision: "deny", reason_codes: ["role_denied"] });
+      return { status: 403, body: { detail: "role_denied" } };
+    }
+    const offered = readiness(m).checks.filter((c) => c.tail === tail).flatMap((c) => c.fixes ?? []);
+    if (!offered.some((f) => f.id === msg.fix)) return { status: 409, body: { detail: "fix_unavailable" } };
+    if (kind === "ask") {
+      const at = new Date().toISOString();
+      asks.set(`${m.id}:${tail}`, { by: actor, at });
+      m.history.push({ action: "mission.ask_maintenance", by: actor, at, note: `Asked maintenance for ${tail}` });
+      o.audit.append({ actor, action: "mission.ask_maintenance", resource_type: "platform", resource_id: tail, detail: `${m.id} needs ${tail}${m.planned_start ? ` by ${new Date(m.planned_start).toISOString().slice(11, 16)}Z` : ""}` });
+      return { status: 200, body: { id: m.id, state: m.state, note: `Maintenance asked for ${tail}; it is at the top of the maintainer's Today.` } };
+    }
+    for (const leg of m.objectives) if (leg.tail === tail) leg.tail = into;
+    asks.delete(`${m.id}:${tail}`);
+    let note = `${into} takes ${tail}'s legs`;
+    const was = m.state;
+    if (was !== "draft") {
+      m.state = "draft";
+      note += `; back to draft from ${was}, so it needs review and approval again`;
+    }
+    m.history.push({ action: "mission.swap_tail", by: actor, at: new Date().toISOString(), note });
+    o.audit.append({ actor, action: "mission.swap_tail", resource_type: "mission", resource_id: m.name, detail: `${m.id}: ${note}` });
+    return { status: 200, body: { id: m.id, state: m.state, note } };
+  }
+
   function readiness(m) {
     const checks = [];
-    const add = (level, detail) => checks.push({ pass: level !== "no-go", level, detail });
+    const add = (level, detail, extra) => checks.push({ pass: level !== "no-go", level, detail, ...extra });
     const tails = tailsOf(m);
     const held = o.heldTails();
+    // An unready tail has two real moves before H-hour: put another airframe on its legs, or ask maintenance for it.
+    const tailFix = (tail, askable) => {
+      const fixes = swapsFor(m, tail).map((c) => ({ id: `swap:${tail}:${c.tail}`, label: `Swap in ${c.tail}`, why: c.why }));
+      const asked = asks.get(`${m.id}:${tail}`);
+      if (askable && !asked) fixes.push({ id: `ask:${tail}`, label: "Ask maintenance", why: `Puts ${tail} at the top of the maintainer's Today with this plan and its H-hour.` });
+      return { tail, fixes, ...(asked ? { asked } : {}) };
+    };
     if (tails.length === 0) add("no-go", "The package has no aircraft.");
     for (const tail of tails) {
       const p = o.platforms.find((x) => x.tail_number === tail);
@@ -342,13 +403,13 @@ export function createMissions(o) {
         add(m.state === "closed" ? "go" : "no-go", `${tail} is not on this range's register${m.state === "closed" ? " (unit airframe, flown under its own register)" : ""}.`);
         continue;
       }
-      if (p.airworthiness === "grounded") add("no-go", `${tail} grounded: ${p.airworthiness_reason}`);
-      else if (p.airworthiness === "restricted") add("no-go", `${tail} restricted: ${p.airworthiness_reason}`);
-      else if (held.has(tail)) add("no-go", `${tail} carries held lot ${held.get(tail)}. Released from Attrition or swapped before launch.`);
+      if (p.airworthiness === "grounded") add("no-go", `${tail} grounded: ${p.airworthiness_reason}`, tailFix(tail, true));
+      else if (p.airworthiness === "restricted") add("no-go", `${tail} restricted: ${p.airworthiness_reason}`, tailFix(tail, true));
+      else if (held.has(tail)) add("no-go", `${tail} carries held lot ${held.get(tail)}. Released from Attrition or swapped before launch.`, tailFix(tail, false));
       else if (o.watchTails[tail]) add("caution", `${tail} carries lot ${o.watchTails[tail].lot}, flagged by the attrition autopsy at ${o.watchTails[tail].ratio}x the loss baseline and not held.`);
       else add("go", `${tail} airworthy (${p.designation}).`);
       const pad = o.padBattery[tail];
-      if (pad !== undefined && pad < 50) add("no-go", `${tail} battery ${pad}% at last report on the pad; needs 50% to launch.`);
+      if (pad !== undefined && pad < 50) add("no-go", `${tail} battery ${pad}% at last report on the pad; needs 50% to launch.`, tailFix(tail, false));
     }
     for (const tail of tails) {
       const legs = m.objectives.filter((x) => x.tail === tail);
@@ -861,7 +922,7 @@ export function createMissions(o) {
         const now = Date.now();
         return { status: 200, body: { source: "Demo plans (SIM)", items: missions.map(row), range: rangeInfo(), generated_at: new Date(now).toISOString() } };
       }
-      const hit = path.match(/^\/v1\/missions\/([^/]+)(?:\/(objectives|readiness|transition|debrief|history|physics|forecast))?$/);
+      const hit = path.match(/^\/v1\/missions\/([^/]+)(?:\/(objectives|readiness|transition|debrief|history|physics|forecast|tail))?$/);
       if (!hit) return null;
       const m = missions.find((x) => x.id === decodeURIComponent(hit[1]));
       if (!m) return { status: 404, body: { detail: "not_found" } };
@@ -889,6 +950,7 @@ export function createMissions(o) {
       if (sub === "physics" && method === "GET") return { status: 200, body: { ...scrub(physics.run(m, Object.fromEntries(url.searchParams))), range: rangeInfo() } };
       if (sub === "physics" && method === "POST") return replan(m, json(raw) ?? {}, who);
       if (sub === "forecast" && method === "POST") return saveForecast(m, json(raw) ?? {}, who);
+      if (sub === "tail" && method === "POST") return tailFixApply(m, json(raw) ?? {}, who);
       if (sub === "history") return { status: 200, body: { items: m.history } };
       if (sub === "transition" && method === "POST") return transition(m, String((json(raw) ?? {}).action ?? ""), who);
       if (sub === "debrief") {

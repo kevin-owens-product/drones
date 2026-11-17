@@ -22,6 +22,8 @@ const item = (id: Section, label: string, group: string, who: readonly Profile[]
 
 /** A customer runs its own fleet: fly it, keep it ready, keep it supplied, learn from it. */
 export const CUSTOMER_NAV: readonly NavItem[] = [
+  // What is waiting on this person, with the action that clears it: a customer's work queue.
+  item("today", "Today", ""),
   item("operate", "Operate", "Fly"),
   item("brief", "Brief", "Fly", ["lead"]),
   item("missions", "Missions", "Fly", ["lead", "operator"]),
@@ -161,11 +163,15 @@ export function sectionsFor(w: Workspace): Section[] {
   return [...navFor(w).map((n) => n.id), "access", "integrations", "audit"];
 }
 
-/** Where each person lands: Neros on its work queue, a maintainer on airframes, everyone else on the live map. */
-export function homeOf(w: Workspace, viewer?: Pick<Viewer, "roles">): Section {
+/**
+ * Where each person lands: on what is waiting on them. Neros on its work queue, a customer's commander, operator
+ * and maintainer on Today (their own queue), a responder program on its shift. The local demo (no organization)
+ * keeps the live map.
+ */
+export function homeOf(w: Workspace, _viewer?: Pick<Viewer, "roles">): Section {
   if (w === "neros") return "ops";
-  if (w === "responder") return viewer && profilesOf(viewer).every((p) => p === "contractor") ? "crew" : "respond";
-  if (w === "customer" && viewer && onlyMaintainer(viewer)) return "fleet";
+  if (w === "responder") return _viewer && profilesOf(_viewer).every((p) => p === "contractor") ? "crew" : "respond";
+  if (w === "customer") return "today";
   return "operate";
 }
 
